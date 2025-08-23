@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<!-- The data-theme attribute will be dynamically set by JavaScript -->
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -30,64 +31,167 @@
       }
       .editor-container .CodeMirror {
         height: calc(100vh - 300px); /* Adjust height as needed */
+        border-radius: 0.25rem;
+      }
+      .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+      }
+
+      /* CodeMirror Dark Theme Integration */
+      html[data-theme="dark"] .CodeMirror {
+        background-color: #1d232a; /* base-100 color for dark theme */
+        color: #a6adbb; /* base-content color for dark theme */
+        border: 1px solid #2a323c; /* A slightly lighter border */
+      }
+      html[data-theme="dark"] .CodeMirror-gutters {
+        background-color: #1d232a;
+        border-right: 1px solid #2a323c;
+      }
+      html[data-theme="dark"] .CodeMirror-linenumber {
+        color: #718096;
+      }
+      html[data-theme="dark"] .CodeMirror-cursor {
+        border-left: 1px solid #f7fafc;
+      }
+      html[data-theme="dark"] .CodeMirror-selected {
+        background: rgba(74, 85, 104, 0.5);
+      }
+      /* Toolbar icons styling */
+      html[data-theme="dark"] .editor-toolbar {
+        border-color: #2a323c;
+      }
+      html[data-theme="dark"] .editor-toolbar a {
+        color: #a6adbb !important;
+      }
+      html[data-theme="dark"] .editor-toolbar a.active,
+      html[data-theme="dark"] .editor-toolbar a:hover {
+        background: #2a323c;
+        border-color: #4a5568;
+      }
+      /* Syntax Highlighting colors */
+      html[data-theme="dark"] .cm-s-easymde .cm-keyword {
+        color: #c3a6ff;
+      }
+      html[data-theme="dark"] .cm-s-easymde .cm-atom {
+        color: #f08d49;
+      }
+      html[data-theme="dark"] .cm-s-easymde .cm-number {
+        color: #f08d49;
+      }
+      html[data-theme="dark"] .cm-s-easymde .cm-def {
+        color: #a1e068;
+      }
+      html[data-theme="dark"] .cm-s-easymde .cm-string {
+        color: #ffed8a;
+      }
+      html[data-theme="dark"] .cm-s-easymde .cm-comment {
+        color: #888888;
+      }
+      html[data-theme="dark"] .cm-s-easymde .cm-link {
+        color: #82aaff;
+      }
+      html[data-theme="dark"] .cm-s-easymde .cm-tag {
+        color: #ff6363;
+      }
+      html[data-theme="dark"] .cm-s-easymde .cm-header {
+        color: #82aaff;
+      }
+      html[data-theme="dark"] .cm-s-easymde .cm-quote {
+        color: #a1e068;
       }
     </style>
   </head>
-  <body class="bg-base-200">
-    <div id="app" class="p-4 md:p-8">
+  <body>
+    <div id="app">
       <!-- Login View -->
-      <div id="login-view" class="max-w-xl mx-auto card bg-base-100 shadow-xl">
-        <div class="card-body">
-          <h2 class="card-title text-2xl mb-4">GitHub 博客编辑器登录</h2>
-          <div class="form-control">
-            <label class="label"
-              ><span class="label-text">GitHub 用户名</span></label
-            >
-            <input
-              id="github-user"
-              type="text"
-              placeholder="例如 a"
-              class="input input-bordered w-full"
-            />
+      <div
+        id="login-view"
+        class="min-h-screen flex items-center justify-center bg-base-200 p-4"
+      >
+        <div class="max-w-xl w-full card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title text-2xl mb-4">GitHub 博客编辑器登录</h2>
+            <div class="form-control">
+              <label class="label"
+                ><span class="label-text">GitHub 用户名</span></label
+              >
+              <input
+                id="github-user"
+                type="text"
+                placeholder="例如 a"
+                class="input input-bordered w-full"
+              />
+            </div>
+            <div class="form-control">
+              <label class="label"
+                ><span class="label-text">GitHub 仓库名</span></label
+              >
+              <input
+                id="github-repo"
+                type="text"
+                placeholder="例如 blog"
+                class="input input-bordered w-full"
+              />
+            </div>
+            <div class="form-control">
+              <label class="label"
+                ><span class="label-text">个人访问令牌 (PAT)</span></label
+              >
+              <input
+                id="github-pat"
+                type="password"
+                placeholder="粘贴您的 PAT"
+                class="input input-bordered w-full"
+              />
+            </div>
+            <div class="card-actions justify-end mt-4">
+              <button id="login-btn" class="btn btn-primary">
+                <span
+                  id="login-spinner"
+                  class="loading loading-spinner hidden"
+                ></span>
+                登录并加载文件
+              </button>
+            </div>
+            <div id="login-error" class="text-error mt-2 hidden"></div>
           </div>
-          <div class="form-control">
-            <label class="label"
-              ><span class="label-text">GitHub 仓库名</span></label
-            >
-            <input
-              id="github-repo"
-              type="text"
-              placeholder="例如 blog"
-              class="input input-bordered w-full"
-            />
-          </div>
-          <div class="form-control">
-            <label class="label"
-              ><span class="label-text">个人访问令牌 (PAT)</span></label
-            >
-            <input
-              id="github-pat"
-              type="password"
-              placeholder="粘贴您的 PAT"
-              class="input input-bordered w-full"
-            />
-          </div>
-          <div class="card-actions justify-end mt-4">
-            <button id="login-btn" class="btn btn-primary">
-              登录并加载文件
-            </button>
-          </div>
-          <div id="login-error" class="text-error mt-2 hidden"></div>
         </div>
       </div>
 
       <!-- Main Editor View -->
-      <div id="main-view" class="hidden">
+      <div id="main-view" class="hidden p-4 md:p-8 bg-base-200 min-h-screen">
         <div class="flex justify-between items-center mb-4">
           <h1 class="text-3xl font-bold">博客文章编辑器</h1>
-          <button id="logout-btn" class="btn btn-sm btn-outline btn-error">
-            登出
-          </button>
+          <div class="flex items-center gap-4">
+            <!-- Theme Toggle -->
+            <label class="swap swap-rotate">
+              <input type="checkbox" id="theme-toggle" />
+              <svg
+                class="swap-on fill-current w-6 h-6"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1,1v3a1,1,0,0,0,2,0V13A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V1a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v3a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"
+                />
+              </svg>
+              <svg
+                class="swap-off fill-current w-6 h-6"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22a10.14,10.14,0,0,0,9.57,9.57A8.14,8.14,0,0,1,12.14,19.69Z"
+                />
+              </svg>
+            </label>
+            <button id="logout-btn" class="btn btn-sm btn-outline btn-error">
+              登出
+            </button>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -95,11 +199,14 @@
           <div class="lg:col-span-1">
             <div class="card bg-base-100 shadow-xl">
               <div class="card-body">
-                <h2 class="card-title">文章列表</h2>
+                <div class="flex justify-between items-center mb-2">
+                  <h2 class="card-title">文章列表</h2>
+                  <button id="new-file-btn" class="btn btn-primary btn-sm">
+                    新建
+                  </button>
+                </div>
                 <div id="file-list-container" class="h-screen overflow-y-auto">
-                  <ul id="file-list" class="menu bg-base-100 rounded-box">
-                    <!-- Files will be dynamically inserted here -->
-                  </ul>
+                  <ul id="file-list" class="menu bg-base-100 rounded-box"></ul>
                 </div>
               </div>
             </div>
@@ -112,8 +219,6 @@
                 <h2 class="card-title text-2xl mb-4">
                   编辑: <span id="current-file-name" class="font-mono"></span>
                 </h2>
-
-                <!-- Metadata Form -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div class="form-control">
                     <label class="label"
@@ -179,12 +284,9 @@
                     ></textarea>
                   </div>
                 </div>
-
-                <!-- Markdown Editor -->
                 <div class="editor-container">
                   <textarea id="markdown-editor"></textarea>
                 </div>
-
                 <div class="card-actions justify-end mt-4">
                   <button id="test-output-btn" class="btn btn-accent">
                     测试输出
@@ -209,7 +311,7 @@
           >
             <div class="text-center">
               <p class="text-xl text-base-content/70">
-                请从左侧选择一篇文章开始编辑。
+                请从左侧选择一篇文章开始编辑，或新建一篇文章。
               </p>
             </div>
           </div>
@@ -217,22 +319,74 @@
       </div>
     </div>
 
+    <!-- New File Modal -->
+    <dialog id="new-file-modal" class="modal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg">创建新文件</h3>
+        <div class="form-control w-full mt-4">
+          <label class="label"
+            ><span class="label-text">文件名 (例如 my-new-post.md)</span></label
+          >
+          <input
+            id="new-filename-input"
+            type="text"
+            placeholder="请输入文件名"
+            class="input input-bordered w-full"
+          />
+          <div id="new-file-error" class="text-error mt-2"></div>
+        </div>
+        <div class="modal-action">
+          <form method="dialog">
+            <button class="btn">取消</button>
+            <button id="create-file-confirm-btn" class="btn btn-primary">
+              创建
+            </button>
+          </form>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Custom Context Menu for File List -->
+    <ul
+      id="file-context-menu"
+      class="menu p-2 shadow bg-base-100 rounded-box w-52"
+      style="display: none; position: absolute; z-index: 1000"
+    >
+      <li>
+        <a id="context-menu-delete-btn" class="text-error">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+            />
+          </svg>
+          删除文件
+        </a>
+      </li>
+    </ul>
+
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         const state = {
           user: "",
           repo: "",
           pat: "",
-          currentFile: {
-            path: null,
-            sha: null,
-          },
+          currentFile: { path: null, sha: null, isNew: false },
         };
 
         const ui = {
           loginView: document.getElementById("login-view"),
           mainView: document.getElementById("main-view"),
           loginBtn: document.getElementById("login-btn"),
+          loginSpinner: document.getElementById("login-spinner"),
           logoutBtn: document.getElementById("logout-btn"),
           userInput: document.getElementById("github-user"),
           repoInput: document.getElementById("github-repo"),
@@ -246,6 +400,18 @@
           saveSpinner: document.getElementById("save-spinner"),
           saveStatus: document.getElementById("save-status"),
           testOutputBtn: document.getElementById("test-output-btn"),
+          newFileBtn: document.getElementById("new-file-btn"),
+          newFileModal: document.getElementById("new-file-modal"),
+          newFileInput: document.getElementById("new-filename-input"),
+          newFileError: document.getElementById("new-file-error"),
+          createFileConfirmBtn: document.getElementById(
+            "create-file-confirm-btn"
+          ),
+          themeToggle: document.getElementById("theme-toggle"),
+          contextMenu: document.getElementById("file-context-menu"),
+          contextMenuDeleteBtn: document.getElementById(
+            "context-menu-delete-btn"
+          ),
           meta: {
             title: document.getElementById("meta-title"),
             published: document.getElementById("meta-published"),
@@ -258,7 +424,47 @@
 
         let easyMDE = null;
 
-        // --- GitHub API Functions ---
+        // --- Theme Functions ---
+        function applyTheme(theme) {
+          document.documentElement.setAttribute("data-theme", theme);
+          ui.themeToggle.checked = theme === "dark";
+        }
+
+        function handleThemeToggle() {
+          const theme = this.checked ? "dark" : "light";
+          localStorage.setItem("github_editor_theme", theme);
+          applyTheme(theme);
+        }
+
+        function loadInitialTheme() {
+          const savedTheme = localStorage.getItem("github_editor_theme");
+          const systemPrefersDark = window.matchMedia(
+            "(prefers-color-scheme: dark)"
+          ).matches;
+          const theme = savedTheme || (systemPrefersDark ? "dark" : "light");
+          applyTheme(theme);
+        }
+
+        // --- Utility & API Functions ---
+        function encodeContent(content) {
+          const encoder = new TextEncoder();
+          const uint8Array = encoder.encode(content);
+          let binaryString = "";
+          uint8Array.forEach((byte) => {
+            binaryString += String.fromCharCode(byte);
+          });
+          return btoa(binaryString);
+        }
+
+        function decodeContent(base64) {
+          const binaryString = atob(base64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const decoder = new TextDecoder("utf-8");
+          return decoder.decode(bytes);
+        }
 
         async function githubApiRequest(endpoint, options = {}) {
           const url = `https://api.github.com/repos/${state.user}/${state.repo}/${endpoint}`;
@@ -276,6 +482,10 @@
                 errorData.message || `HTTP error! status: ${response.status}`
               );
             }
+            if (response.status === 204) {
+              // Handle successful DELETE with no content
+              return { success: true };
+            }
             return await response.json();
           } catch (error) {
             console.error("GitHub API Error:", error);
@@ -286,50 +496,45 @@
         async function getFiles() {
           return githubApiRequest("contents/src/content/posts");
         }
-
         async function getFileContent(path) {
           const data = await githubApiRequest(`contents/${path}`);
           state.currentFile.sha = data.sha;
-
-          // 关键修复：正确地将 Base64 解码为 UTF-8 字符串
-          const binaryString = atob(data.content);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          const decoder = new TextDecoder("utf-8");
-          return decoder.decode(bytes);
+          state.currentFile.isNew = false;
+          return decodeContent(data.content);
         }
-
-        async function updateFile(path, content, sha) {
-          // 关键修复：正确地将 UTF-8 字符串编码为 Base64
-          const encoder = new TextEncoder();
-          const uint8Array = encoder.encode(content);
-          let binaryString = "";
-          uint8Array.forEach((byte) => {
-            binaryString += String.fromCharCode(byte);
+        async function createFile(path, content) {
+          return githubApiRequest(`contents/${path}`, {
+            method: "PUT",
+            body: JSON.stringify({
+              message: `docs: create ${path.split("/").pop()}`,
+              content: encodeContent(content),
+            }),
           });
-          const encodedContent = btoa(binaryString);
-
+        }
+        async function updateFile(path, content, sha) {
           return githubApiRequest(`contents/${path}`, {
             method: "PUT",
             body: JSON.stringify({
               message: `docs: update ${path.split("/").pop()}`,
-              content: encodedContent,
-              sha: sha,
+              content: encodeContent(content),
+              sha,
+            }),
+          });
+        }
+        async function deleteFile(path, sha) {
+          return githubApiRequest(`contents/${path}`, {
+            method: "DELETE",
+            body: JSON.stringify({
+              message: `docs: delete ${path.split("/").pop()}`,
+              sha,
             }),
           });
         }
 
         // --- App Logic ---
-
         function showLoginError(message) {
           ui.loginError.textContent = message;
           ui.loginError.classList.remove("hidden");
-        }
-
-        function clearLoginError() {
-          ui.loginError.classList.add("hidden");
         }
 
         function showSaveStatus(message, isError = false) {
@@ -340,8 +545,25 @@
           setTimeout(() => (ui.saveStatus.textContent = ""), 5000);
         }
 
+        function resetEditorState() {
+          ui.editorSection.classList.add("hidden");
+          ui.placeholderSection.classList.remove("hidden");
+          state.currentFile = { path: null, sha: null, isNew: false };
+          document
+            .querySelectorAll("#file-list a")
+            .forEach((el) => el.classList.remove("active"));
+        }
+
+        async function refreshFileList() {
+          try {
+            renderFileList(await getFiles());
+          } catch (error) {
+            showSaveStatus("无法刷新文件列表。", true);
+          }
+        }
+
         function renderFileList(files) {
-          ui.fileList.innerHTML = ""; // Clear existing list
+          ui.fileList.innerHTML = "";
           const mdFiles = files.filter((file) => file.name.endsWith(".md"));
           if (mdFiles.length === 0) {
             ui.fileList.innerHTML = "<li><a>未找到 Markdown 文件</a></li>";
@@ -350,9 +572,11 @@
           mdFiles.forEach((file) => {
             const li = document.createElement("li");
             const a = document.createElement("a");
-            a.textContent = file.name;
-            a.href = "#";
             a.dataset.path = file.path;
+            a.dataset.sha = file.sha;
+            a.className = "file-item";
+            a.href = "#"; // For better accessibility
+            a.textContent = file.name;
             li.appendChild(a);
             ui.fileList.appendChild(li);
           });
@@ -360,11 +584,9 @@
 
         function parseContent(content) {
           const parts = content.split("---");
-          if (parts.length < 3) {
-            return { metadata: {}, body: content };
-          }
+          if (parts.length < 3) return { metadata: {}, body: content };
           try {
-            const metadata = jsyaml.load(parts[1]);
+            const metadata = jsyaml.load(parts[1]) || {};
             const body = parts.slice(2).join("---").trim();
             return { metadata, body };
           } catch (e) {
@@ -374,40 +596,16 @@
         }
 
         function stringifyMetadata(metadata) {
-          metadata.draft = metadata.draft || false;
-          // 确保 tags 是一个数组
-          if (typeof metadata.tags === "string") {
-            metadata.tags = metadata.tags
+          const cleanMeta = { ...metadata };
+          if (typeof cleanMeta.tags === "string") {
+            cleanMeta.tags = cleanMeta.tags
               .split(",")
               .map((tag) => tag.trim())
               .filter(Boolean);
-          } else if (!Array.isArray(metadata.tags)) {
-            metadata.tags = [];
+          } else if (!Array.isArray(cleanMeta.tags)) {
+            cleanMeta.tags = [];
           }
-
-          // 1. 使用 js-yaml 生成基础的 YAML 字符串
-          const yamlString = jsyaml.dump(metadata, {
-            lineWidth: -1,
-            noQuotes: true,
-            flowLevel: 1, // 确保 tags 数组在一行内显示
-          });
-
-          // 2. 关键修复：逐行处理，移除特定字段的引号
-          const lines = yamlString.split("\n");
-          const processedLines = lines.map((line) => {
-            // 为 'published', 'updated', 和 'tags' 这几行移除所有单引号
-            if (
-              line.startsWith("published:") ||
-              line.startsWith("updated:") ||
-              line.startsWith("tags:")
-            ) {
-              return line.replace(/'/g, "");
-            }
-            return line;
-          });
-
-          // 3. 重新组合成最终的字符串，并过滤掉末尾可能出现的空行
-          return processedLines.filter((line) => line).join("\n");
+          return jsyaml.dump(cleanMeta);
         }
 
         function populateEditor(metadata, body) {
@@ -421,10 +619,7 @@
           ui.meta.description.value = metadata.description || "";
           ui.meta.tags.value = (metadata.tags || []).join(", ");
           ui.meta.category.value = metadata.category || "";
-
-          if (easyMDE) {
-            easyMDE.value(body);
-          }
+          if (easyMDE) easyMDE.value(body);
         }
 
         function setTodaysDate() {
@@ -434,69 +629,115 @@
         }
 
         async function handleFileClick(e) {
+          const target = e.target.closest("a.file-item");
+          if (!target) return;
           e.preventDefault();
-          if (e.target.tagName !== "A" || !e.target.dataset.path) return;
 
-          // Highlight active file
           document
             .querySelectorAll("#file-list a")
             .forEach((el) => el.classList.remove("active"));
-          e.target.classList.add("active");
+          target.classList.add("active");
 
-          const path = e.target.dataset.path;
-          state.currentFile.path = path;
-
+          state.currentFile.path = target.dataset.path;
           ui.placeholderSection.classList.add("hidden");
           ui.editorSection.classList.remove("hidden");
-          ui.currentFileName.textContent = path.split("/").pop();
+          ui.currentFileName.textContent = state.currentFile.path
+            .split("/")
+            .pop();
 
           try {
-            const content = await getFileContent(path);
+            const content = await getFileContent(state.currentFile.path);
             const { metadata, body } = parseContent(content);
             populateEditor(metadata, body);
-            if (!metadata.published) {
-              setTodaysDate();
-            }
+            if (!metadata.published) setTodaysDate();
           } catch (error) {
             showSaveStatus(`加载文件失败: ${error.message}`, true);
           }
         }
 
+        async function confirmAndDeleteFile(path, sha) {
+          if (
+            !confirm(
+              `你确定要删除文件 "${path.split("/").pop()}" 吗？此操作无法撤销。`
+            )
+          )
+            return;
+          try {
+            await deleteFile(path, sha);
+            showSaveStatus("文件删除成功！", false);
+            if (state.currentFile.path === path) resetEditorState();
+            await refreshFileList();
+          } catch (error) {
+            showSaveStatus(`删除失败: ${error.message}`, true);
+          }
+        }
+
+        function handleNewFileClick() {
+          ui.newFileInput.value = "";
+          ui.newFileError.textContent = "";
+          ui.newFileModal.showModal();
+        }
+
+        function handleCreateNewFile() {
+          let filename = ui.newFileInput.value.trim();
+          if (!filename) {
+            ui.newFileError.textContent = "文件名不能为空。";
+            return;
+          }
+          if (!filename.endsWith(".md")) filename += ".md";
+          filename = filename
+            .toLowerCase()
+            .replace(/\s+/g, "-")
+            .replace(/[^a-z0-9-.]/g, "");
+
+          state.currentFile = {
+            path: `src/content/posts/${filename}`,
+            sha: null,
+            isNew: true,
+          };
+          ui.currentFileName.textContent = filename;
+          populateEditor({}, "");
+          setTodaysDate();
+
+          ui.placeholderSection.classList.add("hidden");
+          ui.editorSection.classList.remove("hidden");
+          document
+            .querySelectorAll("#file-list a")
+            .forEach((el) => el.classList.remove("active"));
+          ui.newFileModal.close();
+        }
+
         async function handleSave() {
-          if (!state.currentFile.path || !state.currentFile.sha) {
+          if (!state.currentFile.path) {
             showSaveStatus("没有选择要保存的文件。", true);
             return;
           }
-
           ui.saveSpinner.classList.remove("hidden");
           ui.saveBtn.classList.add("btn-disabled");
-
           try {
             const metadata = {
               title: ui.meta.title.value,
               published: ui.meta.published.value,
               updated: ui.meta.updated.value,
               description: ui.meta.description.value,
-              image: "", // You can add a field for this if needed
-              tags: ui.meta.tags.value
-                .split(",")
-                .map((t) => t.trim())
-                .filter(Boolean),
+              tags: ui.meta.tags.value,
               category: ui.meta.category.value,
-              draft: false, // Defaulting to false
             };
-
             const body = easyMDE.value();
-            const metadataString = stringifyMetadata(metadata);
+            const newContent = `---\n${stringifyMetadata(
+              metadata
+            )}---\n\n${body}`;
+            const result = state.currentFile.isNew
+              ? await createFile(state.currentFile.path, newContent)
+              : await updateFile(
+                  state.currentFile.path,
+                  newContent,
+                  state.currentFile.sha
+                );
 
-            const newContent = `---\n${metadataString}\n---\n\n${body}`;
-
-            const result = await updateFile(
-              state.currentFile.path,
-              newContent,
-              state.currentFile.sha
-            );
-            state.currentFile.sha = result.content.sha; // Update SHA for subsequent saves
+            if (state.currentFile.isNew) await refreshFileList();
+            state.currentFile.sha = result.content.sha;
+            state.currentFile.isNew = false;
             showSaveStatus("文件保存成功！", false);
           } catch (error) {
             showSaveStatus(`保存失败: ${error.message}`, true);
@@ -505,51 +746,34 @@
             ui.saveBtn.classList.remove("btn-disabled");
           }
         }
-        function handleTestOutput() {
-          console.log("--- [测试输出] ---");
 
-          // 1. 从UI收集元数据
+        function handleTestOutput() {
           const metadata = {
             title: ui.meta.title.value,
             published: ui.meta.published.value,
             updated: ui.meta.updated.value,
             description: ui.meta.description.value,
-            image: "",
-            tags: ui.meta.tags.value
-              .split(",")
-              .map((t) => t.trim())
-              .filter(Boolean),
+            tags: ui.meta.tags.value,
             category: ui.meta.category.value,
-            draft: false,
           };
-
-          // 2. 获取Markdown正文
           const body = easyMDE.value();
-
-          // 3. 将元数据对象转换为YAML字符串
-          const metadataString = stringifyMetadata(metadata);
-
-          // 4. 组合成最终的Markdown文件内容
-          const finalContent = `---\n${metadataString}\n---\n\n${body}`;
-
-          // 5. 打印到控制台
-          console.log(finalContent);
-
-          // 6. 在界面上给出提示
+          console.log("---\n" + stringifyMetadata(metadata) + "---\n\n" + body);
           showSaveStatus("内容已输出到开发者控制台。", false);
         }
 
         async function login() {
-          clearLoginError();
+          ui.loginError.classList.add("hidden");
+          ui.loginSpinner.classList.remove("hidden");
+          ui.loginBtn.classList.add("btn-disabled");
           state.user = ui.userInput.value.trim();
           state.repo = ui.repoInput.value.trim();
           state.pat = ui.patInput.value.trim();
-
           if (!state.user || !state.repo || !state.pat) {
             showLoginError("所有字段均为必填项。");
+            ui.loginSpinner.classList.add("hidden");
+            ui.loginBtn.classList.remove("btn-disabled");
             return;
           }
-
           try {
             const files = await getFiles();
             localStorage.setItem(
@@ -567,50 +791,81 @@
             showLoginError(
               `登录失败: ${error.message}. 请检查您的信息和 PAT 权限。`
             );
+          } finally {
+            ui.loginSpinner.classList.add("hidden");
+            ui.loginBtn.classList.remove("btn-disabled");
           }
         }
 
         function logout() {
           localStorage.removeItem("github_editor_data");
-          state.user = "";
-          state.repo = "";
-          state.pat = "";
-          state.currentFile.path = null;
-          state.currentFile.sha = null;
-
+          state.user = state.repo = state.pat = "";
+          resetEditorState();
           ui.mainView.classList.add("hidden");
           ui.loginView.classList.remove("hidden");
-          ui.userInput.value = "";
-          ui.repoInput.value = "";
-          ui.patInput.value = "";
-
-          ui.editorSection.classList.add("hidden");
-          ui.placeholderSection.classList.remove("hidden");
+          ui.userInput.value = ui.repoInput.value = ui.patInput.value = "";
         }
 
-        function initializeApp() {
+        // --- Context Menu Handlers ---
+        function showContextMenu(e) {
+          const fileLink = e.target.closest("a.file-item");
+          if (fileLink) {
+            e.preventDefault();
+            ui.contextMenuDeleteBtn.dataset.path = fileLink.dataset.path;
+            ui.contextMenuDeleteBtn.dataset.sha = fileLink.dataset.sha;
+            ui.contextMenu.style.top = `${e.clientY}px`;
+            ui.contextMenu.style.left = `${e.clientX}px`;
+            ui.contextMenu.style.display = "block";
+          }
+        }
+
+        function hideContextMenu() {
+          if (ui.contextMenu.style.display === "block") {
+            ui.contextMenu.style.display = "none";
+          }
+        }
+
+        async function handleDeleteFromContextMenu() {
+          const { path, sha } = ui.contextMenuDeleteBtn.dataset;
+          if (path && sha) await confirmAndDeleteFile(path, sha);
+        }
+
+        // --- Initialization ---
+        async function initializeApp() {
+          loadInitialTheme();
+          easyMDE = new EasyMDE({
+            element: document.getElementById("markdown-editor"),
+            spellChecker: false,
+          });
+
+          // Event Listeners
+          ui.loginBtn.addEventListener("click", login);
+          ui.logoutBtn.addEventListener("click", logout);
+          ui.fileList.addEventListener("click", handleFileClick);
+          ui.fileList.addEventListener("contextmenu", showContextMenu);
+          document.addEventListener("click", hideContextMenu);
+          ui.contextMenuDeleteBtn.addEventListener(
+            "click",
+            handleDeleteFromContextMenu
+          );
+          ui.testOutputBtn.addEventListener("click", handleTestOutput);
+          ui.saveBtn.addEventListener("click", handleSave);
+          ui.newFileBtn.addEventListener("click", handleNewFileClick);
+          ui.createFileConfirmBtn.addEventListener(
+            "click",
+            handleCreateNewFile
+          );
+          ui.themeToggle.addEventListener("change", handleThemeToggle);
+
           const savedData = localStorage.getItem("github_editor_data");
           if (savedData) {
             const { user, repo, pat } = JSON.parse(savedData);
             ui.userInput.value = user;
             ui.repoInput.value = repo;
             ui.patInput.value = pat;
-            login();
+            await login();
           }
-
-          easyMDE = new EasyMDE({
-            element: document.getElementById("markdown-editor"),
-            spellChecker: false,
-            maxHeight: "600px",
-          });
-
-          ui.loginBtn.addEventListener("click", login);
-          ui.logoutBtn.addEventListener("click", logout);
-          ui.fileList.addEventListener("click", handleFileClick);
-          ui.testOutputBtn.addEventListener("click", handleTestOutput);
-          ui.saveBtn.addEventListener("click", handleSave);
         }
-
         initializeApp();
       });
     </script>
