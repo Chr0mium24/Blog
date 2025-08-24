@@ -3,11 +3,10 @@ title: Lambda初窥
 published: 2025-03-13
 updated: 2025-03-13
 description: ''
-image: ''
 tags: []
-category: '代码'
-draft: false 
+category: 代码
 ---
+
 ```python
 ZERO = lambda f:lambda x:x
 SUC = lambda church:lambda f:lambda x:church(f)(f(x))
