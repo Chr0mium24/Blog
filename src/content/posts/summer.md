@@ -1,7 +1,7 @@
 ---
 title: 夏
-published: '2025-01-04'
-updated: '2025-01-04'
+published: 2025-01-04
+updated: 2025-01-04
 description: ''
 tags: []
 category: 随笔
