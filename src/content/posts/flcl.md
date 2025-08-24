@@ -1,7 +1,7 @@
 ---
 title: FLCL
-published: '2025-04-05'
-updated: '2025-04-05'
+published: 2025-04-05
+updated: 2025-04-05
 description: ''
 tags: []
 category: 生活
