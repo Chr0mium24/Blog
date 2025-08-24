@@ -521,15 +521,93 @@
             }),
           });
         }
-        async function deleteFile(path, sha) {
-          return githubApiRequest(`contents/${path}`, {
-            method: "DELETE",
-            body: JSON.stringify({
-              message: `docs: delete ${path.split("/").pop()}`,
-              sha,
-            }),
-          });
+async function renameFile(oldPath, oldSha, oldName) {
+  const newName = prompt("请输入新的文件名:", oldName);
+
+  if (!newName || newName === oldName) {
+    console.log("重命名取消或文件名未改变。");
+    return;
+  }
+  
+  // 简单校验，确保还是 .md 文件
+  if (!newName.endsWith('.md')) {
+    alert("文件名必须以 .md 结尾！");
+    return;
+  }
+  
+  const newPath = `_posts/${newName}`;
+
+  if (confirm(`确定要将 "${oldName}" 重命名为 "${newName}" 吗？`)) {
+    showSpinner(true, "重命名中...");
+    try {
+      // 1. 获取旧文件的内容
+      const { data: fileData } = await octokit.rest.repos.getContent({
+        owner: user,
+        repo,
+        path: oldPath,
+      });
+      const content = atob(fileData.content); // 内容是 base64 编码的，需要解码
+
+      // 2. 创建新文件（使用旧内容）
+      await octokit.rest.repos.createOrUpdateFileContents({
+        owner: user,
+        repo,
+        path: newPath,
+        message: `feat: rename ${oldName} to ${newName}`,
+        content: btoa(content), // 内容需要用 base64 编码
+        committer: {
+          name: user,
+          email: `${user}@users.noreply.github.com`,
+        },
+      });
+
+      // 3. 删除旧文件
+      await octokit.rest.repos.deleteFile({
+        owner: user,
+        repo,
+        path: oldPath,
+        message: `feat: remove old file after rename ${oldName}`,
+        sha: oldSha,
+        committer: {
+          name: user,
+          email: `${user}@users.noreply.github.com`,
+        },
+      });
+
+      alert("文件重命名成功！");
+      // 重置当前文件状态并刷新列表
+      currentFile = null;
+      easyMDE.value(""); 
+      await loadFiles();
+
+    } catch (error) {
+      console.error("重命名失败:", error);
+      alert(`重命名失败: ${error.message}`);
+    } finally {
+      showSpinner(false);
+    }
+  }
+}
+
+// 建议增加一个通用的加载动画函数，以便在重命名时显示
+function showSpinner(show, text = '登录中...') {
+    const spinner = document.getElementById('login-spinner');
+    const btn = document.getElementById('login-btn');
+    if (show) {
+        if(btn) {
+            btn.disabled = true;
+            spinner.textContent = text;
+            spinner.classList.remove('hidden');
         }
+        // 你也可以在编辑器视图中添加一个全局的 spinner
+    } else {
+       if(btn) {
+           btn.disabled = false;
+           spinner.classList.add('hidden');
+       }
+    }
+}
+
 
         // --- App Logic ---
         function showLoginError(message) {
@@ -562,25 +640,102 @@
           }
         }
 
-        function renderFileList(files) {
-          ui.fileList.innerHTML = "";
-          const mdFiles = files.filter((file) => file.name.endsWith(".md"));
-          if (mdFiles.length === 0) {
-            ui.fileList.innerHTML = "<li><a>未找到 Markdown 文件</a></li>";
-            return;
-          }
-          mdFiles.forEach((file) => {
-            const li = document.createElement("li");
-            const a = document.createElement("a");
-            a.dataset.path = file.path;
-            a.dataset.sha = file.sha;
-            a.className = "file-item";
-            a.href = "#"; // For better accessibility
-            a.textContent = file.name;
-            li.appendChild(a);
-            ui.fileList.appendChild(li);
-          });
+        async function renderFileList() {
+  const fileList = document.getElementById("file-list");
+  fileList.innerHTML =
+    '<li><button id="new-file-btn" class="btn btn-ghost w-full justify-start"> + 新建文件 </button></li>';
+  document
+    .getElementById("new-file-btn")
+    .addEventListener("click", createNewFile);
+
+  try {
+    const response = await octokit.rest.repos.getContent({
+      owner: user,
+      repo,
+      path: "_posts",
+    });
+
+    const mdFiles = response.data
+      .filter((file) => file.name.endsWith(".md"))
+      .sort((a, b) => b.name.localeCompare(a.name)); // 按名称降序排序
+
+    filesCache = mdFiles; // 缓存文件列表
+
+    mdFiles.forEach((file) => {
+      const li = document.createElement("li");
+      const fileItem = document.createElement("a");
+      fileItem.className = "file-item";
+      fileItem.href = "#";
+
+      const fileNameSpan = document.createElement("span");
+      fileNameSpan.textContent = file.name;
+      fileNameSpan.className = "flex-grow truncate"; // 避免长文件名破坏布局
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.innerHTML = " &times; ";
+      deleteBtn.className = "btn btn-xs btn-error opacity-0 group-hover:opacity-100 transition-opacity";
+
+      fileItem.appendChild(fileNameSpan);
+      fileItem.appendChild(deleteBtn);
+      li.appendChild(fileItem);
+      li.className = "group"; // 为父元素 li 添加 group 类
+
+      // 点击文件名加载文件
+      fileNameSpan.addEventListener("click", (e) => {
+        e.preventDefault();
+        loadFileContent(file.path, file.sha);
+      });
+
+      // 点击删除按钮
+      deleteBtn.addEventListener("click", (e) => {
+        e.stopPropagation(); // 防止触发加载文件
+        deleteFile(file.path, file.sha);
+      });
+
+      
+      li.addEventListener("contextmenu", (e) => {
+        e.preventDefault(); // 阻止浏览器默认的右键菜单
+        
+        // 移除任何已存在的自定义菜单
+        const existingMenu = document.getElementById("context-menu");
+        if (existingMenu) {
+          existingMenu.remove();
         }
+
+        // 创建菜单
+        const menu = document.createElement("div");
+        menu.id = "context-menu";
+        menu.className = "menu bg-base-200 rounded-box p-2 fixed";
+        menu.style.left = `${e.clientX}px`;
+        menu.style.top = `${e.clientY}px`;
+        
+        // 添加重命名选项
+        const renameItem = document.createElement("li");
+        renameItem.innerHTML = `<a>重命名</a>`;
+        renameItem.onclick = () => {
+          renameFile(file.path, file.sha, file.name);
+          menu.remove();
+        };
+
+        menu.appendChild(renameItem);
+        document.body.appendChild(menu);
+
+        // 点击页面其他地方，菜单消失
+        const closeMenu = () => {
+          menu.remove();
+          document.body.removeEventListener("click", closeMenu);
+        };
+        setTimeout(() => document.body.addEventListener("click", closeMenu), 0);
+      });
+      
+
+      fileList.appendChild(li);
+    });
+  } catch (error) {
+    console.error("加载文件列表失败:", error);
+    alert("加载文件列表失败，请检查仓库名或目录是否存在。");
+  }
+}
 
         function parseContent(content) {
           const parts = content.split("---");
