@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <!-- The data-theme attribute will be dynamically set by JavaScript -->
-<html lang="en">
+<html lang="ZH-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GitHub Markdown Editor</title>
+    <title>编辑器</title>
 
     <!-- TailwindCSS & daisyUI -->
     <link
@@ -121,7 +121,7 @@
               <input
                 id="github-user"
                 type="text"
-                placeholder="例如 a"
+                placeholder="username"
                 class="input input-bordered w-full"
               />
             </div>
@@ -132,7 +132,7 @@
               <input
                 id="github-repo"
                 type="text"
-                placeholder="例如 blog"
+                placeholder="例如 astro-blog"
                 class="input input-bordered w-full"
               />
             </div>
@@ -175,7 +175,7 @@
                 viewBox="0 0 24 24"
               >
                 <path
-                  d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1,1v3a1,1,0,0,0,2,0V13A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V1a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v3a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"
+                  d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1,1v3a1,1,0,0,0,2,0V13A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V1a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34ZM17.66,7.34a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v3a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"
                 />
               </svg>
               <svg
@@ -216,9 +216,19 @@
           <div id="editor-section" class="lg:col-span-3 hidden">
             <div class="card bg-base-100 shadow-xl">
               <div class="card-body">
-                <h2 class="card-title text-2xl mb-4">
-                  编辑: <span id="current-file-name" class="font-mono"></span>
-                </h2>
+                <!-- Title and Rename Button -->
+                <div class="flex items-center gap-2 mb-4">
+                  <h2 class="card-title text-2xl">
+                    编辑: <span id="current-file-name" class="font-mono"></span>
+                  </h2>
+                  <button
+                    id="rename-file-btn"
+                    class="btn btn-xs btn-outline ml-2"
+                  >
+                    重命名
+                  </button>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div class="form-control">
                     <label class="label"
@@ -288,6 +298,12 @@
                   <textarea id="markdown-editor"></textarea>
                 </div>
                 <div class="card-actions justify-end mt-4">
+                  <button
+                    id="delete-file-btn"
+                    class="btn btn-error btn-outline mr-auto"
+                  >
+                    删除文件
+                  </button>
                   <button id="test-output-btn" class="btn btn-accent">
                     测试输出
                   </button>
@@ -325,7 +341,7 @@
         <h3 class="font-bold text-lg">创建新文件</h3>
         <div class="form-control w-full mt-4">
           <label class="label"
-            ><span class="label-text">文件名 (例如 my-new-post.md)</span></label
+            ><span class="label-text">文件名 (例如 my-new-post)</span></label
           >
           <input
             id="new-filename-input"
@@ -346,32 +362,32 @@
       </div>
     </dialog>
 
-    <!-- Custom Context Menu for File List -->
-    <ul
-      id="file-context-menu"
-      class="menu p-2 shadow bg-base-100 rounded-box w-52"
-      style="display: none; position: absolute; z-index: 1000"
-    >
-      <li>
-        <a id="context-menu-delete-btn" class="text-error">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+    <!-- Rename File Modal -->
+    <dialog id="rename-file-modal" class="modal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg">重命名文件</h3>
+        <div class="form-control w-full mt-4">
+          <label class="label"
+            ><span class="label-text">新文件名 (不含 .md 后缀)</span></label
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
-          删除文件
-        </a>
-      </li>
-    </ul>
+          <input
+            id="rename-filename-input"
+            type="text"
+            placeholder="请输入新文件名"
+            class="input input-bordered w-full"
+          />
+          <div id="rename-file-error" class="text-error mt-2"></div>
+        </div>
+        <div class="modal-action">
+          <form method="dialog">
+            <button class="btn">取消</button>
+            <button id="rename-file-confirm-btn" class="btn btn-primary">
+              确认重命名
+            </button>
+          </form>
+        </div>
+      </div>
+    </dialog>
 
     <script>
       document.addEventListener("DOMContentLoaded", () => {
@@ -400,6 +416,7 @@
           saveSpinner: document.getElementById("save-spinner"),
           saveStatus: document.getElementById("save-status"),
           testOutputBtn: document.getElementById("test-output-btn"),
+          deleteFileBtn: document.getElementById("delete-file-btn"), // NEW
           newFileBtn: document.getElementById("new-file-btn"),
           newFileModal: document.getElementById("new-file-modal"),
           newFileInput: document.getElementById("new-filename-input"),
@@ -407,11 +424,14 @@
           createFileConfirmBtn: document.getElementById(
             "create-file-confirm-btn"
           ),
+          renameFileBtn: document.getElementById("rename-file-btn"), // NEW
+          renameFileModal: document.getElementById("rename-file-modal"), // NEW
+          renameFileInput: document.getElementById("rename-filename-input"), // NEW
+          renameFileError: document.getElementById("rename-file-error"), // NEW
+          renameFileConfirmBtn: document.getElementById(
+            "rename-file-confirm-btn"
+          ), // NEW
           themeToggle: document.getElementById("theme-toggle"),
-          contextMenu: document.getElementById("file-context-menu"),
-          contextMenuDeleteBtn: document.getElementById(
-            "context-menu-delete-btn"
-          ),
           meta: {
             title: document.getElementById("meta-title"),
             published: document.getElementById("meta-published"),
@@ -494,6 +514,7 @@
         }
 
         async function getFiles() {
+          // Assuming blog posts are located in src/content/posts
           return githubApiRequest("contents/src/content/posts");
         }
         async function getFileContent(path) {
@@ -531,62 +552,14 @@
           });
         }
 
-        // --- App Logic ---
-        function showLoginError(message) {
-          ui.loginError.textContent = message;
-          ui.loginError.classList.remove("hidden");
-        }
-
-        function showSaveStatus(message, isError = false) {
-          ui.saveStatus.textContent = message;
-          ui.saveStatus.className = isError
-            ? "mt-2 text-right text-error"
-            : "mt-2 text-right text-success";
-          setTimeout(() => (ui.saveStatus.textContent = ""), 5000);
-        }
-
-        function resetEditorState() {
-          ui.editorSection.classList.add("hidden");
-          ui.placeholderSection.classList.remove("hidden");
-          state.currentFile = { path: null, sha: null, isNew: false };
-          document
-            .querySelectorAll("#file-list a")
-            .forEach((el) => el.classList.remove("active"));
-        }
-
-        async function refreshFileList() {
-          try {
-            renderFileList(await getFiles());
-          } catch (error) {
-            showSaveStatus("无法刷新文件列表。", true);
-          }
-        }
-
-        function renderFileList(files) {
-          ui.fileList.innerHTML = "";
-          const mdFiles = files.filter((file) => file.name.endsWith(".md"));
-          if (mdFiles.length === 0) {
-            ui.fileList.innerHTML = "<li><a>未找到 Markdown 文件</a></li>";
-            return;
-          }
-          mdFiles.forEach((file) => {
-            const li = document.createElement("li");
-            const a = document.createElement("a");
-            a.dataset.path = file.path;
-            a.dataset.sha = file.sha;
-            a.className = "file-item";
-            a.href = "#"; // For better accessibility
-            a.textContent = file.name;
-            li.appendChild(a);
-            ui.fileList.appendChild(li);
-          });
-        }
+        // --- Content Handling ---
 
         function parseContent(content) {
           const parts = content.split("---");
           if (parts.length < 3) return { metadata: {}, body: content };
           try {
             const metadata = jsyaml.load(parts[1]) || {};
+            // Rejoin remaining parts to handle content containing "---"
             const body = parts.slice(2).join("---").trim();
             return { metadata, body };
           } catch (e) {
@@ -635,7 +608,9 @@
           // 3. 重新组合成最终的字符串
           return processedLines.filter((line) => line).join("\n");
         }
+
         function populateEditor(metadata, body) {
+          ui.meta.title.value = metadata.title || "";
           ui.meta.published.value = metadata.published
             ? new Date(metadata.published).toISOString().split("T")[0]
             : "";
@@ -643,7 +618,10 @@
             ? new Date(metadata.updated).toISOString().split("T")[0]
             : "";
           ui.meta.description.value = metadata.description || "";
-          ui.meta.tags.value = metadata.tags ? metadata.tags.join(", ") : "";
+          // Convert array tags to comma-separated string for input display
+          ui.meta.tags.value = Array.isArray(metadata.tags)
+            ? metadata.tags.join(", ")
+            : metadata.tags || "";
           ui.meta.category.value = metadata.category || "";
           if (easyMDE) easyMDE.value(body);
         }
@@ -653,6 +631,64 @@
           ui.meta.published.value = today;
           ui.meta.updated.value = today;
         }
+
+        // --- UI & State Management ---
+        function showLoginError(message) {
+          ui.loginError.textContent = message;
+          ui.loginError.classList.remove("hidden");
+        }
+
+        function showSaveStatus(message, isError = false) {
+          ui.saveStatus.textContent = message;
+          ui.saveStatus.className = isError
+            ? "mt-2 text-right text-error"
+            : "mt-2 text-right text-success";
+          setTimeout(() => (ui.saveStatus.textContent = ""), 5000);
+        }
+
+        function resetEditorState() {
+          ui.editorSection.classList.add("hidden");
+          ui.placeholderSection.classList.remove("hidden");
+          state.currentFile = { path: null, sha: null, isNew: false };
+          document
+            .querySelectorAll("#file-list a")
+            .forEach((el) => el.classList.remove("active"));
+        }
+
+        async function refreshFileList() {
+          try {
+            renderFileList(await getFiles());
+          } catch (error) {
+            showSaveStatus("无法刷新文件列表。", true);
+          }
+        }
+
+        function renderFileList(files) {
+          ui.fileList.innerHTML = "";
+          const mdFiles = files.filter((file) => file.name.endsWith(".md"));
+          if (mdFiles.length === 0) {
+            ui.fileList.innerHTML = "<li><a>未找到 Markdown 文件</a></li>";
+            return;
+          }
+          mdFiles.forEach((file) => {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.dataset.path = file.path;
+            a.dataset.sha = file.sha;
+            a.className = "file-item";
+            a.href = "#";
+            a.textContent = file.name;
+            li.appendChild(a);
+            ui.fileList.appendChild(li);
+
+            // Re-select if this is the current active file
+            if (state.currentFile.path === file.path) {
+              a.classList.add("active");
+            }
+          });
+        }
+
+        // --- Core Action Handlers ---
 
         async function handleFileClick(e) {
           const target = e.target.closest("a.file-item");
@@ -678,16 +714,27 @@
             if (!metadata.published) setTodaysDate();
           } catch (error) {
             showSaveStatus(`加载文件失败: ${error.message}`, true);
+            resetEditorState(); // Revert on failure
           }
         }
 
         async function confirmAndDeleteFile(path, sha) {
+          if (state.currentFile.isNew) {
+            // If it was a new unsaved file, just reset the editor
+            resetEditorState();
+            showSaveStatus("新文件编辑已取消。", false);
+            return;
+          }
+
           if (
             !confirm(
               `你确定要删除文件 "${path.split("/").pop()}" 吗？此操作无法撤销。`
             )
           )
             return;
+
+          ui.deleteFileBtn.classList.add("btn-disabled");
+
           try {
             await deleteFile(path, sha);
             showSaveStatus("文件删除成功！", false);
@@ -695,7 +742,21 @@
             await refreshFileList();
           } catch (error) {
             showSaveStatus(`删除失败: ${error.message}`, true);
+          } finally {
+            ui.deleteFileBtn.classList.remove("btn-disabled");
           }
+        }
+
+        async function handleDeleteButtonClick() {
+          if (!state.currentFile.path) {
+            showSaveStatus("没有选定文件。", true);
+            return;
+          }
+          // Use current state to delete
+          await confirmAndDeleteFile(
+            state.currentFile.path,
+            state.currentFile.sha
+          );
         }
 
         function handleNewFileClick() {
@@ -704,17 +765,27 @@
           ui.newFileModal.showModal();
         }
 
+        function normalizeFilename(name) {
+          let filename = name.trim();
+          // Format filename: lowercase, spaces/non-alphanumeric (except dot/hyphen) to hyphens
+          filename = filename
+            .toLowerCase()
+            .replace(/\s+/g, "-")
+            .replace(/[^a-z0-9-.]/g, "");
+
+          // 1. Add .md suffix if not present
+          if (!filename.endsWith(".md")) filename += ".md";
+          return filename;
+        }
+
         function handleCreateNewFile() {
           let filename = ui.newFileInput.value.trim();
           if (!filename) {
             ui.newFileError.textContent = "文件名不能为空。";
             return;
           }
-          if (!filename.endsWith(".md")) filename += ".md";
-          filename = filename
-            .toLowerCase()
-            .replace(/\s+/g, "-")
-            .replace(/[^a-z0-9-.]/g, "");
+
+          filename = normalizeFilename(filename);
 
           state.currentFile = {
             path: `src/content/posts/${filename}`,
@@ -722,7 +793,15 @@
             isNew: true,
           };
           ui.currentFileName.textContent = filename;
-          populateEditor({}, "");
+
+          // Initialize editor with basic template metadata
+          const templateMeta = {
+            title: ui.newFileInput.value.trim(),
+            category: "",
+            tags: [],
+            description: "",
+          };
+          populateEditor(templateMeta, "Write your content here...");
           setTodaysDate();
 
           ui.placeholderSection.classList.add("hidden");
@@ -732,6 +811,93 @@
             .forEach((el) => el.classList.remove("active"));
           ui.newFileModal.close();
         }
+
+        // --- Rename Logic ---
+
+        function handleRenameClick() {
+          if (!state.currentFile.path || state.currentFile.isNew) {
+            showSaveStatus("请先选择一个已存在的文件进行重命名。", true);
+            return;
+          }
+          // Extract current name without path and without .md suffix
+          const currentName = state.currentFile.path
+            .split("/")
+            .pop()
+            .replace(/\.md$/i, "");
+          ui.renameFileInput.value = currentName;
+          ui.renameFileError.textContent = "";
+          ui.renameFileModal.showModal();
+        }
+
+        async function renameFileAction(oldPath, newFilename) {
+          if (!state.currentFile.sha) {
+            throw new Error("Missing SHA for file manipulation.");
+          }
+
+          // 1. Capture current content
+          const metadata = {
+            title: ui.meta.title.value,
+            published: ui.meta.published.value,
+            updated: ui.meta.updated.value,
+            description: ui.meta.description.value,
+            tags: ui.meta.tags.value,
+            category: ui.meta.category.value,
+          };
+          const body = easyMDE.value();
+          const newContent = `---\n${stringifyMetadata(
+            metadata
+          )}\n---\n\n${body}`;
+
+          newFilename = newFilename.replace(" ", "-");
+
+          const newPath = `src/content/posts/${newFilename}`;
+
+          // 2. Delete old file
+          // Note: We use the existing SHA for deletion.
+          await deleteFile(oldPath, state.currentFile.sha);
+
+          // 3. Create new file
+          const result = await createFile(newPath, newContent);
+
+          // 4. Update state to reflect the new file location/sha
+          state.currentFile.path = newPath;
+          state.currentFile.sha = result.content.sha;
+
+          return result;
+        }
+
+        async function handleRenameConfirm() {
+          const newNameInput = ui.renameFileInput.value.trim();
+          if (!newNameInput) {
+            ui.renameFileError.textContent = "新文件名不能为空。";
+            return;
+          }
+
+          const newFilename = normalizeFilename(newNameInput);
+          const oldPath = state.currentFile.path;
+
+          if (oldPath.split("/").pop() === newFilename) {
+            ui.renameFileError.textContent = "文件名未更改。";
+            return;
+          }
+
+          ui.renameFileConfirmBtn.classList.add("btn-disabled");
+          try {
+            await renameFileAction(oldPath, newFilename);
+            ui.currentFileName.textContent = newFilename;
+            showSaveStatus("文件重命名成功！", false);
+            await refreshFileList();
+
+            ui.renameFileModal.close();
+          } catch (error) {
+            showSaveStatus(`重命名失败: ${error.message}`, true);
+            ui.renameFileError.textContent = `重命名失败: ${error.message}`;
+          } finally {
+            ui.renameFileConfirmBtn.classList.remove("btn-disabled");
+          }
+        }
+
+        // --- Save Handler ---
 
         async function handleSave() {
           if (!state.currentFile.path) {
@@ -750,18 +916,24 @@
               category: ui.meta.category.value,
             };
             const body = easyMDE.value();
+            // Generate full markdown content including front matter
             const newContent = `---\n${stringifyMetadata(
               metadata
             )}\n---\n\n${body}`;
-            const result = state.currentFile.isNew
-              ? await createFile(state.currentFile.path, newContent)
-              : await updateFile(
-                  state.currentFile.path,
-                  newContent,
-                  state.currentFile.sha
-                );
 
-            if (state.currentFile.isNew) await refreshFileList();
+            let result;
+            if (state.currentFile.isNew) {
+              result = await createFile(state.currentFile.path, newContent);
+              await refreshFileList();
+            } else {
+              result = await updateFile(
+                state.currentFile.path,
+                newContent,
+                state.currentFile.sha
+              );
+            }
+
+            // Update SHA for future operations
             state.currentFile.sha = result.content.sha;
             state.currentFile.isNew = false;
             showSaveStatus("文件保存成功！", false);
@@ -783,9 +955,11 @@
             category: ui.meta.category.value,
           };
           const body = easyMDE.value();
-          console.log(
-            "---\n" + stringifyMetadata(metadata) + "\n---\n\n" + body
-          );
+          const output =
+            "---\n" + stringifyMetadata(metadata) + "\n---\n\n" + body;
+          console.log("--- GENERATED FILE CONTENT ---");
+          console.log(output);
+          console.log("------------------------------");
           showSaveStatus("内容已输出到开发者控制台。", false);
         }
 
@@ -834,30 +1008,6 @@
           ui.userInput.value = ui.repoInput.value = ui.patInput.value = "";
         }
 
-        // --- Context Menu Handlers ---
-        function showContextMenu(e) {
-          const fileLink = e.target.closest("a.file-item");
-          if (fileLink) {
-            e.preventDefault();
-            ui.contextMenuDeleteBtn.dataset.path = fileLink.dataset.path;
-            ui.contextMenuDeleteBtn.dataset.sha = fileLink.dataset.sha;
-            ui.contextMenu.style.top = `${e.clientY}px`;
-            ui.contextMenu.style.left = `${e.clientX}px`;
-            ui.contextMenu.style.display = "block";
-          }
-        }
-
-        function hideContextMenu() {
-          if (ui.contextMenu.style.display === "block") {
-            ui.contextMenu.style.display = "none";
-          }
-        }
-
-        async function handleDeleteFromContextMenu() {
-          const { path, sha } = ui.contextMenuDeleteBtn.dataset;
-          if (path && sha) await confirmAndDeleteFile(path, sha);
-        }
-
         // --- Initialization ---
         async function initializeApp() {
           loadInitialTheme();
@@ -870,19 +1020,24 @@
           ui.loginBtn.addEventListener("click", login);
           ui.logoutBtn.addEventListener("click", logout);
           ui.fileList.addEventListener("click", handleFileClick);
-          ui.fileList.addEventListener("contextmenu", showContextMenu);
-          document.addEventListener("click", hideContextMenu);
-          ui.contextMenuDeleteBtn.addEventListener(
-            "click",
-            handleDeleteFromContextMenu
-          );
+
           ui.testOutputBtn.addEventListener("click", handleTestOutput);
           ui.saveBtn.addEventListener("click", handleSave);
+
           ui.newFileBtn.addEventListener("click", handleNewFileClick);
           ui.createFileConfirmBtn.addEventListener(
             "click",
             handleCreateNewFile
           );
+
+          // New/Modified Event Listeners
+          ui.deleteFileBtn.addEventListener("click", handleDeleteButtonClick);
+          ui.renameFileBtn.addEventListener("click", handleRenameClick);
+          ui.renameFileConfirmBtn.addEventListener(
+            "click",
+            handleRenameConfirm
+          );
+
           ui.themeToggle.addEventListener("change", handleThemeToggle);
 
           const savedData = localStorage.getItem("github_editor_data");
