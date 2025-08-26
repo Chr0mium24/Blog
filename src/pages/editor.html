@@ -443,8 +443,74 @@
         };
 
         let easyMDE = null;
+        let draftInterval = null; // 用于持有定时器的 ID
 
-        // --- Theme Functions ---
+        // --- 草稿功能函数 ---
+
+        function getDraftKey(path) {
+          if (!path) return null;
+          return `draft_${state.user}_${state.repo}_${path}`;
+        }
+
+        function saveDraft() {
+          if (!state.currentFile.path || !easyMDE) return;
+
+          const key = getDraftKey(state.currentFile.path);
+          if (!key) return;
+
+          const draft = {
+            metadata: {
+              title: ui.meta.title.value,
+              published: ui.meta.published.value,
+              updated: ui.meta.updated.value,
+              description: ui.meta.description.value,
+              tags: ui.meta.tags.value,
+              category: ui.meta.category.value,
+            },
+            body: easyMDE.value(),
+            savedAt: new Date().toISOString(),
+          };
+
+          try {
+            localStorage.setItem(key, JSON.stringify(draft));
+          } catch (e) {
+            console.error("保存草稿到 localStorage 时出错:", e);
+            showSaveStatus("无法保存草稿，可能是存储空间已满。", true);
+          }
+        }
+
+        function loadDraft(path) {
+          const key = getDraftKey(path);
+          if (!key) return;
+
+          const draftString = localStorage.getItem(key);
+          if (draftString) {
+            try {
+              const draft = JSON.parse(draftString);
+              const savedDate = new Date(draft.savedAt).toLocaleString();
+              if (
+                confirm(`发现该文件于 ${savedDate} 保存的草稿。要加载草稿吗？`)
+              ) {
+                populateEditor(draft.metadata, draft.body);
+                showSaveStatus("已从本地加载草稿。", false);
+              }
+            } catch (e) {
+              console.error("加载草稿时出错:", e);
+              showSaveStatus("加载草稿失败，草稿数据可能已损坏。", true);
+              // 清理损坏的草稿
+              localStorage.removeItem(key);
+            }
+          }
+        }
+
+        function clearDraft(path) {
+          const key = getDraftKey(path);
+          if (key) {
+            localStorage.removeItem(key);
+          }
+        }
+
+        // --- 主题功能 ---
         function applyTheme(theme) {
           document.documentElement.setAttribute("data-theme", theme);
           ui.themeToggle.checked = theme === "dark";
@@ -465,7 +531,7 @@
           applyTheme(theme);
         }
 
-        // --- Utility & API Functions ---
+        // --- 工具 & API 函数 ---
         function encodeContent(content) {
           const encoder = new TextEncoder();
           const uint8Array = encoder.encode(content);
@@ -503,18 +569,18 @@
               );
             }
             if (response.status === 204) {
-              // Handle successful DELETE with no content
+              // 处理成功的无内容 DELETE 请求
               return { success: true };
             }
             return await response.json();
           } catch (error) {
-            console.error("GitHub API Error:", error);
+            console.error("GitHub API 错误:", error);
             throw error;
           }
         }
 
         async function getFiles() {
-          // Assuming blog posts are located in src/content/posts
+          // 假设博客文章位于 src/content/posts
           return githubApiRequest("contents/src/content/posts");
         }
         async function getFileContent(path) {
@@ -552,18 +618,18 @@
           });
         }
 
-        // --- Content Handling ---
+        // --- 内容处理 ---
 
         function parseContent(content) {
           const parts = content.split("---");
           if (parts.length < 3) return { metadata: {}, body: content };
           try {
             const metadata = jsyaml.load(parts[1]) || {};
-            // Rejoin remaining parts to handle content containing "---"
+            // 重新组合剩余部分以处理内容中包含 "---" 的情况
             const body = parts.slice(2).join("---").trim();
             return { metadata, body };
           } catch (e) {
-            console.error("Error parsing YAML metadata:", e);
+            console.error("解析 YAML元数据时出错:", e);
             return { metadata: {}, body: content };
           }
         }
@@ -618,7 +684,7 @@
             ? new Date(metadata.updated).toISOString().split("T")[0]
             : "";
           ui.meta.description.value = metadata.description || "";
-          // Convert array tags to comma-separated string for input display
+          // 将标签数组转换为逗号分隔的字符串以在输入框中显示
           ui.meta.tags.value = Array.isArray(metadata.tags)
             ? metadata.tags.join(", ")
             : metadata.tags || "";
@@ -632,7 +698,7 @@
           ui.meta.updated.value = today;
         }
 
-        // --- UI & State Management ---
+        // --- UI & 状态管理 ---
         function showLoginError(message) {
           ui.loginError.textContent = message;
           ui.loginError.classList.remove("hidden");
@@ -681,19 +747,22 @@
             li.appendChild(a);
             ui.fileList.appendChild(li);
 
-            // Re-select if this is the current active file
+            // 如果这是当前活动文件，则重新选中
             if (state.currentFile.path === file.path) {
               a.classList.add("active");
             }
           });
         }
 
-        // --- Core Action Handlers ---
+        // --- 核心动作处理器 ---
 
         async function handleFileClick(e) {
           const target = e.target.closest("a.file-item");
           if (!target) return;
           e.preventDefault();
+
+          // 在切换前保存当前打开文件的草稿
+          saveDraft();
 
           document
             .querySelectorAll("#file-list a")
@@ -712,15 +781,18 @@
             const { metadata, body } = parseContent(content);
             populateEditor(metadata, body);
             if (!metadata.published) setTodaysDate();
+
+            // 在加载原始文件内容后，检查并加载草稿
+            loadDraft(state.currentFile.path);
           } catch (error) {
             showSaveStatus(`加载文件失败: ${error.message}`, true);
-            resetEditorState(); // Revert on failure
+            resetEditorState(); // 失败时恢复
           }
         }
 
         async function confirmAndDeleteFile(path, sha) {
           if (state.currentFile.isNew) {
-            // If it was a new unsaved file, just reset the editor
+            // 如果是一个未保存的新文件，则只需重置编辑器
             resetEditorState();
             showSaveStatus("新文件编辑已取消。", false);
             return;
@@ -738,6 +810,7 @@
           try {
             await deleteFile(path, sha);
             showSaveStatus("文件删除成功！", false);
+            clearDraft(path); // 删除文件后清除草稿
             if (state.currentFile.path === path) resetEditorState();
             await refreshFileList();
           } catch (error) {
@@ -752,7 +825,7 @@
             showSaveStatus("没有选定文件。", true);
             return;
           }
-          // Use current state to delete
+          // 使用当前状态删除
           await confirmAndDeleteFile(
             state.currentFile.path,
             state.currentFile.sha
@@ -767,13 +840,13 @@
 
         function normalizeFilename(name) {
           let filename = name.trim();
-          // Format filename: lowercase, spaces/non-alphanumeric (except dot/hyphen) to hyphens
+          // 格式化文件名：小写，空格/非字母数字（点/连字符除外）转为连字符
           filename = filename
             .toLowerCase()
             .replace(/\s+/g, "-")
             .replace(/[^a-z0-9-.]/g, "");
 
-          // 1. Add .md suffix if not present
+          // 1. 如果不存在，则添加 .md 后缀
           if (!filename.endsWith(".md")) filename += ".md";
           return filename;
         }
@@ -794,14 +867,14 @@
           };
           ui.currentFileName.textContent = filename;
 
-          // Initialize editor with basic template metadata
+          // 使用基本模板元数据初始化编辑器
           const templateMeta = {
             title: ui.newFileInput.value.trim(),
             category: "",
             tags: [],
             description: "",
           };
-          populateEditor(templateMeta, "Write your content here...");
+          populateEditor(templateMeta, "在这里写下你的内容...");
           setTodaysDate();
 
           ui.placeholderSection.classList.add("hidden");
@@ -812,14 +885,14 @@
           ui.newFileModal.close();
         }
 
-        // --- Rename Logic ---
+        // --- 重命名逻辑 ---
 
         function handleRenameClick() {
           if (!state.currentFile.path || state.currentFile.isNew) {
             showSaveStatus("请先选择一个已存在的文件进行重命名。", true);
             return;
           }
-          // Extract current name without path and without .md suffix
+          // 提取当前文件名，不含路径和 .md 后缀
           const currentName = state.currentFile.path
             .split("/")
             .pop()
@@ -831,10 +904,10 @@
 
         async function renameFileAction(oldPath, newFilename) {
           if (!state.currentFile.sha) {
-            throw new Error("Missing SHA for file manipulation.");
+            throw new Error("文件操作缺少 SHA。");
           }
 
-          // 1. Capture current content
+          // 1. 捕获当前内容
           const metadata = {
             title: ui.meta.title.value,
             published: ui.meta.published.value,
@@ -852,14 +925,14 @@
 
           const newPath = `src/content/posts/${newFilename}`;
 
-          // 2. Delete old file
-          // Note: We use the existing SHA for deletion.
+          // 2. 删除旧文件
+          // 注意：我们使用现有的 SHA 进行删除。
           await deleteFile(oldPath, state.currentFile.sha);
 
-          // 3. Create new file
+          // 3. 创建新文件
           const result = await createFile(newPath, newContent);
 
-          // 4. Update state to reflect the new file location/sha
+          // 4. 更新状态以反映新的文件位置/sha
           state.currentFile.path = newPath;
           state.currentFile.sha = result.content.sha;
 
@@ -885,6 +958,8 @@
           try {
             await renameFileAction(oldPath, newFilename);
             ui.currentFileName.textContent = newFilename;
+            // 清除与旧文件名关联的草稿
+            clearDraft(oldPath);
             showSaveStatus("文件重命名成功！", false);
             await refreshFileList();
 
@@ -897,7 +972,7 @@
           }
         }
 
-        // --- Save Handler ---
+        // --- 保存处理器 ---
 
         async function handleSave() {
           if (!state.currentFile.path) {
@@ -916,7 +991,7 @@
               category: ui.meta.category.value,
             };
             const body = easyMDE.value();
-            // Generate full markdown content including front matter
+            // 生成包含 front matter 的完整 markdown 内容
             const newContent = `---\n${stringifyMetadata(
               metadata
             )}\n---\n\n${body}`;
@@ -933,9 +1008,11 @@
               );
             }
 
-            // Update SHA for future operations
+            // 更新 SHA 以备将来操作
             state.currentFile.sha = result.content.sha;
             state.currentFile.isNew = false;
+            // 成功保存后清除草稿
+            clearDraft(state.currentFile.path);
             showSaveStatus("文件保存成功！", false);
           } catch (error) {
             showSaveStatus(`保存失败: ${error.message}`, true);
@@ -957,7 +1034,7 @@
           const body = easyMDE.value();
           const output =
             "---\n" + stringifyMetadata(metadata) + "\n---\n\n" + body;
-          console.log("--- GENERATED FILE CONTENT ---");
+          console.log("--- 生成的文件内容 ---");
           console.log(output);
           console.log("------------------------------");
           showSaveStatus("内容已输出到开发者控制台。", false);
@@ -1008,7 +1085,7 @@
           ui.userInput.value = ui.repoInput.value = ui.patInput.value = "";
         }
 
-        // --- Initialization ---
+        // --- 初始化 ---
         async function initializeApp() {
           loadInitialTheme();
           easyMDE = new EasyMDE({
@@ -1016,7 +1093,14 @@
             spellChecker: false,
           });
 
-          // Event Listeners
+          // 定期开始自动保存草稿
+          if (draftInterval) clearInterval(draftInterval);
+          draftInterval = setInterval(saveDraft, 5000); // 每 5 秒保存一次
+
+          // 在离开页面前保存草稿
+          window.addEventListener("beforeunload", saveDraft);
+
+          // 事件监听器
           ui.loginBtn.addEventListener("click", login);
           ui.logoutBtn.addEventListener("click", logout);
           ui.fileList.addEventListener("click", handleFileClick);
@@ -1030,7 +1114,7 @@
             handleCreateNewFile
           );
 
-          // New/Modified Event Listeners
+          // 新增/修改的事件监听器
           ui.deleteFileBtn.addEventListener("click", handleDeleteButtonClick);
           ui.renameFileBtn.addEventListener("click", handleRenameClick);
           ui.renameFileConfirmBtn.addEventListener(
