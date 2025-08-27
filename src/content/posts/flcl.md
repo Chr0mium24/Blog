@@ -4,7 +4,7 @@ published: 2025-04-05
 updated: 2025-04-05
 description: ''
 tags: []
-category: 生活
+category: 随笔
 ---
 
 # FLCL(fooly cooly)![0c0891ce261aec9be382759b4bdeb410.1ae8105bc59d46ee2d4d6ee741ea9bab.webp](http://106.55.6.119/static/img/8729b6edbd707848446d76029ed12d42.0c0891ce261aec9be382759b4bdeb410.1ae8105bc59d46ee2d4d6ee741ea9bab.webp)
