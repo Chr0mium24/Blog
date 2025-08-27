@@ -4,7 +4,7 @@ published: 2025-08-27
 updated: 2025-08-27
 description: ''
 tags: []
-category: ''
+category: 生活
 ---
 
 | 特性 | **奔腾小马** | **长安Lumin (糯玉米)** | **五菱宏光MINI EV (特指MINI 3)** | **熊猫骑士 (吉利熊猫mini)** | **零跑T03** |
