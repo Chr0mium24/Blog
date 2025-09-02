@@ -15,7 +15,7 @@ category: 学习
 module and_gate (
   input  a,       // 输入端口 a
   input  b,       // 输入端口 b
-  input  c,d			// 当然你也可以写一起
+  input  c,d,			// 当然你也可以写一起
   output out      // 输出端口 out
 ); 
   assign out = a & b; // 描述功能：out 是 a 和 b 的与运算结果
