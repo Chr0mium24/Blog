@@ -7,6 +7,8 @@ tags: [ECE2050]
 category: 学习
 ---
 
+# 〇、 文件类型
+有.v .sv两种文件，分别为Verilog和SystemVerilog，两者关系类似C和C++关系，SystemVerilog提供了面向对象和系统函数。Verilog中的运算符和流程控制语句也与C类似。
 # 一、模块(Module)和端口(Port)
 
 ### 1.基础用法
@@ -14,8 +16,7 @@ category: 学习
 ```verilog
 module and_gate (
   input  a,       // 输入端口 a
-  input  b,       // 输入端口 b
-  input  c,d,			// 当然你也可以写一起
+  input  b, c,      // 当然你也可以写一起
   output out      // 输出端口 out
 ); 
   assign out = a & b; // 描述功能：out 是 a 和 b 的与运算结果
@@ -28,7 +29,7 @@ endmodule
 ```verilog
 module example (
   input             clk,       // 1位的输入,未标注reg默认类型为wire
-  input [7:0]       data_in,   // 8位的输入总线 (位宽为8)
+  input logic [7:0]      data_in,   // 8位的输入总线 (位宽为8)
   output            valid,     // 1位的输出
   output reg [15:0] data_out,  // 16位的寄存器型输出
   inout [3:0]       bus        // 4位的双向总线
@@ -37,7 +38,9 @@ module example (
 
 - Wire用于组合逻辑，不存储值，它的值由驱动它的元件（例如逻辑门或 assign 语句）决定。 
 
-- Reg用于时序逻辑，代表一个存储元件，如触发器或锁存器。它可以保持一个值，直到被重新赋值。必须在 always 或 initial 块中被赋值。
+- Reg用于时序逻辑，如触发器或锁存器。它可以保持一个值，代表一个存储元件，直到被重新赋值。必须在 always 或 initial 块中被赋值，但是在`always @(*)`中被赋值时，reg将变为类似wire的组合逻辑。
+
+- Logic在SystemVerilog中被引进，属于Wire和Reg的综合，会自动判断属于哪种类型。
 
 # 二、基础语法
 
@@ -98,6 +101,7 @@ end
 | **移位操作符** | `<<` (左移), `>>` (右移) |
 | **拼接操作符** | `{}`, 例如 `{a, b}` |
 | **复制操作符** | `{{}}`, 例如 `{4{1'b1}}` |
+|**系统函数**|如`$countones`，assign x = ($countones({A,B,C,D}) == 3);|
 
 ### 4.不同端口的赋值
 
