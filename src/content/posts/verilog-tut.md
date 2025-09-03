@@ -1,7 +1,7 @@
 ---
 title: verilog入门
 published: 2025-09-02
-updated: 2025-09-02
+updated: 2025-09-03
 description: ''
 tags: [ECE2050]
 category: 学习
