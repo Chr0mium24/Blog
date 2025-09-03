@@ -45,11 +45,6 @@ export const navBarConfig: NavBarConfig = {
 		LinkPreset.Archive,
 		LinkPreset.About,
 		{
-			name: "GitHub",
-			url: "https://github.com/Chr0mium24", // Internal links should not include the base path, as it is automatically added
-			external: true, // Show an external link icon and will open in a new tab
-		},
-		{
 			name: "Skyzhou🥰🥰🥰",
 			url: "https://skyzhou.top", // Internal links should not include the base path, as it is automatically added
 			external: true, // Show an external link icon and will open in a new tab
