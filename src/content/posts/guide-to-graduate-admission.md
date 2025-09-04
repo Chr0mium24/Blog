@@ -4,7 +4,7 @@ published: 2025-09-03
 updated: 2025-09-03
 description: ''
 tags: []
-category: 生活
+category: 学业
 ---
 
 ### **课堂主题：电子与计算机工程 (ECE) 研究生申请深度解析**
