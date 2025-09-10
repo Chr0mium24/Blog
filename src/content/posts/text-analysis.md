@@ -32,7 +32,6 @@ category: 代码
           从词汇、句法、内容、风格等多个维度，对两段中文文本进行全面量化与可视化对比。
         </p>
       </header>
-
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
           <label for="textA" class="block text-lg font-medium text-gray-700"
@@ -57,7 +56,6 @@ category: 代码
           ></textarea>
         </div>
       </div>
-
       <div class="text-center mb-8">
         <button
           id="analyzeBtn"
@@ -66,7 +64,6 @@ category: 代码
           开始深度分析
         </button>
       </div>
-
       <div
         id="results"
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
@@ -74,7 +71,6 @@ category: 代码
         <!-- 图表将在这里动态生成 -->
       </div>
     </div>
-
     <script>
       // --- 文本处理与辅助函数 ---
       const chineseStopWords = new Set([
@@ -109,10 +105,8 @@ category: 代码
         "虽",
         "斯",
       ]);
-
       const splitSentences = (text) =>
         text.match(/[^。？！…\n]+[。？！…\n]?/g) || [];
-
       // 简单的中文分词（此方法仅为演示，精确分析需要专业分词库）
       const tokenize = (text) => {
         // 使用更复杂的正则来尝试匹配中文词语，但仍有限
@@ -137,14 +131,12 @@ category: 代码
           .trim()
           .split(/\s+/)
           .filter(Boolean);
-
       // --- 指标计算函数集合 ---
       const calculateAllMetrics = (text) => {
         if (!text) return null;
         const tokens = tokenizeForWords(text);
         const sentences = splitSentences(text);
         const windowSize = 50;
-
         // 词汇指标
         const slidingTTR =
           tokens.length > windowSize
@@ -172,7 +164,6 @@ category: 代码
             .sort((a, b) => b[1] - a[1])
             .slice(0, 10);
         })();
-
         // 句法指标
         const sentenceLengths = sentences
           .map((s) => tokenizeForWords(s).length)
@@ -180,7 +171,6 @@ category: 代码
         const avgSentenceLength =
           sentenceLengths.reduce((a, b) => a + b, 0) /
           (sentenceLengths.length || 1);
-
         // 风格指标
         const punctuationFreq = {
           "，": (text.match(/，/g) || []).length,
@@ -189,7 +179,6 @@ category: 代码
           "！": (text.match(/！/g) || []).length,
           "、": (text.match(/、/g) || []).length,
         };
-
         // 篇章与信息论指标
         const lzRate = LZString.compress(text).length / text.length;
         const similarities = (() => {
@@ -223,10 +212,8 @@ category: 代码
           }
           return sims;
         })();
-
         // 综合指标
         const complexityIndex = avgSentenceLength * avgWordLength;
-
         return {
           slidingTTR,
           overallTTR,
@@ -239,7 +226,6 @@ category: 代码
           complexityIndex,
         };
       };
-
       // --- 图表渲染 ---
       const charts = {};
       const createChart = (ctx, config) => {
@@ -247,7 +233,6 @@ category: 代码
         if (charts[chartId]) charts[chartId].destroy();
         charts[chartId] = new Chart(ctx, config);
       };
-
       const renderAllCharts = (dataA, dataB) => {
         const resultsDiv = document.getElementById("results");
         resultsDiv.innerHTML = `
@@ -261,7 +246,6 @@ category: 代码
                 <div class="bg-white p-4 rounded-lg shadow"><h3 class="font-bold text-center mb-2">内容关键词 (文本A)</h3><canvas id="tfChartA"></canvas><p class="text-sm text-gray-500 mt-2 text-center">文本A中剔除停用词后的高频词。</p></div>
                 <div class="bg-white p-4 rounded-lg shadow"><h3 class="font-bold text-center mb-2">内容关键词 (文本B)</h3><canvas id="tfChartB"></canvas><p class="text-sm text-gray-500 mt-2 text-center">文本B中剔除停用词后的高频词。</p></div>
             `;
-
         // Row 1
         createChart(document.getElementById("ttrChart").getContext("2d"), {
           type: "line",
@@ -340,7 +324,6 @@ category: 代码
             ],
           },
         });
-
         // Row 2
         createChart(document.getElementById("lexicalChart").getContext("2d"), {
           type: "bar",
@@ -399,7 +382,6 @@ category: 代码
             ],
           },
         });
-
         // Row 3
         createChart(document.getElementById("tfChartA").getContext("2d"), {
           type: "bar",
@@ -430,7 +412,6 @@ category: 代码
           },
         });
       };
-
       // --- 主逻辑 ---
       document.getElementById("analyzeBtn").addEventListener("click", () => {
         const textA = document.getElementById("textA").value;
@@ -439,10 +420,8 @@ category: 代码
           alert("请在两个输入框中都粘贴文本。");
           return;
         }
-
         const dataA = calculateAllMetrics(textA);
         const dataB = calculateAllMetrics(textB);
-
         renderAllCharts(dataA, dataB);
       });
     </script>
