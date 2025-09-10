@@ -1,10 +1,10 @@
 ---
 title: 文本编辑
-published: 2025-08-27
-updated: 2025-08-27
+published: 2025-09-10
+updated: 2025-09-10
 description: ""
 tags: []
-category: 生活
+category: 代码
 ---
 
 <!DOCTYPE html>
