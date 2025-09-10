@@ -22,7 +22,7 @@ category: 代码
     <!-- 引入LZ-String库 用于计算压缩率 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
   </head>
-  <body class="bg-gray-100 font-sans">
+  <div class="bg-gray-100 font-sans">
     <div class="container mx-auto p-4 md:p-8">
       <header class="text-center mb-8">
         <h1 class="text-3xl md:text-4xl font-bold text-gray-800">
@@ -446,5 +446,5 @@ category: 代码
         renderAllCharts(dataA, dataB);
       });
     </script>
-  </body>
+  </div>
 </html>
