@@ -11,6 +11,8 @@ https://blankspace.feishu.cn/share/base/view/shrcnctnLSH9AJM4DCkEYaOC1ue
 
 https://docs.qq.com/sheet/DT051WFNtRkx2cEJy
 
+https://registry.cuhk.edu.cn/sites/default/files/2025-09/Study%20Scheme%20-%20ECE_2024-25_3rd%282025%29_20250714.pdf
+
 CSC3100, ECE1811, 2001, 2050, 2811, 3001, 3080, 3810, 4010, ERG4901
 
 
