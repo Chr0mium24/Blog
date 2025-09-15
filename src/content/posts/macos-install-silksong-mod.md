@@ -10,10 +10,10 @@ category: 游戏
 arm版BepInEx下载(Github [issue 链接](https://github.com/BepInEx/BepInEx/issues/899) )
 
 > You can build the Apple Silicon version yourself, it's based on existing pull requests from here https://github.com/Krakazybik/BepInEx/tree/feat/harmony-v-2-15-0. Build commands:
-> ```bash
+```bash
  export GITHUB_TOKEN=ghp_xxx
  ./build.sh --target=Pack --doorstop_run=17548755183
-> ```
+```
 > Alternatively, you can use the version I built, at your own risk.
 [BepInEx_macos_arm64_5.4.23.3.zip](https://github.com/user-attachments/files/22302507/BepInEx_macos_arm64_5.4.23.3.zip)
 
