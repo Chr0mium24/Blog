@@ -1,5 +1,5 @@
 ---
-title: 丝之歌 macOS(arm) mod 安装教程
+title: 丝之歌 macOS(intel,arm) mod 安装教程
 published: 2025-09-15
 updated: 2025-09-15
 description: ''
@@ -7,7 +7,9 @@ tags: [丝之歌]
 category: 游戏
 ---
 
-arm版BepInEx下载(Github [issue 链接](https://github.com/BepInEx/BepInEx/issues/899) )
+#### intel版BepInEx下载
+Github下载链接：https://github.com/BepInEx/BepInEx/releases/download/v5.4.23.3/BepInEx_macos_x64_5.4.23.3.zip
+#### arm版BepInEx下载(Github [issue 链接](https://github.com/BepInEx/BepInEx/issues/899) )
 
 > You can build the Apple Silicon version yourself, it's based on existing pull requests from here https://github.com/Krakazybik/BepInEx/tree/feat/harmony-v-2-15-0. Build commands:
 > ```bash
@@ -25,7 +27,11 @@ sudo xattr -r -d com.apple.quarantine libdoorstop.dylib
 ```
 
 然后在Steam设置丝之歌启动项，将下面命令的目录设定为上文的`$GamePath`:
-
+* intel版本：
+```bash
+"/Users/cr/Library/Application Support/Steam/steamapps/common/Hollow Knight Silksong/run_bepinex.sh" %command%
+```
+* arm版本：
 ```bash
 /usr/bin/arch -arm64 /bin/bash "/Users/cr/Library/Application Support/Steam/steamapps/common/Hollow Knight Silksong/run_bepinex.sh" %command%
 ```
