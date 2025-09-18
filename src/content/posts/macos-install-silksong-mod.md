@@ -39,5 +39,7 @@ sudo xattr -r -d com.apple.quarantine libdoorstop.dylib
 启动游戏后，BepInEx文件夹下为产生一堆文件，即为初始化成功，然后去网上下载mod，将dll文件放在加到`BepInEx/pligins`下即可。
 
 存档分析：https://tureptor.github.io/silksong-save-analyzer/
-存档编辑：https://bloodorca.github.io/hollow/
+
+存档编辑：https://bloodorca.github.io/hollow/   或者  https://just-addwater.github.io/silksong-saveeditor/
+
 地图：https://i0.hdslb.com/bfs/note/47bccbc725d5df901497c1ce97ce3a25528d13e7.jpg
