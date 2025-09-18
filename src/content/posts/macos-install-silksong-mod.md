@@ -1,7 +1,7 @@
 ---
 title: 丝之歌 macOS(intel,arm) mod 安装教程
 published: 2025-09-15
-updated: 2025-09-15
+updated: 2025-09-19
 description: ''
 tags: [丝之歌]
 category: 游戏
