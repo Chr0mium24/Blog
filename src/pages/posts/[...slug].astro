@@ -92,6 +92,20 @@ const jsonLd = {
                         tags={entry.data.tags}
                         category={entry.data.category}
                 ></PostMetadata>
+
+                <!-- download markdown button -->
+                <div class="flex justify-end mb-3">
+                    <a
+                        href={`/api/download/${entry.slug}.md`}
+                        download
+                        class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-black/70 dark:text-white/70 bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 rounded-lg transition-colors duration-200"
+                        title="下载 Markdown 文件"
+                    >
+                        <Icon name="material-symbols:download-rounded" class="w-4 h-4" />
+                        下载 MD
+                    </a>
+                </div>
+
                 {!entry.data.image && <div class="border-[var(--line-divider)] border-dashed border-b-[1px] mb-5"></div>}
             </div>
 
