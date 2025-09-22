@@ -13,6 +13,7 @@ interface Props {
 	category: string | null;
 	hideTagsForMobile?: boolean;
 	hideUpdateDate?: boolean;
+	slug?: string;
 }
 const {
 	published,
@@ -21,6 +22,7 @@ const {
 	category,
 	hideTagsForMobile = false,
 	hideUpdateDate = false,
+	slug,
 } = Astro.props;
 const className = Astro.props.class;
 ---
@@ -79,4 +81,21 @@ const className = Astro.props.class;
             {!(tags && tags.length > 0) && <div class="transition text-50 text-sm font-medium">{i18n(I18nKey.noTags)}</div>}
         </div>
     </div>
+
+    <!-- download markdown button -->
+    {slug && (
+        <div class="flex items-center">
+            <div class="meta-icon">
+                <Icon name="material-symbols:download-rounded" class="text-xl" />
+            </div>
+            <a
+                href={`/api/download/${slug}.md`}
+                download
+                class="transition text-50 text-sm font-medium hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap"
+                title="下载 Markdown 文件"
+            >
+                下载
+            </a>
+        </div>
+    )}
 </div>
