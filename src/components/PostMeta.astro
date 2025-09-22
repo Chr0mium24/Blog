@@ -98,4 +98,20 @@ const className = Astro.props.class;
             </a>
         </div>
     )}
+
+    <!-- edit button -->
+    {slug && (
+        <div class="flex items-center">
+            <div class="meta-icon">
+                <Icon name="material-symbols:edit-outline-rounded" class="text-xl" />
+            </div>
+            <a
+                href={`/editor/?slug=${encodeURIComponent(slug)}`}
+                class="transition text-50 text-sm font-medium hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap"
+                title="编辑文章"
+            >
+                编辑
+            </a>
+        </div>
+    )}
 </div>

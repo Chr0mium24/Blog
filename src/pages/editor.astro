@@ -1085,6 +1085,56 @@
           ui.userInput.value = ui.repoInput.value = ui.patInput.value = "";
         }
 
+        // --- URL 参数处理 ---
+        function getUrlParams() {
+          const urlParams = new URLSearchParams(window.location.search);
+          return {
+            slug: urlParams.get('slug')
+          };
+        }
+
+        async function loadFileBySlug(slug) {
+          if (!slug) return;
+
+          try {
+            const files = await getFiles();
+            const targetFile = files.find(file => {
+              const fileName = file.name.replace('.md', '');
+              return fileName === slug;
+            });
+
+            if (targetFile) {
+              // 模拟点击文件来加载它
+              state.currentFile.path = targetFile.path;
+              ui.placeholderSection.classList.add("hidden");
+              ui.editorSection.classList.remove("hidden");
+              ui.currentFileName.textContent = targetFile.name;
+
+              // 在文件列表中高亮选中的文件
+              document.querySelectorAll("#file-list a").forEach(el => {
+                el.classList.remove("active");
+                if (el.dataset.path === targetFile.path) {
+                  el.classList.add("active");
+                }
+              });
+
+              const content = await getFileContent(targetFile.path);
+              const { metadata, body } = parseContent(content);
+              populateEditor(metadata, body);
+              if (!metadata.published) setTodaysDate();
+
+              // 检查并加载草稿
+              loadDraft(targetFile.path);
+
+              showSaveStatus(`已自动加载文章: ${targetFile.name}`, false);
+            } else {
+              showSaveStatus(`未找到文章: ${slug}`, true);
+            }
+          } catch (error) {
+            showSaveStatus(`加载指定文章失败: ${error.message}`, true);
+          }
+        }
+
         // --- 初始化 ---
         async function initializeApp() {
           loadInitialTheme();
@@ -1131,6 +1181,12 @@
             ui.repoInput.value = repo;
             ui.patInput.value = pat;
             await login();
+
+            // 登录成功后检查 URL 参数
+            const params = getUrlParams();
+            if (params.slug) {
+              await loadFileBySlug(params.slug);
+            }
           }
         }
         initializeApp();
