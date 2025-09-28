@@ -40,7 +40,7 @@ sudo xattr -r -d com.apple.quarantine libdoorstop.dylib
 
 存档分析：https://tureptor.github.io/silksong-save-analyzer/
 
-存档中文分析（面具，灵丝，金属，纪念盒，苔莓）
+存档中文分析（面具，灵丝，金属，纪念盒，苔莓）：https://rainincat.github.io/
 
 存档编辑：https://bloodorca.github.io/hollow/   或者  https://just-addwater.github.io/silksong-saveeditor/
 
