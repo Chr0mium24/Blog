@@ -23,7 +23,7 @@ import {
 } from "./utils";
 
 
-declare const Vditor: any; // <-- 添加 Vditor 声明
+import Vditor from "vditor";
 
 // UI 元素引用
 const ui = {
@@ -102,6 +102,13 @@ function applyTheme(theme: string) {
     html.classList.remove("dark");
     lightIcon?.classList.add("hidden");
     darkIcon?.classList.remove("hidden");
+  }
+
+   if (vditorInstance) {
+    // Vditor.setTheme(editorThemeName, contentThemeName, themeMode)
+    // 使用主题名作为 Vditor 的编辑器主题和内容主题，并指定模式
+    // Vditor 内置了 'dark' 和 'light' 主题。
+    vditorInstance.setTheme(theme, theme, theme);
   }
 }
 
@@ -571,9 +578,7 @@ function handleTestOutput() {
   const metadata = getEditorMetadata();
   const body = vditorInstance.getValue();
   const output = createFullMarkdown(metadata, body);
-  console.log("--- 生成的文件内容 ---");
   console.log(output);
-  console.log("------------------------------");
   showSaveStatus("内容已输出到开发者控制台。", false);
 }
 
@@ -667,6 +672,7 @@ async function loadFileBySlug(slug: string) {
   }
 }
 
+
 // --- 初始化 ---
 export async function initializeApp() {
   loadInitialTheme();
@@ -674,7 +680,7 @@ export async function initializeApp() {
     height: 500, // 设置一个合理的初始高度
     placeholder: "",
     mode: "sv", // Split View (编辑/预览分屏)
-    theme: document.documentElement.classList.contains("dark") ? 'dark' : 'light', // 设置初始主题
+    theme: document.documentElement.classList.contains("dark") ? 'dark' : 'classic', // 设置初始主题
     toolbarConfig: {
         pin: true, // 固定工具栏
     },

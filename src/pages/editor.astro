@@ -25,12 +25,6 @@ const configHue = siteConfig.themeColor.hue;
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/vditor@3.9.7/dist/index.css"
     />
-    <script src="https://cdn.jsdelivr.net/npm/vditor@3.9.7/dist/index.min.js"
-    ></script>
-
-    <!-- YAML Parser (js-yaml) -->
-    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"
-    ></script>
 
     <!-- Set the theme before the page is rendered to avoid a flash -->
     <!-- 此部分仍需保留，因为它必须在其他脚本之前同步执行 -->
@@ -255,7 +249,7 @@ const configHue = siteConfig.themeColor.hue;
               <div class="flex justify-between items-center mt-6">
                 <button
                   id="delete-file-btn"
-                  class="btn-plain px-4 py-2 rounded-lg text-red-500 hover:bg-red-500/10"
+                  class="!text-red-500 btn-plain px-4 py-2 rounded-lg !hover:bg-red-500"
                 >
                   删除文件
                 </button>
@@ -268,7 +262,7 @@ const configHue = siteConfig.themeColor.hue;
                   </button>
                   <button
                     id="save-btn"
-                    class="btn-regular px-6 py-2 rounded-lg font-medium flex items-center gap-2"
+                    class="btn-regular px-4 py-2 rounded-lg font-medium flex items-center gap-2"
                   >
                     <span id="save-spinner" class="hidden">⏳</span>
                     保存更改
@@ -361,6 +355,9 @@ const configHue = siteConfig.themeColor.hue;
         </div>
       </div>
     </div>
+    <!-- YAML Parser (js-yaml) -->
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"
+    ></script>
 
     <!-- 导入并运行主客户端脚本 -->
     <script>
