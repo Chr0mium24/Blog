@@ -1,0 +1,165 @@
+:root {
+  --hue: var(--configHue, 250);
+  --page-bg: oklch(0.95 0.01 var(--hue));
+  --card-bg: white;
+  --btn-plain-bg-hover: oklch(0.95 0.013 var(--hue));
+  --btn-plain-bg-active: oklch(0.92 0.016 var(--hue));
+  --btn-regular-bg: oklch(0.9 0.015 var(--hue));
+  --btn-regular-bg-hover: oklch(0.85 0.02 var(--hue));
+  --btn-regular-bg-active: oklch(0.8 0.025 var(--hue));
+  --btn-content: oklch(0.35 0.04 var(--hue));
+  --primary: oklch(0.7 0.14 var(--hue));
+  --selection-bg: oklch(0.9 0.09 var(--hue));
+  --radius-large: 0.75rem;
+}
+
+.dark {
+  --page-bg: oklch(0.16 0.014 var(--hue));
+  --card-bg: oklch(0.23 0.015 var(--hue));
+  --btn-plain-bg-hover: oklch(0.25 0.015 var(--hue));
+  --btn-plain-bg-active: oklch(0.3 0.02 var(--hue));
+  --btn-regular-bg: oklch(0.3 0.02 var(--hue));
+  --btn-regular-bg-hover: oklch(0.35 0.03 var(--hue));
+  --btn-regular-bg-active: oklch(0.4 0.03 var(--hue));
+  --btn-content: oklch(0.75 0.04 var(--hue));
+  --primary: oklch(0.75 0.14 var(--hue));
+  --selection-bg: oklch(0.4 0.09 var(--hue));
+}
+
+/* Component classes */
+.card-base {
+  border-radius: var(--radius-large);
+  overflow: hidden;
+  background-color: var(--card-bg);
+  transition: all 0.3s;
+}
+
+.card-shadow {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.btn-plain {
+  transition: all 0.3s;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.dark .btn-plain {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.btn-plain:hover {
+  color: var(--primary);
+  background-color: var(--btn-plain-bg-hover);
+}
+
+.btn-plain:active {
+  background-color: var(--btn-plain-bg-active);
+}
+
+.btn-regular {
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--btn-regular-bg);
+  color: var(--btn-content);
+}
+
+.dark .btn-regular {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.btn-regular:hover {
+  background-color: var(--btn-regular-bg-hover);
+}
+
+.btn-regular:active {
+  background-color: var(--btn-regular-bg-active);
+}
+
+.text-90 {
+  color: rgba(0, 0, 0, 0.9);
+}
+
+.dark .text-90 {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.text-75 {
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.dark .text-75 {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+::selection {
+  background-color: var(--selection-bg);
+}
+
+/* Editor specific styles */
+.editor-container .EasyMDE-container {
+  height: 100%;
+}
+
+.editor-container .CodeMirror {
+  height: calc(100vh - 500px);
+  border-radius: var(--radius-large);
+  background-color: var(--card-bg);
+  color: oklch(0.25 0.02 var(--hue));
+  border: 1px solid oklch(0.85 0.015 var(--hue));
+  font-family: "JetBrains Mono", monospace;
+}
+
+.dark .editor-container .CodeMirror {
+  background-color: oklch(0.2 0.015 var(--hue));
+  color: oklch(0.85 0.02 var(--hue));
+  border: 1px solid oklch(0.3 0.02 var(--hue));
+}
+
+.editor-container .CodeMirror-gutters {
+  background-color: var(--card-bg);
+  border-right: 1px solid oklch(0.85 0.015 var(--hue));
+}
+
+.dark .editor-container .CodeMirror-gutters {
+  background-color: oklch(0.2 0.015 var(--hue));
+  border-right: 1px solid oklch(0.3 0.02 var(--hue));
+}
+
+.editor-container .editor-toolbar {
+  border-color: oklch(0.85 0.015 var(--hue));
+  background-color: var(--card-bg);
+  border-radius: var(--radius-large) var(--radius-large) 0 0;
+}
+
+.dark .editor-container .editor-toolbar {
+  border-color: oklch(0.3 0.02 var(--hue));
+  background-color: oklch(0.2 0.015 var(--hue));
+}
+
+.editor-container .editor-toolbar a {
+  color: oklch(0.5 0.03 var(--hue)) !important;
+}
+
+.dark .editor-container .editor-toolbar a {
+  color: oklch(0.7 0.04 var(--hue)) !important;
+}
+
+.editor-container .editor-toolbar a.active,
+.editor-container .editor-toolbar a:hover {
+  background: var(--btn-plain-bg-hover);
+  border-color: transparent;
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}

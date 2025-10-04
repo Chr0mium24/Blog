@@ -3,11 +3,16 @@ import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 
-const configHue = 250; // Match blog theme hue
+import "../styles/editor.css";
+import { siteConfig } from "@/config";
+const configHue = siteConfig.themeColor.hue;
 ---
 
-<!DOCTYPE html>
-<html lang="zh-CN" class="bg-[var(--page-bg)] transition text-[14px] md:text-[16px]">
+<!doctype html>
+<html
+  lang="zh-CN"
+  class="bg-[var(--page-bg)] transition text-[14px] md:text-[16px]"
+>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -21,184 +26,26 @@ const configHue = 250; // Match blog theme hue
     <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
 
     <!-- YAML Parser (js-yaml) -->
-    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"
+    ></script>
 
     <!-- Set the theme before the page is rendered to avoid a flash -->
     <script is:inline>
       // Load the theme from local storage
-      const savedTheme = localStorage.getItem('github_editor_theme');
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+      const savedTheme = localStorage.getItem("github_editor_theme");
+      const systemPrefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
+      const theme = savedTheme || (systemPrefersDark ? "dark" : "light");
 
-      if (theme === 'dark') {
-        document.documentElement.classList.add('dark');
+      if (theme === "dark") {
+        document.documentElement.classList.add("dark");
       }
     </script>
 
-    <style is:global define:vars={{ configHue }}>
+    <style define:vars={{ configHue }}>
       :root {
-        --hue: var(--configHue);
-        --page-bg: oklch(0.95 0.01 var(--hue));
-        --card-bg: white;
-        --btn-plain-bg-hover: oklch(0.95 0.013 var(--hue));
-        --btn-plain-bg-active: oklch(0.92 0.016 var(--hue));
-        --btn-regular-bg: oklch(0.90 0.015 var(--hue));
-        --btn-regular-bg-hover: oklch(0.85 0.02 var(--hue));
-        --btn-regular-bg-active: oklch(0.80 0.025 var(--hue));
-        --btn-content: oklch(0.35 0.04 var(--hue));
-        --primary: oklch(0.70 0.14 var(--hue));
-        --selection-bg: oklch(0.90 0.09 var(--hue));
-        --radius-large: 0.75rem;
-      }
-
-      .dark {
-        --page-bg: oklch(0.16 0.014 var(--hue));
-        --card-bg: oklch(0.23 0.015 var(--hue));
-        --btn-plain-bg-hover: oklch(0.25 0.015 var(--hue));
-        --btn-plain-bg-active: oklch(0.30 0.02 var(--hue));
-        --btn-regular-bg: oklch(0.30 0.02 var(--hue));
-        --btn-regular-bg-hover: oklch(0.35 0.03 var(--hue));
-        --btn-regular-bg-active: oklch(0.40 0.03 var(--hue));
-        --btn-content: oklch(0.75 0.04 var(--hue));
-        --primary: oklch(0.75 0.14 var(--hue));
-        --selection-bg: oklch(0.40 0.09 var(--hue));
-      }
-
-      /* Component classes */
-      .card-base {
-        border-radius: var(--radius-large);
-        overflow: hidden;
-        background-color: var(--card-bg);
-        transition: all 0.3s;
-      }
-
-      .card-shadow {
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-      }
-
-      .btn-plain {
-        transition: all 0.3s;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: none;
-        color: rgba(0, 0, 0, 0.75);
-      }
-
-      .dark .btn-plain {
-        color: rgba(255, 255, 255, 0.75);
-      }
-
-      .btn-plain:hover {
-        color: var(--primary);
-        background-color: var(--btn-plain-bg-hover);
-      }
-
-      .btn-plain:active {
-        background-color: var(--btn-plain-bg-active);
-      }
-
-      .btn-regular {
-        transition: all 0.3s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: var(--btn-regular-bg);
-        color: var(--btn-content);
-      }
-
-      .dark .btn-regular {
-        color: rgba(255, 255, 255, 0.75);
-      }
-
-      .btn-regular:hover {
-        background-color: var(--btn-regular-bg-hover);
-      }
-
-      .btn-regular:active {
-        background-color: var(--btn-regular-bg-active);
-      }
-
-      .text-90 {
-        color: rgba(0, 0, 0, 0.9);
-      }
-
-      .dark .text-90 {
-        color: rgba(255, 255, 255, 0.9);
-      }
-
-      .text-75 {
-        color: rgba(0, 0, 0, 0.75);
-      }
-
-      .dark .text-75 {
-        color: rgba(255, 255, 255, 0.75);
-      }
-
-      ::selection {
-        background-color: var(--selection-bg);
-      }
-
-      /* Editor specific styles */
-      .editor-container .EasyMDE-container {
-        height: 100%;
-      }
-      .editor-container .CodeMirror {
-        height: calc(100vh - 500px);
-        border-radius: var(--radius-large);
-        background-color: var(--card-bg);
-        color: oklch(0.25 0.02 var(--hue));
-        border: 1px solid oklch(0.85 0.015 var(--hue));
-        font-family: 'JetBrains Mono', monospace;
-      }
-
-      .dark .editor-container .CodeMirror {
-        background-color: oklch(0.20 0.015 var(--hue));
-        color: oklch(0.85 0.02 var(--hue));
-        border: 1px solid oklch(0.30 0.02 var(--hue));
-      }
-
-      .editor-container .CodeMirror-gutters {
-        background-color: var(--card-bg);
-        border-right: 1px solid oklch(0.85 0.015 var(--hue));
-      }
-
-      .dark .editor-container .CodeMirror-gutters {
-        background-color: oklch(0.20 0.015 var(--hue));
-        border-right: 1px solid oklch(0.30 0.02 var(--hue));
-      }
-
-      .editor-container .editor-toolbar {
-        border-color: oklch(0.85 0.015 var(--hue));
-        background-color: var(--card-bg);
-        border-radius: var(--radius-large) var(--radius-large) 0 0;
-      }
-
-      .dark .editor-container .editor-toolbar {
-        border-color: oklch(0.30 0.02 var(--hue));
-        background-color: oklch(0.20 0.015 var(--hue));
-      }
-
-      .editor-container .editor-toolbar a {
-        color: oklch(0.50 0.03 var(--hue)) !important;
-      }
-
-      .dark .editor-container .editor-toolbar a {
-        color: oklch(0.70 0.04 var(--hue)) !important;
-      }
-
-      .editor-container .editor-toolbar a.active,
-      .editor-container .editor-toolbar a:hover {
-        background: var(--btn-plain-bg-hover);
-        border-color: transparent;
-      }
-
-      .file-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
+        --configHue: var(--configHue); /* 注入 configHue 为 CSS 变量 */
       }
     </style>
   </head>
@@ -240,12 +87,16 @@ const configHue = 250; // Match blog theme hue
               />
             </div>
             <div class="flex justify-end mt-6">
-              <button id="login-btn" class="btn-regular px-6 py-2.5 rounded-lg font-medium flex items-center gap-2">
+              <button
+                id="login-btn"
+                class="btn-regular px-6 py-2.5 rounded-lg font-medium flex items-center gap-2"
+              >
                 <span id="login-spinner" class="hidden">⏳</span>
                 登录并加载文件
               </button>
             </div>
-            <div id="login-error" class="text-red-500 mt-2 hidden text-sm"></div>
+            <div id="login-error" class="text-red-500 mt-2 hidden text-sm">
+            </div>
           </div>
         </div>
       </div>
@@ -256,15 +107,38 @@ const configHue = 250; // Match blog theme hue
           <h1 class="text-3xl font-bold text-90">博客文章编辑器</h1>
           <div class="flex items-center gap-4">
             <!-- Theme Toggle -->
-            <button id="theme-toggle" class="btn-plain w-10 h-10 rounded-lg flex items-center justify-center">
-              <svg id="theme-icon-light" class="w-6 h-6 hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z"/>
+            <button
+              id="theme-toggle"
+              class="btn-plain w-10 h-10 rounded-lg flex items-center justify-center"
+            >
+              <svg
+                id="theme-icon-light"
+                class="w-6 h-6 hidden"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z"
+                ></path>
               </svg>
-              <svg id="theme-icon-dark" class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                <path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" clip-rule="evenodd"/>
+              <svg
+                id="theme-icon-dark"
+                class="w-6 h-6"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z"
+                  clip-rule="evenodd"></path>
               </svg>
             </button>
-            <button id="logout-btn" class="btn-regular px-4 py-2 rounded-lg text-sm font-medium">
+            <button
+              id="logout-btn"
+              class="btn-regular px-4 py-2 rounded-lg text-sm font-medium"
+            >
               登出
             </button>
           </div>
@@ -276,11 +150,17 @@ const configHue = 250; // Match blog theme hue
             <div class="card-base card-shadow p-6">
               <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold text-90">文章列表</h2>
-                <button id="new-file-btn" class="btn-regular px-3 py-1.5 rounded-lg text-sm font-medium">
+                <button
+                  id="new-file-btn"
+                  class="btn-regular px-3 py-1.5 rounded-lg text-sm font-medium"
+                >
                   新建
                 </button>
               </div>
-              <div id="file-list-container" class="max-h-[calc(100vh-200px)] overflow-y-auto">
+              <div
+                id="file-list-container"
+                class="max-h-[calc(100vh-200px)] overflow-y-auto"
+              >
                 <ul id="file-list" class="space-y-1"></ul>
               </div>
             </div>
@@ -292,9 +172,14 @@ const configHue = 250; // Match blog theme hue
               <!-- Title and Rename Button -->
               <div class="flex items-center gap-3 mb-6">
                 <h2 class="text-2xl font-bold text-90">
-                  编辑: <span id="current-file-name" class="font-mono text-[var(--primary)]"></span>
+                  编辑: <span
+                    id="current-file-name"
+                    class="font-mono text-[var(--primary)]"></span>
                 </h2>
-                <button id="rename-file-btn" class="btn-plain px-3 py-1 rounded-md text-sm">
+                <button
+                  id="rename-file-btn"
+                  class="btn-plain px-3 py-1 rounded-md text-sm"
+                >
                   重命名
                 </button>
               </div>
@@ -309,7 +194,9 @@ const configHue = 250; // Match blog theme hue
                   />
                 </div>
                 <div>
-                  <label class="block text-75 mb-2 text-sm">类别 (Category)</label>
+                  <label class="block text-75 mb-2 text-sm"
+                    >类别 (Category)</label
+                  >
                   <input
                     id="meta-category"
                     type="text"
@@ -317,7 +204,9 @@ const configHue = 250; // Match blog theme hue
                   />
                 </div>
                 <div>
-                  <label class="block text-75 mb-2 text-sm">发布日期 (Published)</label>
+                  <label class="block text-75 mb-2 text-sm"
+                    >发布日期 (Published)</label
+                  >
                   <input
                     id="meta-published"
                     type="date"
@@ -325,7 +214,9 @@ const configHue = 250; // Match blog theme hue
                   />
                 </div>
                 <div>
-                  <label class="block text-75 mb-2 text-sm">更新日期 (Updated)</label>
+                  <label class="block text-75 mb-2 text-sm"
+                    >更新日期 (Updated)</label
+                  >
                   <input
                     id="meta-updated"
                     type="date"
@@ -333,7 +224,9 @@ const configHue = 250; // Match blog theme hue
                   />
                 </div>
                 <div class="md:col-span-2">
-                  <label class="block text-75 mb-2 text-sm">标签 (Tags, 用英文逗号分隔)</label>
+                  <label class="block text-75 mb-2 text-sm"
+                    >标签 (Tags, 用英文逗号分隔)</label
+                  >
                   <input
                     id="meta-tags"
                     type="text"
@@ -341,7 +234,9 @@ const configHue = 250; // Match blog theme hue
                   />
                 </div>
                 <div class="md:col-span-2">
-                  <label class="block text-75 mb-2 text-sm">描述 (Description)</label>
+                  <label class="block text-75 mb-2 text-sm"
+                    >描述 (Description)</label
+                  >
                   <textarea
                     id="meta-description"
                     class="w-full px-4 py-2 rounded-lg bg-[var(--btn-regular-bg)] text-90 border border-transparent focus:border-[var(--primary)] focus:outline-none transition h-24 resize-none"
@@ -352,14 +247,23 @@ const configHue = 250; // Match blog theme hue
                 <textarea id="markdown-editor"></textarea>
               </div>
               <div class="flex justify-between items-center mt-6">
-                <button id="delete-file-btn" class="btn-plain px-4 py-2 rounded-lg text-red-500 hover:bg-red-500/10">
+                <button
+                  id="delete-file-btn"
+                  class="btn-plain px-4 py-2 rounded-lg text-red-500 hover:bg-red-500/10"
+                >
                   删除文件
                 </button>
                 <div class="flex gap-3">
-                  <button id="test-output-btn" class="btn-plain px-4 py-2 rounded-lg">
+                  <button
+                    id="test-output-btn"
+                    class="btn-plain px-4 py-2 rounded-lg"
+                  >
                     测试输出
                   </button>
-                  <button id="save-btn" class="btn-regular px-6 py-2 rounded-lg font-medium flex items-center gap-2">
+                  <button
+                    id="save-btn"
+                    class="btn-regular px-6 py-2 rounded-lg font-medium flex items-center gap-2"
+                  >
                     <span id="save-spinner" class="hidden">⏳</span>
                     保存更改
                   </button>
@@ -385,11 +289,16 @@ const configHue = 250; // Match blog theme hue
     </div>
 
     <!-- New File Modal -->
-    <div id="new-file-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div
+      id="new-file-modal"
+      class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    >
       <div class="card-base card-shadow p-6 max-w-md w-full">
         <h3 class="font-bold text-lg text-90 mb-4">创建新文件</h3>
         <div class="mb-4">
-          <label class="block text-75 mb-2 text-sm">文件名 (例如 my-new-post)</label>
+          <label class="block text-75 mb-2 text-sm"
+            >文件名 (例如 my-new-post)</label
+          >
           <input
             id="new-filename-input"
             type="text"
@@ -399,8 +308,14 @@ const configHue = 250; // Match blog theme hue
           <div id="new-file-error" class="text-red-500 mt-2 text-sm"></div>
         </div>
         <div class="flex justify-end gap-3">
-          <button id="new-file-cancel-btn" class="btn-plain px-4 py-2 rounded-lg">取消</button>
-          <button id="create-file-confirm-btn" class="btn-regular px-4 py-2 rounded-lg font-medium">
+          <button
+            id="new-file-cancel-btn"
+            class="btn-plain px-4 py-2 rounded-lg">取消</button
+          >
+          <button
+            id="create-file-confirm-btn"
+            class="btn-regular px-4 py-2 rounded-lg font-medium"
+          >
             创建
           </button>
         </div>
@@ -408,11 +323,16 @@ const configHue = 250; // Match blog theme hue
     </div>
 
     <!-- Rename File Modal -->
-    <div id="rename-file-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div
+      id="rename-file-modal"
+      class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    >
       <div class="card-base card-shadow p-6 max-w-md w-full">
         <h3 class="font-bold text-lg text-90 mb-4">重命名文件</h3>
         <div class="mb-4">
-          <label class="block text-75 mb-2 text-sm">新文件名 (不含 .md 后缀)</label>
+          <label class="block text-75 mb-2 text-sm"
+            >新文件名 (不含 .md 后缀)</label
+          >
           <input
             id="rename-filename-input"
             type="text"
@@ -422,8 +342,14 @@ const configHue = 250; // Match blog theme hue
           <div id="rename-file-error" class="text-red-500 mt-2 text-sm"></div>
         </div>
         <div class="flex justify-end gap-3">
-          <button id="rename-file-cancel-btn" class="btn-plain px-4 py-2 rounded-lg">取消</button>
-          <button id="rename-file-confirm-btn" class="btn-regular px-4 py-2 rounded-lg font-medium">
+          <button
+            id="rename-file-cancel-btn"
+            class="btn-plain px-4 py-2 rounded-lg">取消</button
+          >
+          <button
+            id="rename-file-confirm-btn"
+            class="btn-regular px-4 py-2 rounded-lg font-medium"
+          >
             确认重命名
           </button>
         </div>
@@ -554,22 +480,23 @@ const configHue = 250; // Match blog theme hue
         // --- 主题功能 ---
         function applyTheme(theme) {
           const html = document.documentElement;
-          const lightIcon = document.getElementById('theme-icon-light');
-          const darkIcon = document.getElementById('theme-icon-dark');
+          const lightIcon = document.getElementById("theme-icon-light");
+          const darkIcon = document.getElementById("theme-icon-dark");
 
           if (theme === "dark") {
             html.classList.add("dark");
-            lightIcon?.classList.remove('hidden');
-            darkIcon?.classList.add('hidden');
+            lightIcon?.classList.remove("hidden");
+            darkIcon?.classList.add("hidden");
           } else {
             html.classList.remove("dark");
-            lightIcon?.classList.add('hidden');
-            darkIcon?.classList.remove('hidden');
+            lightIcon?.classList.add("hidden");
+            darkIcon?.classList.remove("hidden");
           }
         }
 
         function handleThemeToggle() {
-          const currentTheme = localStorage.getItem("github_editor_theme") || "light";
+          const currentTheme =
+            localStorage.getItem("github_editor_theme") || "light";
           const newTheme = currentTheme === "dark" ? "light" : "dark";
           localStorage.setItem("github_editor_theme", newTheme);
           applyTheme(newTheme);
@@ -771,7 +698,12 @@ const configHue = 250; // Match blog theme hue
           state.currentFile = { path: null, sha: null, isNew: false };
           document
             .querySelectorAll("#file-list a")
-            .forEach((el) => el.classList.remove("bg-[var(--btn-plain-bg-hover)]", "text-[var(--primary)]"));
+            .forEach((el) =>
+              el.classList.remove(
+                "bg-[var(--btn-plain-bg-hover)]",
+                "text-[var(--primary)]"
+              )
+            );
         }
 
         async function refreshFileList() {
@@ -786,21 +718,26 @@ const configHue = 250; // Match blog theme hue
           ui.fileList.innerHTML = "";
           const mdFiles = files.filter((file) => file.name.endsWith(".md"));
           if (mdFiles.length === 0) {
-            ui.fileList.innerHTML = "<li class='text-75 text-sm p-2'>未找到 Markdown 文件</li>";
+            ui.fileList.innerHTML =
+              "<li class='text-75 text-sm p-2'>未找到 Markdown 文件</li>";
             return;
           }
           mdFiles.forEach((file) => {
             const a = document.createElement("a");
             a.dataset.path = file.path;
             a.dataset.sha = file.sha;
-            a.className = "file-item block px-3 py-2 rounded-lg text-90 hover:bg-[var(--btn-plain-bg-hover)] transition cursor-pointer";
+            a.className =
+              "file-item block px-3 py-2 rounded-lg text-90 hover:bg-[var(--btn-plain-bg-hover)] transition cursor-pointer";
             a.href = "#";
             a.textContent = file.name;
             ui.fileList.appendChild(a);
 
             // 如果这是当前活动文件，则重新选中
             if (state.currentFile.path === file.path) {
-              a.classList.add("bg-[var(--btn-plain-bg-hover)]", "text-[var(--primary)]");
+              a.classList.add(
+                "bg-[var(--btn-plain-bg-hover)]",
+                "text-[var(--primary)]"
+              );
             }
           });
         }
@@ -815,12 +752,16 @@ const configHue = 250; // Match blog theme hue
           // 在切换前保存当前打开文件的草稿
           saveDraft();
 
-          document
-            .querySelectorAll("#file-list a")
-            .forEach((el) => {
-              el.classList.remove("bg-[var(--btn-plain-bg-hover)]", "text-[var(--primary)]");
-            });
-          target.classList.add("bg-[var(--btn-plain-bg-hover)]", "text-[var(--primary)]");
+          document.querySelectorAll("#file-list a").forEach((el) => {
+            el.classList.remove(
+              "bg-[var(--btn-plain-bg-hover)]",
+              "text-[var(--primary)]"
+            );
+          });
+          target.classList.add(
+            "bg-[var(--btn-plain-bg-hover)]",
+            "text-[var(--primary)]"
+          );
 
           state.currentFile.path = target.dataset.path;
           ui.placeholderSection.classList.add("hidden");
@@ -888,7 +829,7 @@ const configHue = 250; // Match blog theme hue
         function handleNewFileClick() {
           ui.newFileInput.value = "";
           ui.newFileError.textContent = "";
-          ui.newFileModal.classList.remove('hidden');
+          ui.newFileModal.classList.remove("hidden");
         }
 
         function normalizeFilename(name) {
@@ -934,8 +875,13 @@ const configHue = 250; // Match blog theme hue
           ui.editorSection.classList.remove("hidden");
           document
             .querySelectorAll("#file-list a")
-            .forEach((el) => el.classList.remove("bg-[var(--btn-plain-bg-hover)]", "text-[var(--primary)]"));
-          ui.newFileModal.classList.add('hidden');
+            .forEach((el) =>
+              el.classList.remove(
+                "bg-[var(--btn-plain-bg-hover)]",
+                "text-[var(--primary)]"
+              )
+            );
+          ui.newFileModal.classList.add("hidden");
         }
 
         // --- 重命名逻辑 ---
@@ -952,7 +898,7 @@ const configHue = 250; // Match blog theme hue
             .replace(/\.md$/i, "");
           ui.renameFileInput.value = currentName;
           ui.renameFileError.textContent = "";
-          ui.renameFileModal.classList.remove('hidden');
+          ui.renameFileModal.classList.remove("hidden");
         }
 
         async function renameFileAction(oldPath, newFilename) {
@@ -1016,7 +962,7 @@ const configHue = 250; // Match blog theme hue
             showSaveStatus("文件重命名成功！", false);
             await refreshFileList();
 
-            ui.renameFileModal.classList.add('hidden');
+            ui.renameFileModal.classList.add("hidden");
           } catch (error) {
             showSaveStatus(`重命名失败: ${error.message}`, true);
             ui.renameFileError.textContent = `重命名失败: ${error.message}`;
@@ -1142,7 +1088,7 @@ const configHue = 250; // Match blog theme hue
         function getUrlParams() {
           const urlParams = new URLSearchParams(window.location.search);
           return {
-            slug: urlParams.get('slug')
+            slug: urlParams.get("slug"),
           };
         }
 
@@ -1151,8 +1097,8 @@ const configHue = 250; // Match blog theme hue
 
           try {
             const files = await getFiles();
-            const targetFile = files.find(file => {
-              const fileName = file.name.replace('.md', '');
+            const targetFile = files.find((file) => {
+              const fileName = file.name.replace(".md", "");
               return fileName === slug;
             });
 
@@ -1164,10 +1110,16 @@ const configHue = 250; // Match blog theme hue
               ui.currentFileName.textContent = targetFile.name;
 
               // 在文件列表中高亮选中的文件
-              document.querySelectorAll("#file-list a").forEach(el => {
-                el.classList.remove("bg-[var(--btn-plain-bg-hover)]", "text-[var(--primary)]");
+              document.querySelectorAll("#file-list a").forEach((el) => {
+                el.classList.remove(
+                  "bg-[var(--btn-plain-bg-hover)]",
+                  "text-[var(--primary)]"
+                );
                 if (el.dataset.path === targetFile.path) {
-                  el.classList.add("bg-[var(--btn-plain-bg-hover)]", "text-[var(--primary)]");
+                  el.classList.add(
+                    "bg-[var(--btn-plain-bg-hover)]",
+                    "text-[var(--primary)]"
+                  );
                 }
               });
 
@@ -1228,22 +1180,26 @@ const configHue = 250; // Match blog theme hue
           ui.themeToggle.addEventListener("click", handleThemeToggle);
 
           // Modal close buttons
-          document.getElementById('new-file-cancel-btn')?.addEventListener('click', () => {
-            ui.newFileModal.classList.add('hidden');
-          });
-          document.getElementById('rename-file-cancel-btn')?.addEventListener('click', () => {
-            ui.renameFileModal.classList.add('hidden');
-          });
+          document
+            .getElementById("new-file-cancel-btn")
+            ?.addEventListener("click", () => {
+              ui.newFileModal.classList.add("hidden");
+            });
+          document
+            .getElementById("rename-file-cancel-btn")
+            ?.addEventListener("click", () => {
+              ui.renameFileModal.classList.add("hidden");
+            });
 
           // Close modals on background click
-          ui.newFileModal?.addEventListener('click', (e) => {
+          ui.newFileModal?.addEventListener("click", (e) => {
             if (e.target === ui.newFileModal) {
-              ui.newFileModal.classList.add('hidden');
+              ui.newFileModal.classList.add("hidden");
             }
           });
-          ui.renameFileModal?.addEventListener('click', (e) => {
+          ui.renameFileModal?.addEventListener("click", (e) => {
             if (e.target === ui.renameFileModal) {
-              ui.renameFileModal.classList.add('hidden');
+              ui.renameFileModal.classList.add("hidden");
             }
           });
 
