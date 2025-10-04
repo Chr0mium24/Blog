@@ -2,7 +2,6 @@
 import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
-import "@/styles/main.css";
 
 const configHue = 250; // Match blog theme hue
 ---
@@ -63,6 +62,82 @@ const configHue = 250; // Match blog theme hue
         --btn-content: oklch(0.75 0.04 var(--hue));
         --primary: oklch(0.75 0.14 var(--hue));
         --selection-bg: oklch(0.40 0.09 var(--hue));
+      }
+
+      /* Component classes */
+      .card-base {
+        border-radius: var(--radius-large);
+        overflow: hidden;
+        background-color: var(--card-bg);
+        transition: all 0.3s;
+      }
+
+      .card-shadow {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+
+      .btn-plain {
+        transition: all 0.3s;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        color: rgba(0, 0, 0, 0.75);
+      }
+
+      .dark .btn-plain {
+        color: rgba(255, 255, 255, 0.75);
+      }
+
+      .btn-plain:hover {
+        color: var(--primary);
+        background-color: var(--btn-plain-bg-hover);
+      }
+
+      .btn-plain:active {
+        background-color: var(--btn-plain-bg-active);
+      }
+
+      .btn-regular {
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--btn-regular-bg);
+        color: var(--btn-content);
+      }
+
+      .dark .btn-regular {
+        color: rgba(255, 255, 255, 0.75);
+      }
+
+      .btn-regular:hover {
+        background-color: var(--btn-regular-bg-hover);
+      }
+
+      .btn-regular:active {
+        background-color: var(--btn-regular-bg-active);
+      }
+
+      .text-90 {
+        color: rgba(0, 0, 0, 0.9);
+      }
+
+      .dark .text-90 {
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .text-75 {
+        color: rgba(0, 0, 0, 0.75);
+      }
+
+      .dark .text-75 {
+        color: rgba(255, 255, 255, 0.75);
+      }
+
+      ::selection {
+        background-color: var(--selection-bg);
       }
 
       /* Editor specific styles */
