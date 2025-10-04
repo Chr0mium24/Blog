@@ -85,6 +85,7 @@ const state: EditorState = {
 
 let easyMDE: any = null;
 let draftInterval: number | null = null;
+let isDirty: boolean = false;
 
 // --- 主题功能 ---
 
@@ -121,6 +122,45 @@ function loadInitialTheme() {
   applyTheme(theme);
 }
 
+// --- 脏检查和状态管理 ---
+
+function markAsDirty() {
+  if (!isDirty && state.currentFile.path) {
+    isDirty = true;
+    // 使用一个不同的颜色来表示“未保存到 GitHub”，但“已修改”
+    ui.saveStatus.textContent = "未保存的更改 (本地草稿将在 5 秒后更新)";
+    ui.saveStatus.className = "mt-2 text-right text-orange-500";
+  }
+}
+
+function markAsClean() {
+  isDirty = false;
+  ui.saveStatus.textContent = "";
+  ui.saveStatus.className = "mt-2 text-right text-sm"; // 恢复默认或清除
+}
+
+function setupChangeListeners() {
+  // 移除旧的监听器以防重复（如果需要重新加载文件）
+  // 对于简单的应用，我们假设只需要附加一次，但为了健壮性，我们可以检查。
+  // 更简单的做法是：确保在每次加载新文件时都调用 markAsClean
+  
+  // 监听元数据输入变化
+  Object.values(ui.meta).forEach(input => {
+    input.addEventListener("input", markAsDirty);
+    // 确保 date inputs 的 change 事件也被监听，因为它们有不同的触发机制
+    if (input.type === "date") {
+        input.addEventListener("change", markAsDirty);
+    }
+  });
+
+  // 监听 EasyMDE (CodeMirror) 变化
+  // EasyMDE 将其编辑器实例暴露为 `codemirror`
+  if (easyMDE && easyMDE.codemirror) {
+    // 移除之前的 change 监听器 (CodeMirror 内部管理，但为了安全，我们只在初始化时调用一次)
+    // 这里我们假设 initializeApp 只调用一次，所以监听器只添加一次。
+  }
+}
+
 // --- 草稿功能函数 ---
 
 function getEditorMetadata(): Partial<Metadata> {
@@ -135,27 +175,50 @@ function getEditorMetadata(): Partial<Metadata> {
 }
 
 function saveDraft() {
-  if (!state.currentFile.path || !easyMDE) return;
+  if (!state.currentFile.path || !easyMDE|| !isDirty) return;
   const metadata = getEditorMetadata();
   const body = easyMDE.value();
   try {
       saveDraftToStorage(state, state.currentFile.path, metadata, body);
+      markAsClean(); // 草稿保存成功，将状态标记为 clean (clean = 草稿已是最新的)
+      ui.saveStatus.textContent = `本地草稿已保存于 ${new Date().toLocaleTimeString()}`;
+      ui.saveStatus.className = "mt-2 text-right text-gray-500 text-sm";
+      setTimeout(() => ui.saveStatus.textContent = "", 3000);
   } catch (e: any) {
       console.error(e);
       showSaveStatus(e.message, true);
   }
 }
 
-function loadDraft(path: string) {
+// <--- 修改 loadDraft 签名，需要 originalContent 来进行比较
+function loadDraft(path: string, originalContent: ParsedContent) {
   try {
     const draft = loadDraftFromStorage(state, path);
     if (draft) {
+      // 1. 生成远程版本的完整 Markdown 字符串
+      const originalFull = createFullMarkdown(originalContent.metadata, originalContent.body);
+      
+      // 2. 生成草稿版本的完整 Markdown 字符串
+      const draftFull = createFullMarkdown(draft.metadata, draft.body);
+
+      // 3. 比较两者。如果完全一致，则删除草稿并退出。
+      if (originalFull.trim() === draftFull.trim()) {
+        clearDraft(path);
+        return; 
+      }
+
+      // 4. 如果不一致，则弹窗询问
       const savedDate = new Date(draft.savedAt).toLocaleString();
       if (
-        confirm(`发现该文件于 ${savedDate} 保存的草稿。要加载草稿吗？`)
+        confirm(`发现该文件于 ${savedDate} 保存的草稿。内容与远程版本不同，要加载草稿吗？`)
       ) {
         populateEditor(draft.metadata, draft.body);
+        // 加载草稿后，编辑器内容变脏，需要标记为 dirty (但此时 isDirty 已经是 false，需要重新标记)
+        // 实际上，因为 populateEditor 触发了 markAsDirty，这里我们不需要额外的标记，只需显示状态。
         showSaveStatus("已从本地加载草稿。", false);
+      } else {
+        // 如果用户选择不加载，则清除草稿
+        clearDraft(path);
       }
     }
   } catch (e: any) {
@@ -163,7 +226,6 @@ function loadDraft(path: string) {
     showSaveStatus(e.message, true);
   }
 }
-
 function clearDraft(path: string) {
     clearDraftFromStorage(state, path);
 }
@@ -290,12 +352,18 @@ async function handleFileClick(e: Event) {
     const { content, sha } = await getFileContent(state, state.currentFile.path);
     state.currentFile.sha = sha;
     state.currentFile.isNew = false;
+
+    const originalContent = parseContent(content); // <--- 获取原始解析内容
+    
     const { metadata, body } = parseContent(content);
     populateEditor(metadata, body);
     if (!metadata.published) setTodaysDate();
 
+    markAsClean(); // <--- 从远程加载后，文件是干净的
+
     // 在加载原始文件内容后，检查并加载草稿
-    loadDraft(state.currentFile.path);
+    loadDraft(state.currentFile.path, originalContent); 
+
   } catch (error: any) {
     showSaveStatus(`加载文件失败: ${error.message}`, true);
     resetEditorState();
@@ -372,8 +440,10 @@ function handleCreateNewFile() {
     tags: [],
     description: "",
   };
-  populateEditor(templateMeta, "在这里写下你的内容...");
+  populateEditor(templateMeta, "");
   setTodaysDate();
+
+  markAsDirty(); // <--- 新建文件后，它默认是 dirty 的，因为尚未保存到 GitHub
 
   ui.placeholderSection.classList.add("hidden");
   ui.editorSection.classList.remove("hidden");
@@ -494,6 +564,7 @@ async function handleSave() {
     state.currentFile.sha = result.content.sha;
     state.currentFile.isNew = false;
     clearDraft(state.currentFile.path);
+    markAsClean(); // <--- 成功保存到 GitHub 后，标记为 clean
     showSaveStatus("文件保存成功！", false);
   } catch (error: any) {
     showSaveStatus(`保存失败: ${error.message}`, true);
@@ -610,6 +681,12 @@ export async function initializeApp() {
     element: document.getElementById("markdown-editor"),
     spellChecker: false,
   });
+
+   // CodeMirror change listener: 任何键盘输入都标记为 dirty
+  if (easyMDE && easyMDE.codemirror) {
+    easyMDE.codemirror.on("change", markAsDirty);
+  }
+  setupChangeListeners(); // <--- 确保元数据输入框的监听器被设置
 
   if (draftInterval) clearInterval(draftInterval);
   draftInterval = setInterval(saveDraft, 5000) as unknown as number;
