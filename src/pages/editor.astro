@@ -7,7 +7,7 @@ import "@fontsource/roboto/700.css";
 import "../styles/editor.css";
 import { siteConfig } from "@/config";
 // 确保 siteConfig.themeColor.hue 可用
-const configHue = siteConfig.themeColor.hue; 
+const configHue = siteConfig.themeColor.hue;
 ---
 
 <!doctype html>
@@ -361,9 +361,9 @@ const configHue = siteConfig.themeColor.hue;
     </div>
 
     <!-- 导入并运行主客户端脚本 -->
-    <script type="module">
-      import { initializeApp } from "../scripts/editor/index.ts";
-      
+    <script>
+      import { initializeApp } from "../scripts/editor.ts";
+
       document.addEventListener("DOMContentLoaded", initializeApp);
     </script>
   </body>
