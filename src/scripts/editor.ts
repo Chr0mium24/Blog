@@ -22,8 +22,8 @@ import {
   createFullMarkdown,
 } from "./utils";
 
-// 假设 EasyMDE 已通过 CDN 全局加载
-declare const EasyMDE: any;
+
+declare const Vditor: any; // <-- 添加 Vditor 声明
 
 // UI 元素引用
 const ui = {
@@ -83,7 +83,7 @@ const state: EditorState = {
   currentFile: { path: null, sha: null, isNew: false },
 };
 
-let easyMDE: any = null;
+let vditorInstance: any = null; 
 let draftInterval: number | null = null;
 let isDirty: boolean = false;
 
@@ -152,13 +152,6 @@ function setupChangeListeners() {
         input.addEventListener("change", markAsDirty);
     }
   });
-
-  // 监听 EasyMDE (CodeMirror) 变化
-  // EasyMDE 将其编辑器实例暴露为 `codemirror`
-  if (easyMDE && easyMDE.codemirror) {
-    // 移除之前的 change 监听器 (CodeMirror 内部管理，但为了安全，我们只在初始化时调用一次)
-    // 这里我们假设 initializeApp 只调用一次，所以监听器只添加一次。
-  }
 }
 
 // --- 草稿功能函数 ---
@@ -175,9 +168,9 @@ function getEditorMetadata(): Partial<Metadata> {
 }
 
 function saveDraft() {
-  if (!state.currentFile.path || !easyMDE|| !isDirty) return;
+if (!state.currentFile.path || !vditorInstance || !isDirty) return; // <-- 新 Vditor
   const metadata = getEditorMetadata();
-  const body = easyMDE.value();
+  const body = vditorInstance.getValue();
   try {
       saveDraftToStorage(state, state.currentFile.path, metadata, body);
       markAsClean(); // 草稿保存成功，将状态标记为 clean (clean = 草稿已是最新的)
@@ -309,7 +302,7 @@ function populateEditor(metadata: Partial<Metadata>, body: string) {
     ? metadata.tags.join(", ")
     : metadata.tags || "";
   ui.meta.category.value = metadata.category || "";
-  if (easyMDE) easyMDE.value(body);
+  if (vditorInstance) vditorInstance.setValue(body);
 }
 
 function setTodaysDate() {
@@ -354,7 +347,7 @@ async function handleFileClick(e: Event) {
     state.currentFile.isNew = false;
 
     const originalContent = parseContent(content); // <--- 获取原始解析内容
-    
+
     const { metadata, body } = parseContent(content);
     populateEditor(metadata, body);
     if (!metadata.published) setTodaysDate();
@@ -480,7 +473,7 @@ async function renameFileAction(oldPath: string, newFilename: string) {
   }
 
   const metadata = getEditorMetadata();
-  const body = easyMDE.value();
+  const body = vditorInstance.getValue();
   const newContent = createFullMarkdown(metadata, body);
 
   const newPath = `src/content/posts/${newFilename}`;
@@ -543,7 +536,7 @@ async function handleSave() {
   ui.saveBtn.classList.add("btn-disabled");
   try {
     const metadata = getEditorMetadata();
-    const body = easyMDE.value();
+    const body = vditorInstance.getValue();
     const newContent = createFullMarkdown(metadata, body);
 
     let result;
@@ -576,7 +569,7 @@ async function handleSave() {
 
 function handleTestOutput() {
   const metadata = getEditorMetadata();
-  const body = easyMDE.value();
+  const body = vditorInstance.getValue();
   const output = createFullMarkdown(metadata, body);
   console.log("--- 生成的文件内容 ---");
   console.log(output);
@@ -677,15 +670,21 @@ async function loadFileBySlug(slug: string) {
 // --- 初始化 ---
 export async function initializeApp() {
   loadInitialTheme();
-  easyMDE = new EasyMDE({
-    element: document.getElementById("markdown-editor"),
-    spellChecker: false,
+  vditorInstance = new Vditor("markdown-editor", {
+    height: 500, // 设置一个合理的初始高度
+    placeholder: "",
+    mode: "sv", // Split View (编辑/预览分屏)
+    theme: document.documentElement.classList.contains("dark") ? 'dark' : 'light', // 设置初始主题
+    toolbarConfig: {
+        pin: true, // 固定工具栏
+    },
+    cache: {
+        enable: false, // 禁用 Vditor 的内部缓存，我们使用自己的草稿功能
+    },
+    // 关键：使用 input 事件监听内容变化，并触发 markAsDirty
+    input: markAsDirty, 
   });
 
-   // CodeMirror change listener: 任何键盘输入都标记为 dirty
-  if (easyMDE && easyMDE.codemirror) {
-    easyMDE.codemirror.on("change", markAsDirty);
-  }
   setupChangeListeners(); // <--- 确保元数据输入框的监听器被设置
 
   if (draftInterval) clearInterval(draftInterval);
