@@ -1,20 +1,21 @@
 ---
 title: lgu课程评价
 published: 2025-09-01
-updated: 2025-09-01
+updated: 2025-10-26
 description: ''
 tags: []
 category: 学习
 ---
 
-https://blankspace.feishu.cn/share/base/view/shrcnctnLSH9AJM4DCkEYaOC1ue
+[课程评价1](https://blankspace.feishu.cn/share/base/view/shrcnctnLSH9AJM4DCkEYaOC1ue)
 
-https://docs.qq.com/sheet/DT051WFNtRkx2cEJy
+[课程评价2](https://docs.qq.com/sheet/DT051WFNtRkx2cEJy)
 
-https://registry.cuhk.edu.cn/sites/default/files/2025-09/Study%20Scheme%20-%20ECE_2024-25_3rd%282025%29_20250714.pdf
+[ECE课程修读计划2025.10.26更新](https://registry.cuhk.edu.cn/sites/default/files/2025-09/Study%20Scheme%20-%20ECE_2024-25_3rd%282025%29_20250714.pdf)
+
+[2025-2026校历](https://registry.cuhk.edu.cn/sites/default/files/2025-05/Annex%202%20Calendar%20View%20of%20Academic%20Calendar%202025-26%20%28Tentative%29-Revised%20to%20Website%20-Updated%20Version-FINAL-PDF.pdf)
 
 CSC3100, ECE1811, 2001, 2050, 2811, 3001, 3080, 3810, 4010, ERG4901
-
 
 | 日期 | 事项 |
 | :--- | :--- |
@@ -39,3 +40,4 @@ CSC3100, ECE1811, 2001, 2050, 2811, 3001, 3080, 3810, 4010, ERG4901
 | 6月19日 (周五) | 端午节 |
 | 7月17日 (周五) | 暑期课程最后授课日 |
 | 7月20日～22日 (周一～周三) | 暑期课程科目考试 |
+
