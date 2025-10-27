@@ -4,17 +4,17 @@ published: 2025-09-26
 updated: 2025-09-26
 description: ''
 tags: []
-category: ''
+category: 代码
 ---
 
 Lcapy 中设置受控源非常直观，它沿用了 SPICE 的经典语法。Lcapy 支持所有四种基本类型的线性受控源。
 
 这四种受控源分别是：
 
-1.  **E**: 压控电压源 (VCVS - Voltage-Controlled Voltage Source)
-2.  **G**: 压控电流源 (VCCS - Voltage-Controlled Current Source)
-3.  **H**: 流控电压源 (CCVS - Current-Controlled Voltage Source)
-4.  **F**: 流控电流源 (CCCS - Current-Controlled Current Source)
+1. **E**: 压控电压源 (VCVS - Voltage-Controlled Voltage Source)
+2. **G**: 压控电流源 (VCCS - Voltage-Controlled Current Source)
+3. **H**: 流控电压源 (CCVS - Current-Controlled Voltage Source)
+4. **F**: 流控电流源 (CCCS - Current-Controlled Current Source)
 
 下面我将详细解释每一种的设置方法，并提供可运行的 Python 代码示例。
 
@@ -26,11 +26,11 @@ Lcapy 中设置受控源非常直观，它沿用了 SPICE 的经典语法。Lcap
 
 **语法**: `E<name> n+ n- nc+ nc- K`
 
-*   `E<name>`: 元件名称，例如 `E1`。
-*   `n+ n-`: 受控源自身的正负节点。
-*   `nc+ nc-`: **控制电压**的参考正负节点。
-*   `K`: 电压增益（无单位）。
-*   关系式: `V(n+, n-) = K * V(nc+, nc-)`
+* `E<name>`: 元件名称，例如 `E1`。
+* `n+ n-`: 受控源自身的正负节点。
+* `nc+ nc-`: **控制电压**的参考正负节点。
+* `K`: 电压增益（无单位）。
+* 关系式: `V(n+, n-) = K * V(nc+, nc-)`
 
 **示例代码:**
 
@@ -68,11 +68,11 @@ print(f"压控电压源 (VCVS) 的输出电压 V(2): {V_out}")
 
 **语法**: `G<name> n+ n- nc+ nc- Gm`
 
-*   `G<name>`: 元件名称，例如 `G1`。
-*   `n+ n-`: 电流**从 n+ 流向 n-**。
-*   `nc+ nc-`: **控制电压**的参考正负节点。
-*   `Gm`: 跨导增益（单位是西门子 S）。
-*   关系式: `I(n+ -> n-) = Gm * V(nc+, nc-)`
+* `G<name>`: 元件名称，例如 `G1`。
+* `n+ n-`: 电流**从 n+ 流向 n-**。
+* `nc+ nc-`: **控制电压**的参考正负节点。
+* `Gm`: 跨导增益（单位是西门子 S）。
+* 关系式: `I(n+ -> n-) = Gm * V(nc+, nc-)`
 
 **示例代码:**
 
@@ -108,11 +108,11 @@ print(f"压控电流源 (VCCS) 产生的电流 I(R1): {I_R1}")
 
 **语法**: `H<name> n+ n- V_sensor Rm`
 
-*   `H<name>`: 元件名称，例如 `H1`。
-*   `n+ n-`: 受控源自身的正负节点。
-*   `V_sensor`: **作为电流传感器的0V电压源**的名称。
-*   `Rm`: 跨阻增益（单位是欧姆 Ω）。
-*   关系式: `V(n+, n-) = Rm * I(V_sensor)`
+* `H<name>`: 元件名称，例如 `H1`。
+* `n+ n-`: 受控源自身的正负节点。
+* `V_sensor`: **作为电流传感器的0V电压源**的名称。
+* `Rm`: 跨阻增益（单位是欧姆 Ω）。
+* 关系式: `V(n+, n-) = Rm * I(V_sensor)`
 
 **示例代码:**
 
@@ -146,11 +146,11 @@ print(f"流控电压源 (CCVS) 的输出电压 V(2): {V_out}")
 
 **语法**: `F<name> n+ n- V_sensor Beta`
 
-*   `F<name>`: 元件名称，例如 `F1`。
-*   `n+ n-`: 电流**从 n+ 流向 n-**。
-*   `V_sensor`: **作为电流传感器的0V电压源**的名称。
-*   `Beta`: 电流增益（无单位），通常用于BJT等模型。
-*   关系式: `I(n+ -> n-) = Beta * I(V_sensor)`
+* `F<name>`: 元件名称，例如 `F1`。
+* `n+ n-`: 电流**从 n+ 流向 n-**。
+* `V_sensor`: **作为电流传感器的0V电压源**的名称。
+* `Beta`: 电流增益（无单位），通常用于BJT等模型。
+* 关系式: `I(n+ -> n-) = Beta * I(V_sensor)`
 
 **示例代码 (BJT简化模型):**
 
@@ -190,3 +190,4 @@ print(f"流控电流源 (CCCS) 产生的电流 I(F1): {I_c}")
 | **CCCS** | **F** | 流控电流源 | 电流 `I(V_sensor)` | 电流 | `F name n+ n- V_sensor Beta` |
 
 **最重要的技巧**: 当你需要用电流作为控制量时（CCVS 和 CCCS），记得在被控制的支路中串联一个**值为0的电压源**，并用它的名字来告诉 Lcapy 你要测量哪里的电流。
+
