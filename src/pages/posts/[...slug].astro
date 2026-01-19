@@ -78,9 +78,22 @@ const jsonLd = {
                     text-black/90 dark:text-white/90
                     md:before:w-1 before:h-5 before:rounded-md before:bg-[var(--primary)]
                     before:absolute before:top-[0.75rem] before:left-[-1.125rem]
-                ">
+                "
+                    data-editor-inline-display
+                >
                     {entry.data.title}
                 </div>
+                <input
+                    type="text"
+                    value={entry.data.title}
+                    class="hidden transition w-full block font-bold mb-3
+                    text-3xl md:text-[2.25rem]/[2.75rem]
+                    text-black/90 dark:text-white/90 bg-transparent
+                    border border-transparent focus:border-[var(--primary)]
+                    rounded-md px-2 py-1"
+                    data-editor-inline-input
+                    data-editor-field="title"
+                />
             </div>
 
             <!-- metadata -->
@@ -103,9 +116,40 @@ const jsonLd = {
             }
 
 
-            <Markdown class="mb-6 markdown-content onload-animation">
-                <Content />
-            </Markdown>
+            <div data-editor-inline-input class="hidden">
+                <div class="card-base card-shadow p-6 mb-6">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                        <div class="text-lg font-bold text-90">正文编辑</div>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                class="btn-regular px-4 py-2 rounded-lg text-sm font-medium"
+                                data-editor-save
+                            >
+                                保存更改
+                            </button>
+                            <button
+                                type="button"
+                                class="btn-plain px-4 py-2 rounded-lg text-sm font-medium"
+                                data-editor-cancel-edit
+                            >
+                                取消
+                            </button>
+                        </div>
+                    </div>
+                    <div
+                        class="milkdown min-h-[360px] rounded-lg border border-transparent"
+                        data-editor-body
+                    ></div>
+                    <div class="text-sm mt-3 text-75" data-editor-status></div>
+                </div>
+            </div>
+
+            <div data-editor-inline-display>
+                <Markdown class="mb-6 markdown-content onload-animation">
+                    <Content />
+                </Markdown>
+            </div>
 
             {licenseConfig.enable && <License title={entry.data.title} slug={entry.slug} pubDate={entry.data.published} class="mb-6 rounded-xl license-container onload-animation"></License>}
 

@@ -23,7 +23,10 @@ import {
 } from "./utils";
 
 
-import Vditor from "vditor";
+import "@milkdown/crepe/theme/common/style.css";
+import "@milkdown/crepe/theme/nord.css";
+import { Crepe } from "@milkdown/crepe";
+import { replaceAll } from "@milkdown/utils";
 
 // UI 元素引用
 const ui = {
@@ -66,6 +69,12 @@ const ui = {
   themeToggle: document.getElementById("theme-toggle") as HTMLButtonElement,
   newFileCancelBtn: document.getElementById("new-file-cancel-btn") as HTMLButtonElement,
   renameFileCancelBtn: document.getElementById("rename-file-cancel-btn") as HTMLButtonElement,
+  tagList: document.getElementById("tag-list") as HTMLElement,
+  categoryList: document.getElementById("category-list") as HTMLElement,
+  newTagInput: document.getElementById("new-tag-input") as HTMLInputElement,
+  newCategoryInput: document.getElementById("new-category-input") as HTMLInputElement,
+  addTagBtn: document.getElementById("add-tag-btn") as HTMLButtonElement,
+  addCategoryBtn: document.getElementById("add-category-btn") as HTMLButtonElement,
   meta: {
     title: document.getElementById("meta-title") as HTMLInputElement,
     published: document.getElementById("meta-published") as HTMLInputElement,
@@ -83,9 +92,27 @@ const state: EditorState = {
   currentFile: { path: null, sha: null, isNew: false },
 };
 
-let vditorInstance: any = null; 
+let crepeInstance: Crepe | null = null;
+let crepeReady: Promise<void> | null = null;
+let suppressCrepeDirty = false;
 let draftInterval: number | null = null;
 let isDirty: boolean = false;
+let pendingSlug: string | null = null;
+let cachedEntries: FileEntry[] = [];
+
+const CUSTOM_TAGS_KEY = "github_editor_custom_tags";
+const CUSTOM_CATEGORIES_KEY = "github_editor_custom_categories";
+
+type FileEntry = {
+  path: string;
+  name: string;
+  sha: string;
+  title: string;
+  dateLabel: string;
+  sortTime: number;
+  tags: string[];
+  category: string;
+};
 
 // --- 主题功能 ---
 
@@ -102,13 +129,6 @@ function applyTheme(theme: string) {
     html.classList.remove("dark");
     lightIcon?.classList.add("hidden");
     darkIcon?.classList.remove("hidden");
-  }
-
-   if (vditorInstance) {
-    // Vditor.setTheme(editorThemeName, contentThemeName, themeMode)
-    // 使用主题名作为 Vditor 的编辑器主题和内容主题，并指定模式
-    // Vditor 内置了 'dark' 和 'light' 主题。
-    vditorInstance.setTheme(theme, theme, theme);
   }
 }
 
@@ -127,6 +147,187 @@ function loadInitialTheme() {
   ).matches;
   const theme = savedTheme || (systemPrefersDark ? "dark" : "light");
   applyTheme(theme);
+}
+
+async function ensureEditorReady() {
+  if (crepeInstance && crepeReady) return crepeReady;
+  const root = document.getElementById("markdown-editor");
+  if (!root) return;
+
+  crepeInstance = new Crepe({ root });
+  crepeReady = crepeInstance.create().then(() => {
+    crepeInstance?.on((listener) =>
+      listener.markdownUpdated(() => {
+        if (!suppressCrepeDirty) markAsDirty();
+      })
+    );
+  });
+  return crepeReady;
+}
+
+function getEditorMarkdown(): string {
+  return crepeInstance ? crepeInstance.getMarkdown() : "";
+}
+
+function setEditorMarkdown(value: string) {
+  if (!crepeInstance) return;
+  suppressCrepeDirty = true;
+  crepeInstance.editor.action(replaceAll(value));
+  suppressCrepeDirty = false;
+}
+
+function parseTags(tags: Metadata["tags"] | undefined): string[] {
+  if (!tags) return [];
+  if (Array.isArray(tags)) {
+    return tags.map((tag) => tag.trim()).filter(Boolean);
+  }
+  return tags
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function parseDateValue(value: unknown): number {
+  if (!value) return 0;
+  const date = value instanceof Date ? value : new Date(String(value));
+  const time = date.getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function formatDateLabel(value: unknown): string {
+  if (!value) return "未设置日期";
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) return "未设置日期";
+  return date.toISOString().split("T")[0];
+}
+
+function loadCustomList(key: string): string[] {
+  const raw = localStorage.getItem(key);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((item) => String(item).trim()).filter(Boolean);
+  } catch {
+    localStorage.removeItem(key);
+    return [];
+  }
+}
+
+function saveCustomList(key: string, list: string[]) {
+  localStorage.setItem(key, JSON.stringify(list));
+}
+
+function uniqueSorted(values: string[]): string[] {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).sort(
+    (a, b) => a.localeCompare(b, "zh-Hans-CN")
+  );
+}
+
+async function buildFileEntries(files: any[]): Promise<FileEntry[]> {
+  const mdFiles = files.filter((file) => file.name.endsWith(".md"));
+  if (mdFiles.length === 0) return [];
+
+  const entries = await Promise.all(
+    mdFiles.map(async (file: any) => {
+      try {
+        const { content, sha } = await getFileContent(state, file.path);
+        const { metadata } = parseContent(content);
+        const title = metadata.title
+          ? String(metadata.title)
+          : file.name.replace(/\.md$/i, "");
+        const updatedTime = parseDateValue(metadata.updated);
+        const publishedTime = parseDateValue(metadata.published);
+        const sortTime = updatedTime || publishedTime || 0;
+        const dateLabel = formatDateLabel(metadata.updated || metadata.published);
+        const tags = parseTags(metadata.tags);
+        const category = metadata.category ? String(metadata.category) : "";
+
+        return {
+          path: file.path,
+          name: file.name,
+          sha,
+          title,
+          dateLabel,
+          sortTime,
+          tags,
+          category,
+        } as FileEntry;
+      } catch {
+        return {
+          path: file.path,
+          name: file.name,
+          sha: file.sha,
+          title: file.name.replace(/\.md$/i, ""),
+          dateLabel: "未设置日期",
+          sortTime: 0,
+          tags: [],
+          category: "",
+        } as FileEntry;
+      }
+    })
+  );
+
+  return entries.sort((a, b) => b.sortTime - a.sortTime);
+}
+
+function renderTagCategoryRegistry(entries: FileEntry[]) {
+  const entryTags = entries.flatMap((entry) => entry.tags);
+  const entryCategories = entries
+    .map((entry) => entry.category)
+    .filter(Boolean);
+  const customTags = loadCustomList(CUSTOM_TAGS_KEY);
+  const customCategories = loadCustomList(CUSTOM_CATEGORIES_KEY);
+
+  const tags = uniqueSorted([...entryTags, ...customTags]);
+  const categories = uniqueSorted([...entryCategories, ...customCategories]);
+
+  ui.tagList.innerHTML = "";
+  tags.forEach((tag) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className =
+      "btn-plain px-2.5 py-1 rounded-full text-sm whitespace-nowrap";
+    button.textContent = tag;
+    button.addEventListener("click", () => {
+      const current = parseTags(ui.meta.tags.value);
+      if (!current.includes(tag)) {
+        current.push(tag);
+        ui.meta.tags.value = current.join(", ");
+        markAsDirty();
+      }
+    });
+    ui.tagList.appendChild(button);
+  });
+
+  ui.categoryList.innerHTML = "";
+  categories.forEach((category) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className =
+      "btn-plain px-2.5 py-1 rounded-full text-sm whitespace-nowrap";
+    button.textContent = category;
+    button.addEventListener("click", () => {
+      ui.meta.category.value = category;
+      markAsDirty();
+    });
+    ui.categoryList.appendChild(button);
+  });
+}
+
+function addCustomItem(
+  key: string,
+  value: string,
+  afterAdd?: () => void
+) {
+  const trimmed = value.trim();
+  if (!trimmed) return;
+  const list = loadCustomList(key);
+  if (!list.includes(trimmed)) {
+    list.push(trimmed);
+    saveCustomList(key, list);
+    if (afterAdd) afterAdd();
+  }
 }
 
 // --- 脏检查和状态管理 ---
@@ -175,9 +376,9 @@ function getEditorMetadata(): Partial<Metadata> {
 }
 
 function saveDraft() {
-if (!state.currentFile.path || !vditorInstance || !isDirty) return; // <-- 新 Vditor
+  if (!state.currentFile.path || !isDirty) return;
   const metadata = getEditorMetadata();
-  const body = vditorInstance.getValue();
+  const body = getEditorMarkdown();
   try {
       saveDraftToStorage(state, state.currentFile.path, metadata, body);
       markAsClean(); // 草稿保存成功，将状态标记为 clean (clean = 草稿已是最新的)
@@ -213,8 +414,8 @@ function loadDraft(path: string, originalContent: ParsedContent) {
         confirm(`发现该文件于 ${savedDate} 保存的草稿。内容与远程版本不同，要加载草稿吗？`)
       ) {
         populateEditor(draft.metadata, draft.body);
-        // 加载草稿后，编辑器内容变脏，需要标记为 dirty (但此时 isDirty 已经是 false，需要重新标记)
-        // 实际上，因为 populateEditor 触发了 markAsDirty，这里我们不需要额外的标记，只需显示状态。
+        markAsDirty();
+        // 加载草稿后，编辑器内容变脏，需要标记为 dirty。
         showSaveStatus("已从本地加载草稿。", false);
       } else {
         // 如果用户选择不加载，则清除草稿
@@ -261,32 +462,46 @@ function resetEditorState() {
 
 async function refreshFileList() {
   try {
-    renderFileList(await getFiles(state));
+    ui.fileList.innerHTML =
+      "<li class='text-75 text-sm p-2'>正在加载文章列表...</li>";
+    const entries = await buildFileEntries(await getFiles(state));
+    cachedEntries = entries;
+    renderFileList(entries);
+    renderTagCategoryRegistry(entries);
   } catch (error) {
     showSaveStatus("无法刷新文件列表。", true);
   }
 }
 
-function renderFileList(files: any[]) {
+function renderFileList(entries: FileEntry[]) {
   ui.fileList.innerHTML = "";
-  const mdFiles = files.filter((file) => file.name.endsWith(".md"));
-  if (mdFiles.length === 0) {
+  if (entries.length === 0) {
     ui.fileList.innerHTML =
       "<li class='text-75 text-sm p-2'>未找到 Markdown 文件</li>";
     return;
   }
-  mdFiles.forEach((file) => {
+  entries.forEach((entry) => {
     const a = document.createElement("a");
-    a.dataset.path = file.path;
-    a.dataset.sha = file.sha;
+    a.dataset.path = entry.path;
+    a.dataset.sha = entry.sha;
     a.className =
       "file-item block px-3 py-2 rounded-lg text-90 hover:bg-[var(--btn-plain-bg-hover)] transition cursor-pointer";
     a.href = "#";
-    a.textContent = file.name;
+    const wrapper = document.createElement("div");
+    wrapper.className = "flex flex-col w-full";
+    const titleSpan = document.createElement("span");
+    titleSpan.className = "text-sm font-medium text-90 truncate";
+    titleSpan.textContent = entry.title;
+    const dateSpan = document.createElement("span");
+    dateSpan.className = "text-xs text-50";
+    dateSpan.textContent = entry.dateLabel;
+    wrapper.appendChild(titleSpan);
+    wrapper.appendChild(dateSpan);
+    a.appendChild(wrapper);
     ui.fileList.appendChild(a);
 
     // 如果这是当前活动文件，则重新选中
-    if (state.currentFile.path === file.path) {
+    if (state.currentFile.path === entry.path) {
       a.classList.add(
         "bg-[var(--btn-plain-bg-hover)]",
         "text-[var(--primary)]"
@@ -309,7 +524,7 @@ function populateEditor(metadata: Partial<Metadata>, body: string) {
     ? metadata.tags.join(", ")
     : metadata.tags || "";
   ui.meta.category.value = metadata.category || "";
-  if (vditorInstance) vditorInstance.setValue(body);
+  setEditorMarkdown(body);
 }
 
 function setTodaysDate() {
@@ -318,15 +533,40 @@ function setTodaysDate() {
   ui.meta.updated.value = today;
 }
 
+async function applyFileContent(path: string, content: string, sha: string) {
+  await ensureEditorReady();
+  state.currentFile.path = path;
+  state.currentFile.sha = sha;
+  state.currentFile.isNew = false;
+
+  ui.placeholderSection.classList.add("hidden");
+  ui.editorSection.classList.remove("hidden");
+  ui.currentFileName.textContent = path.split("/").pop() || "";
+
+  const originalContent = parseContent(content);
+  populateEditor(originalContent.metadata, originalContent.body);
+  if (!originalContent.metadata.published) setTodaysDate();
+  markAsClean();
+  loadDraft(path, originalContent);
+}
+
+async function loadFileForEditing(path: string) {
+  saveDraft();
+  try {
+    const { content, sha } = await getFileContent(state, path);
+    await applyFileContent(path, content, sha);
+  } catch (error: any) {
+    showSaveStatus(`加载文件失败: ${error.message}`, true);
+    resetEditorState();
+  }
+}
+
 // --- 核心动作处理器 ---
 
 async function handleFileClick(e: Event) {
   const target = (e.target as HTMLElement).closest("a.file-item") as HTMLElement;
   if (!target) return;
   e.preventDefault();
-
-  // 在切换前保存当前打开文件的草稿
-  saveDraft();
 
   document.querySelectorAll("#file-list a").forEach((el) => {
     el.classList.remove(
@@ -339,35 +579,9 @@ async function handleFileClick(e: Event) {
     "text-[var(--primary)]"
   );
 
-  state.currentFile.path = target.dataset.path || null;
-  ui.placeholderSection.classList.add("hidden");
-  ui.editorSection.classList.remove("hidden");
-  ui.currentFileName.textContent = state.currentFile.path
-    ? state.currentFile.path.split("/").pop()!
-    : "";
-
-  if (!state.currentFile.path) return;
-
-  try {
-    const { content, sha } = await getFileContent(state, state.currentFile.path);
-    state.currentFile.sha = sha;
-    state.currentFile.isNew = false;
-
-    const originalContent = parseContent(content); // <--- 获取原始解析内容
-
-    const { metadata, body } = parseContent(content);
-    populateEditor(metadata, body);
-    if (!metadata.published) setTodaysDate();
-
-    markAsClean(); // <--- 从远程加载后，文件是干净的
-
-    // 在加载原始文件内容后，检查并加载草稿
-    loadDraft(state.currentFile.path, originalContent); 
-
-  } catch (error: any) {
-    showSaveStatus(`加载文件失败: ${error.message}`, true);
-    resetEditorState();
-  }
+  const path = target.dataset.path;
+  if (!path) return;
+  await loadFileForEditing(path);
 }
 
 async function confirmAndDeleteFile(path: string, sha: string | null) {
@@ -480,7 +694,7 @@ async function renameFileAction(oldPath: string, newFilename: string) {
   }
 
   const metadata = getEditorMetadata();
-  const body = vditorInstance.getValue();
+  const body = getEditorMarkdown();
   const newContent = createFullMarkdown(metadata, body);
 
   const newPath = `src/content/posts/${newFilename}`;
@@ -543,7 +757,7 @@ async function handleSave() {
   ui.saveBtn.classList.add("btn-disabled");
   try {
     const metadata = getEditorMetadata();
-    const body = vditorInstance.getValue();
+    const body = getEditorMarkdown();
     const newContent = createFullMarkdown(metadata, body);
 
     let result;
@@ -566,6 +780,24 @@ async function handleSave() {
     clearDraft(state.currentFile.path);
     markAsClean(); // <--- 成功保存到 GitHub 后，标记为 clean
     showSaveStatus("文件保存成功！", false);
+
+    const savedTags = parseTags(metadata.tags);
+    let registryUpdated = false;
+    if (savedTags.length > 0) {
+      savedTags.forEach((tag) =>
+        addCustomItem(CUSTOM_TAGS_KEY, tag, () => {
+          registryUpdated = true;
+        })
+      );
+    }
+    if (metadata.category) {
+      addCustomItem(CUSTOM_CATEGORIES_KEY, metadata.category, () => {
+        registryUpdated = true;
+      });
+    }
+    if (registryUpdated) {
+      renderTagCategoryRegistry(cachedEntries);
+    }
   } catch (error: any) {
     showSaveStatus(`保存失败: ${error.message}`, true);
   } finally {
@@ -576,10 +808,24 @@ async function handleSave() {
 
 function handleTestOutput() {
   const metadata = getEditorMetadata();
-  const body = vditorInstance.getValue();
+  const body = getEditorMarkdown();
   const output = createFullMarkdown(metadata, body);
   console.log(output);
   showSaveStatus("内容已输出到开发者控制台。", false);
+}
+
+function handleAddTag() {
+  addCustomItem(CUSTOM_TAGS_KEY, ui.newTagInput.value, () => {
+    renderTagCategoryRegistry(cachedEntries);
+  });
+  ui.newTagInput.value = "";
+}
+
+function handleAddCategory() {
+  addCustomItem(CUSTOM_CATEGORIES_KEY, ui.newCategoryInput.value, () => {
+    renderTagCategoryRegistry(cachedEntries);
+  });
+  ui.newCategoryInput.value = "";
 }
 
 // --- 登录/登出 ---
@@ -598,7 +844,6 @@ async function login() {
     return;
   }
   try {
-    const files = await getFiles(state);
     const loginData: LoginData = {
       user: state.user,
       repo: state.repo,
@@ -607,7 +852,12 @@ async function login() {
     localStorage.setItem("github_editor_data", JSON.stringify(loginData));
     ui.loginView.classList.add("hidden");
     ui.mainView.classList.remove("hidden");
-    renderFileList(files);
+    await refreshFileList();
+    if (pendingSlug) {
+      const slug = pendingSlug;
+      pendingSlug = null;
+      await loadFileBySlug(slug);
+    }
   } catch (error: any) {
     showLoginError(
       `登录失败: ${error.message}. 请检查您的信息和 PAT 权限。`
@@ -636,60 +886,50 @@ function getUrlParams() {
 }
 
 async function loadFileBySlug(slug: string) {
-  try {
-    const files = await getFiles(state);
-    const targetFile = files.find((file: any) => {
-      const fileName = file.name.replace(".md", "");
-      return fileName === slug;
-    });
+  const normalizedSlug = slug.replace(/^\/+/, "").replace(/\.md$/i, "");
+  const candidatePaths = [
+    `src/content/posts/${normalizedSlug}.md`,
+    `src/content/posts/${normalizedSlug}/index.md`,
+  ];
 
-    if (targetFile) {
-      // 模拟点击文件来加载它
-      const mockEvent = {
-        target: { closest: () => ({ dataset: { path: targetFile.path, sha: targetFile.sha }, classList: { add: () => {} } }) }
-      } as unknown as Event; // 模拟一个包含 target.closest 的事件
-      await handleFileClick(mockEvent);
+  let lastError: unknown = null;
+  for (const path of candidatePaths) {
+    try {
+      const { content, sha } = await getFileContent(state, path);
+      await applyFileContent(path, content, sha);
 
-      // 重新高亮正确的项目（因为 handleFileClick 的模拟可能不够完美）
       document.querySelectorAll("#file-list a").forEach((el: any) => {
         el.classList.remove(
+          "bg-[var(--btn-plain-bg-hover)]",
+          "text-[var(--primary)]"
+        );
+        if (el.dataset.path === path) {
+          el.classList.add(
             "bg-[var(--btn-plain-bg-hover)]",
             "text-[var(--primary)]"
-        );
-        if (el.dataset.path === targetFile.path) {
-          el.classList.add(
-              "bg-[var(--btn-plain-bg-hover)]",
-              "text-[var(--primary)]"
           );
         }
       });
-      showSaveStatus(`已自动加载文章: ${targetFile.name}`, false);
-    } else {
-      showSaveStatus(`未找到文章: ${slug}`, true);
+
+      showSaveStatus(`已自动加载文章: ${path.split("/").pop()}`, false);
+      return;
+    } catch (error: any) {
+      lastError = error;
     }
-  } catch (error: any) {
-    showSaveStatus(`加载指定文章失败: ${error.message}`, true);
   }
+
+  const message =
+    lastError instanceof Error
+      ? lastError.message
+      : `未找到文章: ${slug}`;
+  showSaveStatus(`加载指定文章失败: ${message}`, true);
 }
 
 
 // --- 初始化 ---
 export async function initializeApp() {
   loadInitialTheme();
-  vditorInstance = new Vditor("markdown-editor", {
-    height: 500, // 设置一个合理的初始高度
-    placeholder: "",
-    mode: "sv", // Split View (编辑/预览分屏)
-    theme: document.documentElement.classList.contains("dark") ? 'dark' : 'classic', // 设置初始主题
-    toolbarConfig: {
-        pin: true, // 固定工具栏
-    },
-    cache: {
-        enable: false, // 禁用 Vditor 的内部缓存，我们使用自己的草稿功能
-    },
-    // 关键：使用 input 事件监听内容变化，并触发 markAsDirty
-    input: markAsDirty, 
-  });
+  await ensureEditorReady();
 
   setupChangeListeners(); // <--- 确保元数据输入框的监听器被设置
 
@@ -714,6 +954,21 @@ export async function initializeApp() {
   ui.renameFileConfirmBtn.addEventListener("click", handleRenameConfirm);
 
   ui.themeToggle.addEventListener("click", handleThemeToggle);
+  ui.addTagBtn.addEventListener("click", handleAddTag);
+  ui.addCategoryBtn.addEventListener("click", handleAddCategory);
+
+  ui.newTagInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleAddTag();
+    }
+  });
+  ui.newCategoryInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleAddCategory();
+    }
+  });
 
   // Modal close buttons
   ui.newFileCancelBtn.addEventListener("click", () => {
@@ -735,6 +990,9 @@ export async function initializeApp() {
     }
   });
 
+  const params = getUrlParams();
+  pendingSlug = params.slug;
+
   const savedData = localStorage.getItem("github_editor_data");
   if (savedData) {
     const { user, repo, pat }: LoginData = JSON.parse(savedData);
@@ -742,10 +1000,5 @@ export async function initializeApp() {
     ui.repoInput.value = repo;
     ui.patInput.value = pat;
     await login();
-
-    const params = getUrlParams();
-    if (params.slug) {
-      await loadFileBySlug(params.slug);
-    }
   }
 }

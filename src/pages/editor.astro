@@ -20,12 +20,6 @@ const configHue = siteConfig.themeColor.hue;
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>编辑器 - Cr's Blog</title>
 
-    <!-- Markdown Editor (Vditor) -->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/vditor@3.9.7/dist/index.css"
-    />
-
     <!-- Set the theme before the page is rendered to avoid a flash -->
     <!-- 此部分仍需保留，因为它必须在其他脚本之前同步执行 -->
     <script is:inline>
@@ -163,6 +157,48 @@ const configHue = siteConfig.themeColor.hue;
                 <ul id="file-list" class="space-y-1"></ul>
               </div>
             </div>
+
+            <div class="card-base card-shadow p-6 mt-6">
+              <h2 class="text-xl font-bold text-90 mb-4">标签与分类</h2>
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-75 mb-2 text-sm">新增标签</label>
+                  <div class="flex gap-2">
+                    <input
+                      id="new-tag-input"
+                      type="text"
+                      placeholder="例如 astro"
+                      class="flex-1 px-3 py-2 rounded-lg bg-[var(--btn-regular-bg)] text-90 border border-transparent focus:border-[var(--primary)] focus:outline-none transition text-sm"
+                    />
+                    <button
+                      id="add-tag-btn"
+                      class="btn-regular px-3 py-2 rounded-lg text-sm font-medium"
+                    >
+                      添加
+                    </button>
+                  </div>
+                  <div id="tag-list" class="flex flex-wrap gap-2 mt-3"></div>
+                </div>
+                <div>
+                  <label class="block text-75 mb-2 text-sm">新增分类</label>
+                  <div class="flex gap-2">
+                    <input
+                      id="new-category-input"
+                      type="text"
+                      placeholder="例如 技术"
+                      class="flex-1 px-3 py-2 rounded-lg bg-[var(--btn-regular-bg)] text-90 border border-transparent focus:border-[var(--primary)] focus:outline-none transition text-sm"
+                    />
+                    <button
+                      id="add-category-btn"
+                      class="btn-regular px-3 py-2 rounded-lg text-sm font-medium"
+                    >
+                      添加
+                    </button>
+                  </div>
+                  <div id="category-list" class="flex flex-wrap gap-2 mt-3"></div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Editor Section -->
@@ -242,9 +278,9 @@ const configHue = siteConfig.themeColor.hue;
                   ></textarea>
                 </div>
               </div>
-              <!-- Vditor 结构 -->
+              <!-- Markdown Editor (Milkdown Crepe) -->
               <div class="editor-container mb-6">
-                <div id="markdown-editor"></div>
+                <div id="markdown-editor" class="milkdown min-h-[500px]"></div>
               </div>
               <div class="flex justify-between items-center mt-6">
                 <button

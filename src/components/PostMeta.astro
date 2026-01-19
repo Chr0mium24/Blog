@@ -25,16 +25,34 @@ const {
 	slug,
 } = Astro.props;
 const className = Astro.props.class;
+const publishedValue = formatDateToYYYYMMDD(published);
+const updatedValue = updated ? formatDateToYYYYMMDD(updated) : "";
+const tagsValue =
+	tags && tags.length > 0
+		? tags.map((tag) => tag.trim()).filter(Boolean).join(", ")
+		: "";
+const categoryValue = category || "";
 ---
 
-<div class:list={["flex flex-wrap text-neutral-500 dark:text-neutral-400 items-center gap-4 gap-x-4 gap-y-2", className]}>
+<div
+    class:list={["flex flex-wrap text-neutral-500 dark:text-neutral-400 items-center gap-4 gap-x-4 gap-y-2", className]}
+    data-editor-meta
+    data-editor-slug={slug}
+>
     <!-- publish date -->
     <div class="flex items-center">
         <div class="meta-icon"
         >
             <Icon name="material-symbols:calendar-today-outline-rounded" class="text-xl"></Icon>
         </div>
-        <span class="text-50 text-sm font-medium">{formatDateToYYYYMMDD(published)}</span>
+        <span class="text-50 text-sm font-medium" data-editor-inline-display>{publishedValue}</span>
+        <input
+            type="date"
+            value={publishedValue}
+            class="hidden text-50 text-sm font-medium bg-transparent border border-transparent focus:border-[var(--primary)] rounded-md px-2 py-1"
+            data-editor-inline-input
+            data-editor-field="published"
+        />
     </div>
 
     <!-- update date -->
@@ -44,7 +62,14 @@ const className = Astro.props.class;
             >
                 <Icon name="material-symbols:edit-calendar-outline-rounded" class="text-xl"></Icon>
             </div>
-            <span class="text-50 text-sm font-medium">{formatDateToYYYYMMDD(updated)}</span>
+            <span class="text-50 text-sm font-medium" data-editor-inline-display>{updatedValue}</span>
+            <input
+                type="date"
+                value={updatedValue}
+                class="hidden text-50 text-sm font-medium bg-transparent border border-transparent focus:border-[var(--primary)] rounded-md px-2 py-1"
+                data-editor-inline-input
+                data-editor-field="updated"
+            />
         </div>
     )}
 
@@ -54,13 +79,21 @@ const className = Astro.props.class;
         >
             <Icon name="material-symbols:book-2-outline-rounded" class="text-xl"></Icon>
         </div>
-        <div class="flex flex-row flex-nowrap items-center">
+        <div class="flex flex-row flex-nowrap items-center" data-editor-inline-display>
             <a href={getCategoryUrl(category)} aria-label={`View all posts in the ${category} category`}
                class="link-lg transition text-50 text-sm font-medium
                             hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap">
                 {category || i18n(I18nKey.uncategorized)}
             </a>
         </div>
+        <input
+            type="text"
+            value={categoryValue}
+            class="hidden text-50 text-sm font-medium bg-transparent border border-transparent focus:border-[var(--primary)] rounded-md px-2 py-1 w-40"
+            placeholder={i18n(I18nKey.uncategorized)}
+            data-editor-inline-input
+            data-editor-field="category"
+        />
     </div>
 
     <!-- tags -->
@@ -69,7 +102,7 @@ const className = Astro.props.class;
         >
             <Icon name="material-symbols:tag-rounded" class="text-xl"></Icon>
         </div>
-        <div class="flex flex-row flex-nowrap items-center">
+        <div class="flex flex-row flex-nowrap items-center" data-editor-inline-display>
             {(tags && tags.length > 0) && tags.map((tag, i) => (
                 <div class:list={[{"hidden": i == 0}, "mx-1.5 text-[var(--meta-divider)] text-sm"]}>/</div>
                 <a href={getTagUrl(tag)} aria-label={`View all posts with the ${tag.trim()} tag`}
@@ -80,6 +113,14 @@ const className = Astro.props.class;
             ))}
             {!(tags && tags.length > 0) && <div class="transition text-50 text-sm font-medium">{i18n(I18nKey.noTags)}</div>}
         </div>
+        <input
+            type="text"
+            value={tagsValue}
+            class="hidden text-50 text-sm font-medium bg-transparent border border-transparent focus:border-[var(--primary)] rounded-md px-2 py-1 w-56"
+            placeholder={i18n(I18nKey.noTags)}
+            data-editor-inline-input
+            data-editor-field="tags"
+        />
     </div>
 
     <!-- download markdown button -->
@@ -99,19 +140,112 @@ const className = Astro.props.class;
         </div>
     )}
 
-    <!-- edit button -->
+    <!-- edit toggle -->
     {slug && (
-        <div class="flex items-center">
-            <div class="meta-icon">
-                <Icon name="material-symbols:edit-outline-rounded" class="text-xl" />
+        <>
+            <div class="flex items-center">
+                <div class="meta-icon">
+                    <Icon name="material-symbols:edit-outline-rounded" class="text-xl" />
+                </div>
+                <button
+                    type="button"
+                    class="transition text-50 text-sm font-medium hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap"
+                    title="编辑开关"
+                    data-editor-toggle
+                >
+                    编辑
+                    <span class="ml-1 text-[var(--meta-divider)]" data-editor-toggle-state>关闭</span>
+                </button>
             </div>
-            <a
-                href={`/editor/?slug=${encodeURIComponent(slug)}`}
-                class="transition text-50 text-sm font-medium hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap"
-                title="编辑文章"
+
+            <div class="w-full hidden mt-3" data-editor-panel>
+                <div class="card-base card-shadow px-4 py-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div class="text-sm text-75" data-editor-summary>未登录</div>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            class="btn-regular px-3 py-1.5 rounded-lg text-sm font-medium"
+                            data-editor-open-content
+                        >
+                            编辑当前文章
+                        </button>
+                        <a
+                            href={`/editor/?slug=${encodeURIComponent(slug)}`}
+                            class="btn-plain px-3 py-1.5 rounded-lg text-sm font-medium"
+                        >
+                            打开编辑器
+                        </a>
+                        <button
+                            type="button"
+                            class="btn-plain px-3 py-1.5 rounded-lg text-sm font-medium"
+                            data-editor-logout
+                        >
+                            退出登录
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+                data-editor-modal
             >
-                编辑
-            </a>
-        </div>
+                <div class="card-base card-shadow p-6 max-w-md w-full">
+                    <h3 class="font-bold text-lg text-90 mb-4">编辑器登录</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-75 mb-2 text-sm">GitHub 用户名</label>
+                            <input
+                                type="text"
+                                placeholder="username"
+                                class="w-full px-4 py-2 rounded-lg bg-[var(--btn-regular-bg)] text-90 border border-transparent focus:border-[var(--primary)] focus:outline-none transition"
+                                data-editor-user
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-75 mb-2 text-sm">GitHub 仓库名</label>
+                            <input
+                                type="text"
+                                placeholder="例如 astro-blog"
+                                class="w-full px-4 py-2 rounded-lg bg-[var(--btn-regular-bg)] text-90 border border-transparent focus:border-[var(--primary)] focus:outline-none transition"
+                                data-editor-repo
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-75 mb-2 text-sm">个人访问令牌 (PAT)</label>
+                            <input
+                                type="password"
+                                placeholder="粘贴您的 PAT"
+                                class="w-full px-4 py-2 rounded-lg bg-[var(--btn-regular-bg)] text-90 border border-transparent focus:border-[var(--primary)] focus:outline-none transition"
+                                data-editor-pat
+                            />
+                        </div>
+                        <div class="flex justify-end gap-3 mt-4">
+                            <button
+                                type="button"
+                                class="btn-plain px-4 py-2 rounded-lg text-sm"
+                                data-editor-cancel
+                            >
+                                取消
+                            </button>
+                            <button
+                                type="button"
+                                class="btn-regular px-4 py-2 rounded-lg text-sm font-medium"
+                                data-editor-login
+                            >
+                                登录
+                            </button>
+                        </div>
+                        <div class="text-red-500 mt-2 hidden text-sm" data-editor-error></div>
+                    </div>
+                </div>
+            </div>
+        </>
     )}
 </div>
+
+<script>
+  import { initPostInlineEditor } from "../scripts/post-inline-editor";
+
+  initPostInlineEditor();
+</script>
