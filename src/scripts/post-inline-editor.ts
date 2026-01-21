@@ -72,6 +72,36 @@ const createState = (login: LoginData): EditorState => ({
   currentFile: { path: null, sha: null, isNew: false },
 });
 
+const getContainerSlug = (container: Element | null) =>
+  container?.getAttribute("data-editor-slug")?.trim() ?? "";
+
+const resolveModal = (container: Element | null) => {
+  const localModal = container?.querySelector("[data-editor-modal]");
+  if (localModal instanceof HTMLElement) return localModal;
+  const slug = getContainerSlug(container);
+  if (!slug) return null;
+  const selector = `[data-editor-modal][data-editor-modal-id="${CSS.escape(
+    slug
+  )}"]`;
+  return document.querySelector(selector) as HTMLElement | null;
+};
+
+const ensureModalPortal = (modalEl: HTMLElement | null) => {
+  if (!modalEl) return;
+  if (modalEl.parentElement !== document.body) {
+    document.body.appendChild(modalEl);
+  }
+};
+
+const resolveContainerFromModal = (modalEl: HTMLElement) => {
+  const direct = modalEl.closest("[data-editor-meta]");
+  if (direct) return direct;
+  const slug = modalEl.getAttribute("data-editor-modal-id")?.trim() ?? "";
+  if (!slug) return null;
+  const selector = `[data-editor-meta][data-editor-slug="${CSS.escape(slug)}"]`;
+  return document.querySelector(selector);
+};
+
 const ensureInlineEditor = async () => {
   if (inlineEditor && inlineEditorReady) return inlineEditorReady;
   const root = document.querySelector("[data-editor-body]") as HTMLElement | null;
@@ -372,17 +402,18 @@ export const initPostInlineEditor = () => {
         const container = toggleBtn.closest("[data-editor-meta]");
         if (!container) return;
         const panelEl = container.querySelector("[data-editor-panel]");
-        const modalEl = container.querySelector("[data-editor-modal]");
+        const modalEl = resolveModal(container);
         const toggleStateEl = container.querySelector("[data-editor-toggle-state]");
         const summaryEl = container.querySelector("[data-editor-summary]");
         const loginData = parseLoginData();
 
         if (!loginData) {
           if (modalEl) {
-            const userInput = container.querySelector("[data-editor-user]");
-            const repoInput = container.querySelector("[data-editor-repo]");
-            const patInput = container.querySelector("[data-editor-pat]");
-            const errorEl = container.querySelector("[data-editor-error]");
+            ensureModalPortal(modalEl);
+            const userInput = modalEl.querySelector("[data-editor-user]");
+            const repoInput = modalEl.querySelector("[data-editor-repo]");
+            const patInput = modalEl.querySelector("[data-editor-pat]");
+            const errorEl = modalEl.querySelector("[data-editor-error]");
             if (errorEl) errorEl.classList.add("hidden");
             modalEl.classList.remove("hidden");
             if (userInput) userInput.value = "";
@@ -400,15 +431,17 @@ export const initPostInlineEditor = () => {
 
       const loginBtn = target.closest("[data-editor-login]");
       if (loginBtn) {
-        const container = loginBtn.closest("[data-editor-meta]");
+        const modalEl = loginBtn.closest("[data-editor-modal]") as HTMLElement | null;
+        const container = modalEl
+          ? resolveContainerFromModal(modalEl)
+          : loginBtn.closest("[data-editor-meta]");
         if (!container) return;
-        const userInput = container.querySelector("[data-editor-user]");
-        const repoInput = container.querySelector("[data-editor-repo]");
-        const patInput = container.querySelector("[data-editor-pat]");
-        const errorEl = container.querySelector("[data-editor-error]");
+        const userInput = modalEl?.querySelector("[data-editor-user]");
+        const repoInput = modalEl?.querySelector("[data-editor-repo]");
+        const patInput = modalEl?.querySelector("[data-editor-pat]");
+        const errorEl = modalEl?.querySelector("[data-editor-error]");
         const summaryEl = container.querySelector("[data-editor-summary]");
         const panelEl = container.querySelector("[data-editor-panel]");
-        const modalEl = container.querySelector("[data-editor-modal]");
         const toggleStateEl = container.querySelector("[data-editor-toggle-state]");
         const user = userInput?.value.trim();
         const repo = repoInput?.value.trim();
@@ -454,9 +487,11 @@ export const initPostInlineEditor = () => {
 
       const cancelBtn = target.closest("[data-editor-cancel]");
       if (cancelBtn) {
-        const container = cancelBtn.closest("[data-editor-meta]");
+        const modalEl = cancelBtn.closest("[data-editor-modal]") as HTMLElement | null;
+        const container = modalEl
+          ? resolveContainerFromModal(modalEl)
+          : cancelBtn.closest("[data-editor-meta]");
         if (!container) return;
-        const modalEl = container.querySelector("[data-editor-modal]");
         const panelEl = container.querySelector("[data-editor-panel]");
         const toggleStateEl = container.querySelector("[data-editor-toggle-state]");
         if (modalEl) modalEl.classList.add("hidden");
@@ -479,9 +514,9 @@ export const initPostInlineEditor = () => {
       }
 
       const modalEl = target.closest("[data-editor-modal]");
-      if (modalEl && target === modalEl) {
+      if (modalEl instanceof HTMLElement && target === modalEl) {
         modalEl.classList.add("hidden");
-        const container = modalEl.closest("[data-editor-meta]");
+        const container = resolveContainerFromModal(modalEl);
         if (!container) return;
         const panelEl = container.querySelector("[data-editor-panel]");
         const toggleStateEl = container.querySelector("[data-editor-toggle-state]");
