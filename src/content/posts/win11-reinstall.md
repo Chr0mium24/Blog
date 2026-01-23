@@ -73,7 +73,7 @@ New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings" -Nam
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
 ```
 
-### 安装winget（[官方文档](https://learn.microsoft.com/zh-cn/windows/package-manager/winget/)）
+### 安装winget：[官方文档](https://learn.microsoft.com/zh-cn/windows/package-manager/winget/)
 
 win11自带winget，如果msstore源没有正常配置，可以运行下面命令进行重置
 
@@ -87,7 +87,7 @@ winget source reset --force
 winget source update
 ```
 
-### 安装wsl（[官方教程](https://learn.microsoft.com/zh-cn/windows/wsl/install)）
+### 安装wsl：[官方教程](https://learn.microsoft.com/zh-cn/windows/wsl/install)
 
 输入下面命令安装wsl功能后重启
 
@@ -103,6 +103,12 @@ wsl --install -d <DistroName># 安装指定版本 要设置密码
  passwd <username>
 ```
 
+#### Ubuntu apt换源：[USTC换源文档](https://mirrors.ustc.edu.cn/help/ubuntu.html#__tabbed_4_4)
+
+[USTC换源文件生成器](https://mirrors.ustc.edu.cn/repogen/)
+
+替换/etc/apt/sources.list
+
 ### 安装C/C++编译器
 
 ```PowerShell
@@ -114,10 +120,27 @@ pacman -S --needed mingw-w64-ucrt-x86_64-toolchain
 [Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\msys64\ucrt64\bin", "Machine")
 ```
 
-### 安装git, uv
+### 安装git
 
 ```PowerShell
 winget install Git.Git
+```
+
+### 安装uv：[官方配置文档](https://docs.astral.sh/uv/concepts/configuration-files/)
+
+```PowerShell
 winget install --id=astral-sh.uv -e
+# uv换源
+# 方法一：临时换源
+export UV_DEFAULT_INDEX="https://mirrors.aliyun.com/pypi/simple"
+# 方法二：修改配置
+# 如果在本地配置pyproject.toml，写入如下配置
+[[tool.uv.index]]
+url = "https://mirrors.ustc.edu.cn/pypi/simple"
+default = true
+# 如果在全局配置uv.toml（Linux和MacOS一般是~/.config/uv/uv.toml，Windows一般是%APPDATA%/uv/uv.toml，路径不存在手动创建即可），写入如下配置
+[[index]]
+url = "https://mirrors.ustc.edu.cn/pypi/simple"
+default = true
 ```
 
