@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CEC 工具</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+      body {
+        font-family: -apple-system, sans-serif;
+        background: #f0f2f5;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        min-height: 100vh;
+        position: relative;
+      }
+      .container {
+        width: 100%;
+        max-width: 500px;
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        box-sizing: border-box;
+        z-index: 2;
+        position: relative;
+      }
+
+      /* 扫描区域样式 */
+      #reader {
+        width: 100%;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 10px;
+        min-height: 0;
+        background: #eee;
+        display: none;
+      }
+      #reader.active {
+        display: block;
+        min-height: 250px;
+      }
+
+      /* 按钮样式 */
+      .btn {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        transition: background 0.2s;
+      }
+      .btn-primary {
+        background: #007bff;
+        color: white;
+      }
+      .btn-primary:hover {
+        background: #0069d9;
+      }
+      .btn-secondary {
+        background: #6c757d;
+        color: white;
+      }
+      .btn-success {
+        background: #28a745;
+        color: white;
+      }
+
+      /* 二维码展示区 */
+      .qr-section {
+        text-align: center;
+        padding: 20px 0;
+        border-bottom: 1px dashed #ccc;
+      }
+      .qr-title {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 10px;
+        font-weight: bold;
+      }
+      .qr-holder {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 10px;
+      }
+      .token-info {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+        font-family: monospace;
+      }
+
+      /* 进度条样式 */
+      .progress-wrapper {
+        width: 180px;
+        height: 6px;
+        background: #eee;
+        border-radius: 3px;
+        margin: 10px auto;
+        overflow: hidden;
+      }
+      .progress-bar {
+        height: 100%;
+        background: #e91e63;
+        width: 0%;
+        border-radius: 3px;
+      }
+      .progress-bar.animating {
+        animation: progressFill 5s linear infinite;
+      }
+
+      @keyframes progressFill {
+        0% {
+          width: 0%;
+        }
+        100% {
+          width: 100%;
+        }
+      }
+
+      #file-input {
+        display: none;
+      }
+      .info-text {
+        font-size: 13px;
+        color: #888;
+        margin: 10px 0;
+        text-align: center;
+      }
+      canvas {
+        max-width: 100%;
+      }
+
+      /* 拖拽遮罩层 */
+      #drag-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 123, 255, 0.9);
+        z-index: 10;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        border: 5px dashed white;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 拖拽提示层 -->
+    <div id="drag-overlay">
+      <div>📂 释放动态二维码图片以识别</div>
+    </div>
+
+    <div class="container">
+      <div id="scan-view">
+        <h2>CEC工具</h2>
+
+        <!-- 摄像头区域 -->
+        <div id="reader"></div>
+
+        <button
+          id="btn-start-scan"
+          class="btn btn-success"
+          onclick="startCamera()"
+        >
+          📷 相机扫描动态二维码
+        </button>
+        <button
+          id="btn-stop-scan"
+          class="btn btn-secondary"
+          onclick="stopCamera()"
+          style="display: none"
+        >
+          ⏹ 停止扫描
+        </button>
+
+        <div style="height: 1px; background: #eee; margin: 15px 0"></div>
+
+        <button
+          class="btn btn-primary"
+          onclick="document.getElementById('file-input').click()"
+        >
+          📁 上传动态二维码识别
+        </button>
+        <input type="file" id="file-input" accept="image/*" />
+
+        <p class="info-text">
+          支持 <strong>Ctrl+V</strong> 粘贴图片<br />
+          或将图片 <strong>拖拽</strong> 到此页面
+        </p>
+      </div>
+
+      <div id="generate-view" style="display: none">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
+          <h2>本地模拟生成</h2>
+          <button
+            class="btn btn-secondary"
+            style="width: auto; padding: 5px 15px; font-size: 14px"
+            onclick="resetScan()"
+          >
+            返回
+          </button>
+        </div>
+
+        <div class="qr-section">
+          <div class="qr-title">1. 课程详情码 (Static)</div>
+          <div id="static-qrcode" class="qr-holder"></div>
+        </div>
+
+        <div class="qr-section" style="border-bottom: none">
+          <div class="qr-title">2. 动态签到码 (5s 刷新)</div>
+          <div id="dynamic-qrcode" class="qr-holder"></div>
+
+          <!-- 进度条 -->
+          <div class="progress-wrapper">
+            <div id="token-progress" class="progress-bar"></div>
+          </div>
+
+          <div id="token-text" class="token-info">Waiting...</div>
+        </div>
+
+        <button class="btn btn-primary" onclick="copyCurrentUrl()">
+          🔗 复制此页面链接
+        </button>
+      </div>
+    </div>
+
+    <script>
+      let html5QrCode;
+      let refreshInterval;
+      let isScanning = false;
+
+      // --- 初始化与路由 ---
+      window.addEventListener("load", handleRouting);
+      window.addEventListener("hashchange", handleRouting);
+
+      function handleRouting() {
+        const params = getHashParams();
+        if (params.id && params.dataId) {
+          showGenerateView(params);
+        } else {
+          showScanView();
+        }
+      }
+
+      // --- 视图切换 ---
+      function showScanView() {
+        document.getElementById("scan-view").style.display = "block";
+        document.getElementById("generate-view").style.display = "none";
+        stopDynamicRefresh();
+        stopCamera();
+      }
+
+      function showGenerateView(params) {
+        document.getElementById("scan-view").style.display = "none";
+        document.getElementById("generate-view").style.display = "block";
+        stopCamera();
+
+        // 生成静态详情码
+        const staticUrl = `https://cesp.cuhk.edu.cn/qrcode?hkuType=${params.hkuType}&scene=lectureDetail&lectureId=${params.id}`;
+        renderQr("static-qrcode", staticUrl);
+
+        // 启动动态刷新
+        startDynamicRefresh(params);
+      }
+
+      // --- 扫描相关逻辑 ---
+      async function startCamera() {
+        if (isScanning) return;
+
+        const readerDiv = document.getElementById("reader");
+        readerDiv.classList.add("active");
+
+        document.getElementById("btn-start-scan").style.display = "none";
+        document.getElementById("btn-stop-scan").style.display = "block";
+
+        if (!html5QrCode) {
+          html5QrCode = new Html5Qrcode("reader");
+        }
+
+        try {
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            onScanSuccess,
+          );
+          isScanning = true;
+        } catch (err) {
+          console.error(err);
+          alert("摄像头启动失败，请确保授予权限或使用HTTPS协议。");
+          stopCamera();
+        }
+      }
+
+      function stopCamera() {
+        if (html5QrCode && isScanning) {
+          html5QrCode
+            .stop()
+            .then(() => {
+              html5QrCode.clear();
+              isScanning = false;
+              document.getElementById("reader").classList.remove("active");
+              document.getElementById("btn-start-scan").style.display = "block";
+              document.getElementById("btn-stop-scan").style.display = "none";
+            })
+            .catch((err) => console.log("停止失败", err));
+        }
+      }
+
+      function onScanSuccess(decodedText) {
+        try {
+          const url = new URL(decodedText);
+          const p = new URLSearchParams(url.search);
+          if (p.get("scene") === "signInOut") {
+            const newHash = `hkuType=${p.get("hkuType")}&dataId=${p.get("dataId")}&id=${p.get("id")}`;
+            window.location.hash = newHash;
+          } else {
+            alert("识别成功，但不是有效的动态签到码 (scene!=signInOut)");
+          }
+        } catch (e) {
+          alert("无效的链接: " + decodedText);
+        }
+      }
+
+      // --- 文件/粘贴/拖拽识别核心 ---
+      function scanImageFile(file) {
+        if (!file) return;
+        const scanner = new Html5Qrcode("reader"); // 使用临时实例或复用
+        scanner
+          .scanFile(file, true)
+          .then((decodedText) => {
+            onScanSuccess(decodedText);
+          })
+          .catch((err) => {
+            alert("无法识别图片中的二维码，请确保图片清晰且包含完整二维码。");
+            console.error(err);
+          });
+      }
+
+      // 1. 文件输入框监听
+      document.getElementById("file-input").addEventListener("change", (e) => {
+        if (e.target.files.length > 0) scanImageFile(e.target.files[0]);
+      });
+
+      // 2. 全局粘贴监听 (Ctrl+V)
+      document.addEventListener("paste", (e) => {
+        // 如果不在生成页面，才允许粘贴
+        if (document.getElementById("scan-view").style.display === "none")
+          return;
+
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let item of items) {
+          if (item.kind === "file" && item.type.startsWith("image/")) {
+            const blob = item.getAsFile();
+            scanImageFile(blob);
+            e.preventDefault();
+            return;
+          }
+        }
+      });
+
+      // 3. 全局拖拽监听
+      const dragOverlay = document.getElementById("drag-overlay");
+      let dragCounter = 0;
+
+      window.addEventListener("dragenter", (e) => {
+        e.preventDefault();
+        dragCounter++;
+        if (document.getElementById("scan-view").style.display !== "none") {
+          dragOverlay.style.display = "flex";
+        }
+      });
+
+      window.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        dragCounter--;
+        if (dragCounter === 0) {
+          dragOverlay.style.display = "none";
+        }
+      });
+
+      window.addEventListener("dragover", (e) => e.preventDefault());
+
+      window.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dragCounter = 0;
+        dragOverlay.style.display = "none";
+
+        if (document.getElementById("scan-view").style.display === "none")
+          return;
+
+        if (e.dataTransfer.files.length > 0) {
+          const file = e.dataTransfer.files[0];
+          if (file.type.startsWith("image/")) {
+            scanImageFile(file);
+          } else {
+            alert("请拖入动态二维码图片文件");
+          }
+        }
+      });
+
+      // --- 生成逻辑 ---
+      function renderQr(elementId, text) {
+        const container = document.getElementById(elementId);
+        container.innerHTML = "";
+        new QRCode(container, {
+          text: text,
+          width: 180,
+          height: 180,
+          correctLevel: QRCode.CorrectLevel.L,
+        });
+      }
+
+      function startDynamicRefresh(params) {
+        const container = document.getElementById("dynamic-qrcode");
+        const tokenText = document.getElementById("token-text");
+        const progressBar = document.getElementById("token-progress");
+
+        const update = () => {
+          const now = Date.now();
+          const token = now.toString(36);
+          const dynamicUrl = `https://cesp.cuhk.edu.cn/qrcode?scene=signInOut&hkuType=${params.hkuType}&dataId=${params.dataId}&id=${params.id}&token=${token}`;
+
+          container.innerHTML = "";
+          new QRCode(container, {
+            text: dynamicUrl,
+            width: 180,
+            height: 180,
+            correctLevel: QRCode.CorrectLevel.L,
+          });
+
+          const d = new Date(now);
+          tokenText.innerText = `Token: ${token} (${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")})`;
+
+          // 重置并重新开始动画
+          progressBar.classList.remove("animating");
+          void progressBar.offsetWidth; // 触发回流 (Reflow) 重启动画
+          progressBar.classList.add("animating");
+        };
+
+        update(); // 立即执行一次
+        if (refreshInterval) clearInterval(refreshInterval);
+        refreshInterval = setInterval(update, 5000); // 5秒循环
+      }
+
+      function stopDynamicRefresh() {
+        if (refreshInterval) {
+          clearInterval(refreshInterval);
+          refreshInterval = null;
+        }
+        document.getElementById("token-progress").classList.remove("animating");
+      }
+
+      // --- 工具函数 ---
+      function getHashParams() {
+        const hash = window.location.hash.substring(1);
+        const params = {};
+        hash.split("&").forEach((pair) => {
+          const [key, value] = pair.split("=");
+          if (key) params[key] = value;
+        });
+        return params;
+      }
+
+      function resetScan() {
+        window.location.hash = "";
+      }
+
+      function copyCurrentUrl() {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+          alert("✅ 链接已复制！");
+        });
+      }
+    </script>
+  </body>
+</html>
