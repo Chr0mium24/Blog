@@ -1,7 +1,7 @@
 ---
 title: Win11重装工具
 published: 2026-01-23
-updated: 2026-01-23
+updated: 2026-01-23T00:00:00.000Z
 description: ''
 tags: [统计，数学]
 category: 代码
@@ -11,11 +11,15 @@ category: 代码
 
 * 工具箱
 
+[Adobe&设计软件汇总(星野设计学)](https://workspace.dingtalk.com/9e2e3rFbYuqVG1enZL7WDX)
+
+[Adobe软件汇总(Vposy大神)](https://www.vposy.com/page/3)
+
 [Cencrack工具箱：盗版软件合集](http://cencrack.com/?post=18)
 
 [图吧工具箱：计算机测试软件合集](https://www.tbtool.cn/)
 
-[PowerToys：Windows系统增强工具](https://github.com/microsoft/PowerToys/releases) 
+[PowerToys：Windows系统增强工具](https://github.com/microsoft/PowerToys/releases)
 
 * 美化类
 
@@ -47,7 +51,7 @@ category: 代码
 
 [RedDot：中英文输入法切换](https://github.com/Autumn-one/RedDot)
 
-# win11激活 
+# win11激活
 
 ## 用户设置
 
