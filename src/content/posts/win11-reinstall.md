@@ -6,11 +6,12 @@ description: ''
 tags: []
 category: 工具
 ---
+
 # 好用软件合集
 
 * 工具箱
 
-[Adobe&amp;设计软件汇总(星野设计学)](https://workspace.dingtalk.com/9e2e3rFbYuqVG1enZL7WDX)
+[Adobe&设计软件汇总(星野设计学)](https://workspace.dingtalk.com/9e2e3rFbYuqVG1enZL7WDX)
 
 [Adobe软件汇总(Vposy大神)](https://www.vposy.com/page/3)
 
@@ -49,6 +50,8 @@ category: 工具
 [ContextMenuManager：右键菜单管理](https://github.com/BluePointLilac/ContextMenuManager/releases/tag/3.3.3.1)
 
 [RedDot：中英文输入法切换](https://github.com/Autumn-one/RedDot)
+
+[Windows11自带软件卸载](https://github.com/Raphire/Win11Debloat)
 
 # win11激活
 
@@ -146,3 +149,4 @@ default = true
 url = "https://mirrors.ustc.edu.cn/pypi/simple"
 default = true
 ```
+
