@@ -33,7 +33,6 @@ const inlineState: InlineState = {
 let yamlPromise: Promise<void> | null = null;
 let inlineEditor: Crepe | null = null;
 let inlineEditorReady: Promise<void> | null = null;
-let suppressInlineDirty = false;
 
 const getWindow = () =>
   window as typeof window & { __postMetaEditorInit?: boolean; jsyaml?: unknown };
@@ -72,27 +71,6 @@ const createState = (login: LoginData): EditorState => ({
   currentFile: { path: null, sha: null, isNew: false },
 });
 
-const getContainerSlug = (container: Element | null) =>
-  container?.getAttribute("data-editor-slug")?.trim() ?? "";
-
-const resolveModal = (container: Element | null) => {
-  const localModal = container?.querySelector("[data-editor-modal]");
-  if (localModal instanceof HTMLElement) return localModal;
-  const slug = getContainerSlug(container);
-  if (!slug) return null;
-  const selector = `[data-editor-modal][data-editor-modal-id="${CSS.escape(
-    slug
-  )}"]`;
-  return document.querySelector(selector) as HTMLElement | null;
-};
-
-const ensureModalPortal = (modalEl: HTMLElement | null) => {
-  if (!modalEl) return;
-  if (modalEl.parentElement !== document.body) {
-    document.body.appendChild(modalEl);
-  }
-};
-
 const resolveContainerFromModal = (modalEl: HTMLElement) => {
   const direct = modalEl.closest("[data-editor-meta]");
   if (direct) return direct;
@@ -107,7 +85,7 @@ const ensureInlineEditor = async () => {
   const root = document.querySelector("[data-editor-body]") as HTMLElement | null;
   if (!root) return;
   inlineEditor = new Crepe({ root });
-  inlineEditorReady = inlineEditor.create();
+  inlineEditorReady = inlineEditor.create().then(() => undefined);
   return inlineEditorReady;
 };
 
@@ -246,9 +224,7 @@ const loadPostContent = async () => {
     inlineState.sha = sha;
     inlineState.metadata = parsed.metadata || {};
     inlineState.loaded = true;
-    suppressInlineDirty = true;
     inlineEditor.editor.action(replaceAll(parsed.body || ""));
-    suppressInlineDirty = false;
     hydrateFieldsFromMetadata(inlineState.metadata);
     setStatus("正文已加载，可以开始编辑。", false);
   } catch (error) {
@@ -327,6 +303,22 @@ const updateSummary = (summaryEl: Element | null, loginData: LoginData | null) =
   }
 };
 
+const updateAuthOnlyVisibility = (loginData: LoginData | null) => {
+  const isLoggedIn = !!(loginData?.user && loginData?.repo && loginData?.pat);
+  document.querySelectorAll("[data-editor-auth-only]").forEach((el) => {
+    el.classList.toggle("hidden", !isLoggedIn);
+  });
+
+  if (!isLoggedIn) {
+    document
+      .querySelectorAll("[data-editor-panel]")
+      .forEach((el) => el.classList.add("hidden"));
+    document
+      .querySelectorAll("[data-editor-modal]")
+      .forEach((el) => el.classList.add("hidden"));
+  }
+};
+
 const toggleInlineFields = (isOpen: boolean) => {
   document
     .querySelectorAll("[data-editor-inline-display]")
@@ -350,6 +342,7 @@ const setPanelOpen = (
 
 const hydrateSummaries = () => {
   const loginData = parseLoginData();
+  updateAuthOnlyVisibility(loginData);
   document.querySelectorAll("[data-editor-meta]").forEach((container) => {
     const summaryEl = container.querySelector("[data-editor-summary]");
     const toggleStateEl = container.querySelector("[data-editor-toggle-state]");
@@ -371,9 +364,7 @@ const resetInlineState = () => {
     statusEl.classList.add("text-75");
   }
   if (inlineEditor) {
-    suppressInlineDirty = true;
     inlineEditor.editor.action(replaceAll(""));
-    suppressInlineDirty = false;
   }
 };
 
@@ -402,24 +393,15 @@ export const initPostInlineEditor = () => {
         const container = toggleBtn.closest("[data-editor-meta]");
         if (!container) return;
         const panelEl = container.querySelector("[data-editor-panel]");
-        const modalEl = resolveModal(container);
         const toggleStateEl = container.querySelector("[data-editor-toggle-state]");
         const summaryEl = container.querySelector("[data-editor-summary]");
         const loginData = parseLoginData();
 
         if (!loginData) {
-          if (modalEl) {
-            ensureModalPortal(modalEl);
-            const userInput = modalEl.querySelector("[data-editor-user]");
-            const repoInput = modalEl.querySelector("[data-editor-repo]");
-            const patInput = modalEl.querySelector("[data-editor-pat]");
-            const errorEl = modalEl.querySelector("[data-editor-error]");
-            if (errorEl) errorEl.classList.add("hidden");
-            modalEl.classList.remove("hidden");
-            if (userInput) userInput.value = "";
-            if (repoInput) repoInput.value = "";
-            if (patInput) patInput.value = "";
-          }
+          const next = encodeURIComponent(
+            `${window.location.pathname}${window.location.search}`
+          );
+          window.location.href = `/login/?next=${next}`;
           return;
         }
 
@@ -436,9 +418,15 @@ export const initPostInlineEditor = () => {
           ? resolveContainerFromModal(modalEl)
           : loginBtn.closest("[data-editor-meta]");
         if (!container) return;
-        const userInput = modalEl?.querySelector("[data-editor-user]");
-        const repoInput = modalEl?.querySelector("[data-editor-repo]");
-        const patInput = modalEl?.querySelector("[data-editor-pat]");
+        const userInput = modalEl?.querySelector(
+          "[data-editor-user]"
+        ) as HTMLInputElement | null | undefined;
+        const repoInput = modalEl?.querySelector(
+          "[data-editor-repo]"
+        ) as HTMLInputElement | null | undefined;
+        const patInput = modalEl?.querySelector(
+          "[data-editor-pat]"
+        ) as HTMLInputElement | null | undefined;
         const errorEl = modalEl?.querySelector("[data-editor-error]");
         const summaryEl = container.querySelector("[data-editor-summary]");
         const panelEl = container.querySelector("[data-editor-panel]");
@@ -455,6 +443,7 @@ export const initPostInlineEditor = () => {
         }
         const newData = { user, repo, pat };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+        updateAuthOnlyVisibility(newData);
         updateSummary(summaryEl, newData);
         if (modalEl) modalEl.classList.add("hidden");
         setPanelOpen(panelEl, toggleStateEl, true);
@@ -507,6 +496,7 @@ export const initPostInlineEditor = () => {
         const toggleStateEl = container.querySelector("[data-editor-toggle-state]");
         const summaryEl = container.querySelector("[data-editor-summary]");
         localStorage.removeItem(STORAGE_KEY);
+        updateAuthOnlyVisibility(null);
         updateSummary(summaryEl, null);
         setPanelOpen(panelEl, toggleStateEl, false);
         resetInlineState();

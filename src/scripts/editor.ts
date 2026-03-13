@@ -2,7 +2,6 @@
 
 import type {
   EditorState,
-  CurrentFile,
   Metadata,
   LoginData,
   ParsedContent,
@@ -14,7 +13,6 @@ import {
   updateFile,
   deleteFile,
   parseContent,
-  stringifyMetadata,
   normalizeFilename,
   saveDraftToStorage,
   loadDraftFromStorage,
@@ -30,15 +28,7 @@ import { replaceAll } from "@milkdown/utils";
 
 // UI 元素引用
 const ui = {
-  loginView: document.getElementById("login-view") as HTMLElement,
-  mainView: document.getElementById("main-view") as HTMLElement,
-  loginBtn: document.getElementById("login-btn") as HTMLButtonElement,
-  loginSpinner: document.getElementById("login-spinner") as HTMLElement,
   logoutBtn: document.getElementById("logout-btn") as HTMLButtonElement,
-  userInput: document.getElementById("github-user") as HTMLInputElement,
-  repoInput: document.getElementById("github-repo") as HTMLInputElement,
-  patInput: document.getElementById("github-pat") as HTMLInputElement,
-  loginError: document.getElementById("login-error") as HTMLElement,
   fileList: document.getElementById("file-list") as HTMLUListElement,
   editorSection: document.getElementById("editor-section") as HTMLElement,
   placeholderSection: document.getElementById(
@@ -102,6 +92,7 @@ let cachedEntries: FileEntry[] = [];
 
 const CUSTOM_TAGS_KEY = "github_editor_custom_tags";
 const CUSTOM_CATEGORIES_KEY = "github_editor_custom_categories";
+const LOGIN_STORAGE_KEY = "github_editor_data";
 
 type FileEntry = {
   path: string;
@@ -432,11 +423,6 @@ function clearDraft(path: string) {
 }
 
 // --- UI & 状态管理 ---
-
-function showLoginError(message: string) {
-  ui.loginError.textContent = message;
-  ui.loginError.classList.remove("hidden");
-}
 
 function showSaveStatus(message: string, isError: boolean = false) {
   ui.saveStatus.textContent = message;
@@ -830,51 +816,44 @@ function handleAddCategory() {
 
 // --- 登录/登出 ---
 
-async function login() {
-  ui.loginError.classList.add("hidden");
-  ui.loginSpinner.classList.remove("hidden");
-  ui.loginBtn.classList.add("btn-disabled");
-  state.user = ui.userInput.value.trim();
-  state.repo = ui.repoInput.value.trim();
-  state.pat = ui.patInput.value.trim();
-  if (!state.user || !state.repo || !state.pat) {
-    showLoginError("所有字段均为必填项。");
-    ui.loginSpinner.classList.add("hidden");
-    ui.loginBtn.classList.remove("btn-disabled");
-    return;
-  }
+function parseSavedLoginData(): LoginData | null {
+  const savedData = localStorage.getItem(LOGIN_STORAGE_KEY);
+  if (!savedData) return null;
   try {
-    const loginData: LoginData = {
-      user: state.user,
-      repo: state.repo,
-      pat: state.pat,
-    };
-    localStorage.setItem("github_editor_data", JSON.stringify(loginData));
-    ui.loginView.classList.add("hidden");
-    ui.mainView.classList.remove("hidden");
-    await refreshFileList();
-    if (pendingSlug) {
-      const slug = pendingSlug;
-      pendingSlug = null;
-      await loadFileBySlug(slug);
+    const parsed = JSON.parse(savedData) as Partial<LoginData>;
+    if (!parsed.user || !parsed.repo || !parsed.pat) {
+      localStorage.removeItem(LOGIN_STORAGE_KEY);
+      return null;
     }
-  } catch (error: any) {
-    showLoginError(
-      `登录失败: ${error.message}. 请检查您的信息和 PAT 权限。`
-    );
-  } finally {
-    ui.loginSpinner.classList.add("hidden");
-    ui.loginBtn.classList.remove("btn-disabled");
+    return {
+      user: String(parsed.user).trim(),
+      repo: String(parsed.repo).trim(),
+      pat: String(parsed.pat).trim(),
+    };
+  } catch {
+    localStorage.removeItem(LOGIN_STORAGE_KEY);
+    return null;
   }
 }
 
+function applyLoginData(loginData: LoginData) {
+  state.user = loginData.user;
+  state.repo = loginData.repo;
+  state.pat = loginData.pat;
+}
+
+function redirectToLogin() {
+  const next = encodeURIComponent(
+    `${window.location.pathname}${window.location.search}`
+  );
+  window.location.replace(`/login/?next=${next}`);
+}
+
 function logout() {
-  localStorage.removeItem("github_editor_data");
+  localStorage.removeItem(LOGIN_STORAGE_KEY);
   state.user = state.repo = state.pat = "";
   resetEditorState();
-  ui.mainView.classList.add("hidden");
-  ui.loginView.classList.remove("hidden");
-  ui.userInput.value = ui.repoInput.value = ui.patInput.value = "";
+  redirectToLogin();
 }
 
 // --- URL 参数处理 ---
@@ -929,6 +908,13 @@ async function loadFileBySlug(slug: string) {
 // --- 初始化 ---
 export async function initializeApp() {
   loadInitialTheme();
+  const loginData = parseSavedLoginData();
+  if (!loginData) {
+    redirectToLogin();
+    return;
+  }
+  applyLoginData(loginData);
+
   await ensureEditorReady();
 
   setupChangeListeners(); // <--- 确保元数据输入框的监听器被设置
@@ -939,7 +925,6 @@ export async function initializeApp() {
   window.addEventListener("beforeunload", saveDraft);
 
   // 事件监听器
-  ui.loginBtn.addEventListener("click", login);
   ui.logoutBtn.addEventListener("click", logout);
   ui.fileList.addEventListener("click", handleFileClick);
 
@@ -993,12 +978,15 @@ export async function initializeApp() {
   const params = getUrlParams();
   pendingSlug = params.slug;
 
-  const savedData = localStorage.getItem("github_editor_data");
-  if (savedData) {
-    const { user, repo, pat }: LoginData = JSON.parse(savedData);
-    ui.userInput.value = user;
-    ui.repoInput.value = repo;
-    ui.patInput.value = pat;
-    await login();
+  try {
+    await refreshFileList();
+    if (pendingSlug) {
+      const slug = pendingSlug;
+      pendingSlug = null;
+      await loadFileBySlug(slug);
+    }
+  } catch {
+    showSaveStatus("登录信息无效，请重新登录。", true);
+    logout();
   }
 }

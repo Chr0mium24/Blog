@@ -125,7 +125,7 @@ const categoryValue = category || "";
 
     <!-- download markdown button -->
     {slug && (
-        <div class="flex items-center">
+        <div class="hidden flex items-center" data-editor-auth-only>
             <div class="meta-icon">
                 <Icon name="material-symbols:download-rounded" class="text-xl" />
             </div>
@@ -142,7 +142,7 @@ const categoryValue = category || "";
 
     <!-- edit toggle -->
     {slug && (
-        <>
+        <div class="hidden contents" data-editor-auth-only>
             <div class="flex items-center">
                 <div class="meta-icon">
                     <Icon name="material-symbols:edit-outline-rounded" class="text-xl" />
@@ -241,7 +241,7 @@ const categoryValue = category || "";
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     )}
 </div>
 

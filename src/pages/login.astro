@@ -1,0 +1,90 @@
+---
+import "@fontsource/roboto/400.css";
+import "@fontsource/roboto/500.css";
+import "@fontsource/roboto/700.css";
+
+import "../styles/editor.css";
+import { siteConfig } from "@/config";
+
+const configHue = siteConfig.themeColor.hue;
+---
+
+<!doctype html>
+<html lang="zh-CN" class="bg-[var(--page-bg)] transition text-[14px] md:text-[16px]">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>登录编辑器 - Cr's Blog</title>
+
+    <script is:inline>
+      const savedTheme = localStorage.getItem("github_editor_theme");
+      const systemPrefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
+      const theme = savedTheme || (systemPrefersDark ? "dark" : "light");
+
+      if (theme === "dark") {
+        document.documentElement.classList.add("dark");
+      }
+    </script>
+
+    <style define:vars={{ configHue }}>
+      :root {
+        --configHue: var(--configHue);
+      }
+    </style>
+  </head>
+
+  <body class="min-h-screen transition">
+    <div class="min-h-screen flex items-center justify-center p-4">
+      <div class="max-w-xl w-full card-base card-shadow p-8">
+        <h2 class="text-2xl font-bold mb-6 text-90">GitHub 博客编辑器登录</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-75 mb-2">GitHub 用户名</label>
+            <input
+              id="github-user"
+              type="text"
+              placeholder="username"
+              class="w-full px-4 py-2 rounded-lg bg-[var(--btn-regular-bg)] text-90 border border-transparent focus:border-[var(--primary)] focus:outline-none transition"
+            />
+          </div>
+          <div>
+            <label class="block text-75 mb-2">GitHub 仓库名</label>
+            <input
+              id="github-repo"
+              type="text"
+              placeholder="例如 astro-blog"
+              class="w-full px-4 py-2 rounded-lg bg-[var(--btn-regular-bg)] text-90 border border-transparent focus:border-[var(--primary)] focus:outline-none transition"
+            />
+          </div>
+          <div>
+            <label class="block text-75 mb-2">个人访问令牌 (PAT)</label>
+            <input
+              id="github-pat"
+              type="password"
+              placeholder="粘贴您的 PAT"
+              class="w-full px-4 py-2 rounded-lg bg-[var(--btn-regular-bg)] text-90 border border-transparent focus:border-[var(--primary)] focus:outline-none transition"
+            />
+          </div>
+          <div class="flex justify-end mt-6">
+            <button
+              id="login-btn"
+              class="btn-regular px-6 py-2.5 rounded-lg font-medium flex items-center gap-2"
+            >
+              <span id="login-spinner" class="hidden">⏳</span>
+              登录并进入编辑器
+            </button>
+          </div>
+          <div id="login-error" class="text-red-500 mt-2 hidden text-sm"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      import { initializeLoginApp } from "../scripts/login.ts";
+
+      document.addEventListener("DOMContentLoaded", initializeLoginApp);
+    </script>
+  </body>
+</html>
