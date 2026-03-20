@@ -1,5 +1,5 @@
 ---
-title: research drawing
+title: 科研绘图
 published: 2026-03-20
 updated: 2026-03-20
 description: ''
