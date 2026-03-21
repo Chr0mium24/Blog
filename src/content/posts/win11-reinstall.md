@@ -1,7 +1,7 @@
 ---
 title: Win11重装工具
 published: 2026-01-23
-updated: 2026-01-23T00:00:00.000Z
+updated: 2026-01-23
 description: ''
 tags: []
 category: 工具
@@ -114,6 +114,16 @@ wsl --install -d <DistroName># 安装指定版本 要设置密码
 [USTC换源文件生成器](https://mirrors.ustc.edu.cn/repogen/)
 
 替换/etc/apt/sources.list
+
+### [下载换源](https://github.com/xixu-me/xget)
+
+### 安装[clash](https://github.com/nelvko/clash-for-linux-install)
+
+```Shell
+git clone --branch master --depth 1 https://gh-proxy.org/https://github.com/nelvko/clash-for-linux-install.git \
+  && cd clash-for-linux-install \
+  && bash install.sh
+```
 
 ### 安装C/C++编译器
 
