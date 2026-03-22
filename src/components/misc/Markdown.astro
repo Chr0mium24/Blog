@@ -14,30 +14,235 @@ const className = Astro.props.class;
 </div>
 
 <script>
-document.addEventListener("click", function (e: MouseEvent) {
-    const target = e.target as Element | null;
-    if (target && target.classList.contains("copy-btn")) {
-        const preEle = target.closest("pre");
-        const codeEle = preEle?.querySelector("code");
-        const code = Array.from(codeEle?.querySelectorAll(".code:not(summary *)") ?? [])
-            .map(el => el.textContent)
-            .map(t => t === "\n" ? "" : t)
-            .join("\n");
-        navigator.clipboard.writeText(code);
+type PyodideGlobals = {
+	destroy?: () => void;
+};
 
-        const timeoutId = target.getAttribute("data-timeout-id");
-        if (timeoutId) {
-            clearTimeout(parseInt(timeoutId));
-        }
+type PyodideRuntime = {
+	globals: {
+		get: (name: string) => () => PyodideGlobals;
+	};
+	loadPackage: (packages: string[]) => Promise<void>;
+	runPythonAsync: (
+		code: string,
+		options?: { globals?: PyodideGlobals },
+	) => Promise<unknown>;
+	setStdout: (options: { batched: (output: string) => void }) => void;
+	setStderr: (options: { batched: (output: string) => void }) => void;
+};
 
-        target.classList.add("success");
+declare global {
+	interface Window {
+		__markdownEnhancerReady?: boolean;
+		__pythonWasmRuntimePromise?: Promise<PyodideRuntime>;
+		__pythonWasmExecutionQueue?: Promise<unknown>;
+		__pythonWasmLoadedPackages?: Set<string>;
+	}
+}
 
-        // 设置新的timeout并保存ID到按钮的自定义属性中
-        const newTimeoutId = setTimeout(() => {
-            target.classList.remove("success");
-        }, 1000);
+const PYODIDE_VERSION = "0.28.2";
+const PYODIDE_BASE_URL = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
 
-        target.setAttribute("data-timeout-id", newTimeoutId.toString());
-    }
-});
+function decodeBase64Utf8(value: string): string {
+	const binary = atob(value);
+	const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+	return new TextDecoder().decode(bytes);
+}
+
+function setButtonLoadingState(button: HTMLButtonElement | null, loading: boolean) {
+	if (!button) return;
+	button.disabled = loading;
+	button.textContent = loading ? "运行中..." : "运行";
+}
+
+function getOutputText(error: unknown, fallback: string): string {
+	if (error instanceof Error) return error.message;
+	if (typeof error === "string" && error.trim().length > 0) return error;
+	return fallback;
+}
+
+async function loadPyodideRuntime(): Promise<PyodideRuntime> {
+	if (!window.__pythonWasmRuntimePromise) {
+		window.__pythonWasmRuntimePromise = import(
+			/* @vite-ignore */ `${PYODIDE_BASE_URL}pyodide.mjs`
+		).then(async ({ loadPyodide }) => {
+			return loadPyodide({
+				indexURL: PYODIDE_BASE_URL,
+			}) as Promise<PyodideRuntime>;
+		});
+	}
+	return window.__pythonWasmRuntimePromise;
+}
+
+async function ensurePackagesLoaded(
+	pyodide: PyodideRuntime,
+	packages: string[],
+): Promise<void> {
+	if (!window.__pythonWasmLoadedPackages) {
+		window.__pythonWasmLoadedPackages = new Set<string>();
+	}
+	const pendingPackages = packages.filter(
+		(pkg) => pkg && !window.__pythonWasmLoadedPackages?.has(pkg),
+	);
+	if (pendingPackages.length === 0) return;
+
+	await pyodide.loadPackage(pendingPackages);
+	for (const pkg of pendingPackages) {
+		window.__pythonWasmLoadedPackages.add(pkg);
+	}
+}
+
+async function runPythonInBrowser(
+	code: string,
+	packages: string[],
+): Promise<{ output: string; error: boolean }> {
+	const execute = async () => {
+		const pyodide = await loadPyodideRuntime();
+		await ensurePackagesLoaded(pyodide, packages);
+
+		const stdoutChunks: string[] = [];
+		const stderrChunks: string[] = [];
+		pyodide.setStdout({
+			batched: (output) => stdoutChunks.push(output),
+		});
+		pyodide.setStderr({
+			batched: (output) => stderrChunks.push(output),
+		});
+
+		const createDict = pyodide.globals.get("dict");
+		const globals = createDict();
+
+		try {
+			const result = await pyodide.runPythonAsync(code, { globals });
+			const combinedOutput = [...stdoutChunks, ...stderrChunks]
+				.filter((chunk) => chunk.length > 0)
+				.join("\n")
+				.trim();
+
+			if (combinedOutput.length > 0) {
+				return { output: combinedOutput, error: stderrChunks.length > 0 };
+			}
+
+			if (result !== undefined && result !== null) {
+				return { output: String(result), error: false };
+			}
+
+			return { output: "执行完成，没有输出。", error: false };
+		} finally {
+			globals.destroy?.();
+		}
+	};
+
+	const previousQueue = window.__pythonWasmExecutionQueue || Promise.resolve();
+	const queuedExecution = previousQueue.then(execute, execute);
+	window.__pythonWasmExecutionQueue = queuedExecution.catch(() => undefined);
+	return queuedExecution;
+}
+
+function initializePythonWasmBlock(block: HTMLElement) {
+	if (block.dataset.pythonWasmReady === "true") return;
+	block.dataset.pythonWasmReady = "true";
+
+	const runButton = block.querySelector<HTMLButtonElement>("[data-python-run]");
+	const clearButton = block.querySelector<HTMLButtonElement>("[data-python-clear]");
+	const status = block.querySelector<HTMLElement>("[data-python-status]");
+	const output = block.querySelector<HTMLElement>("[data-python-output]");
+	const encodedCode = block.getAttribute("data-python-code");
+	const packagesAttr = block.getAttribute("data-python-packages");
+	const packages = packagesAttr
+		? packagesAttr
+				.split(",")
+				.map((item) => item.trim())
+				.filter(Boolean)
+		: [];
+
+	if (!runButton || !clearButton || !status || !output || !encodedCode) return;
+
+	const initialStatus = status.textContent || "浏览器内 Python (Pyodide)";
+	const initialOutput = output.textContent || "";
+
+	runButton.addEventListener("click", async () => {
+		setButtonLoadingState(runButton, true);
+		block.setAttribute("data-python-state", "running");
+		status.textContent =
+			packages.length > 0
+				? `加载 Python 运行时并准备依赖: ${packages.join(", ")}`
+				: "加载 Python 运行时...";
+		output.textContent = "";
+
+		try {
+			const code = decodeBase64Utf8(encodedCode);
+			status.textContent = "执行中...";
+			const result = await runPythonInBrowser(code, packages);
+			block.setAttribute("data-python-state", result.error ? "error" : "done");
+			status.textContent = result.error ? "执行结束，包含错误输出" : "执行完成";
+			output.textContent = result.output;
+		} catch (error) {
+			block.setAttribute("data-python-state", "error");
+			status.textContent = "执行失败";
+			output.textContent = getOutputText(
+				error,
+				"Pyodide 加载或执行失败，请稍后重试。",
+			);
+		} finally {
+			setButtonLoadingState(runButton, false);
+		}
+	});
+
+	clearButton.addEventListener("click", () => {
+		block.setAttribute("data-python-state", "idle");
+		status.textContent = initialStatus;
+		output.textContent = initialOutput;
+	});
+}
+
+function initializeMarkdownEnhancements(root: ParentNode = document) {
+	root.querySelectorAll<HTMLElement>("[data-python-wasm]").forEach((block) => {
+		initializePythonWasmBlock(block);
+	});
+}
+
+if (!window.__markdownEnhancerReady) {
+	window.__markdownEnhancerReady = true;
+
+	document.addEventListener("click", function (e: MouseEvent) {
+		const target = e.target as Element | null;
+		if (target && target.classList.contains("copy-btn")) {
+			const preEle = target.closest("pre");
+			const codeEle = preEle?.querySelector("code");
+			const code = Array.from(codeEle?.querySelectorAll(".code:not(summary *)") ?? [])
+				.map(el => el.textContent)
+				.map(t => t === "\n" ? "" : t)
+				.join("\n");
+			navigator.clipboard.writeText(code);
+
+			const timeoutId = target.getAttribute("data-timeout-id");
+			if (timeoutId) {
+				clearTimeout(parseInt(timeoutId));
+			}
+
+			target.classList.add("success");
+
+			const newTimeoutId = setTimeout(() => {
+				target.classList.remove("success");
+			}, 1000);
+
+			target.setAttribute("data-timeout-id", newTimeoutId.toString());
+		}
+	});
+
+	initializeMarkdownEnhancements();
+
+	const setupSwupHook = () => {
+		window.swup.hooks.on("page:view", () => {
+			initializeMarkdownEnhancements();
+		});
+	};
+
+	if (window.swup?.hooks) {
+		setupSwupHook();
+	} else {
+		document.addEventListener("swup:enable", setupSwupHook, { once: true });
+	}
+}
 </script>

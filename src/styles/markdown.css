@@ -89,6 +89,53 @@
         @apply opacity-100
     }
 
+    .python-wasm-panel {
+        @apply mt-3 overflow-hidden rounded-xl border border-black/5 bg-black/[0.025] dark:border-white/10 dark:bg-white/[0.035];
+    }
+
+    .python-wasm-toolbar {
+        @apply flex flex-wrap items-center gap-2 border-b border-black/5 px-3 py-2 dark:border-white/10;
+    }
+
+    .python-wasm-run-btn,
+    .python-wasm-clear-btn {
+        all: initial;
+        font-family: inherit;
+        @apply cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium transition;
+
+        &:disabled {
+            @apply cursor-wait opacity-60;
+        }
+    }
+
+    .python-wasm-run-btn {
+        @apply bg-[var(--btn-regular-bg)] text-[var(--btn-content)] hover:bg-[var(--btn-regular-bg-hover)] active:bg-[var(--btn-regular-bg-active)];
+    }
+
+    .python-wasm-clear-btn {
+        @apply bg-black/5 text-black/70 hover:bg-black/10 active:bg-black/15 dark:bg-white/10 dark:text-white/75 dark:hover:bg-white/15 dark:active:bg-white/20;
+    }
+
+    .python-wasm-status {
+        @apply ml-auto text-xs text-black/45 dark:text-white/45;
+    }
+
+    .python-wasm-output {
+        @apply m-0 overflow-x-auto px-3 py-3 text-sm leading-6 text-black/80 dark:text-white/80;
+        background: transparent;
+        font-family: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .python-wasm-block[data-python-state="error"] .python-wasm-status {
+        @apply text-red-600 dark:text-red-300;
+    }
+
+    .python-wasm-block[data-python-state="done"] .python-wasm-status {
+        @apply text-emerald-600 dark:text-emerald-300;
+    }
+
     .expressive-code {
         @apply my-4;
         ::selection {
