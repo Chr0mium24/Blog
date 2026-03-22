@@ -72,34 +72,67 @@ export function pluginPythonWasm() {
 								{
 									type: "button",
 									"data-python-run": "",
+									"aria-label": "运行 Python",
+									title: "运行 Python",
 								},
-								"运行",
-							),
-							h(
-								"button.python-wasm-clear-btn",
-								{
-									type: "button",
-									"data-python-clear": "",
-								},
-								"清空输出",
-							),
-							h(
-								"span.python-wasm-status",
-								{
-									"data-python-status": "",
-								},
-								packages.length > 0
-									? `浏览器内 Python (Pyodide) · packages: ${packages.join(", ")}`
-									: "浏览器内 Python (Pyodide)",
+								[
+									h(
+										"svg.python-wasm-run-icon",
+										{
+											viewBox: "0 0 24 24",
+											"aria-hidden": "true",
+										},
+										[
+											h("path", {
+												d: "M8 6.82v10.36a1 1 0 0 0 1.53.85l7.99-5.18a1 1 0 0 0 0-1.68L9.53 5.97A1 1 0 0 0 8 6.82Z",
+											}),
+										],
+									),
+									h(
+										"span.python-wasm-run-label",
+										{
+											"data-python-run-label": "",
+										},
+										"运行",
+									),
+								],
 							),
 						]),
 						h(
-							"pre.python-wasm-output",
+							"div.python-wasm-result",
 							{
-								"data-python-output": "",
-								"aria-live": "polite",
+								"data-python-result": "",
+								hidden: true,
 							},
-							"点击“运行”后会在浏览器内执行这段 Python 代码。",
+							[
+								h("div.python-wasm-result-bar", [
+									h(
+										"span.python-wasm-status",
+										{
+											"data-python-status": "",
+										},
+										packages.length > 0
+											? `Pyodide · packages: ${packages.join(", ")}`
+											: "Pyodide",
+									),
+									h(
+										"button.python-wasm-clear-btn",
+										{
+											type: "button",
+											"data-python-clear": "",
+										},
+										"清空",
+									),
+								]),
+								h(
+									"pre.python-wasm-output",
+									{
+										"data-python-output": "",
+										"aria-live": "polite",
+									},
+									"",
+								),
+							],
 						),
 					]),
 				);

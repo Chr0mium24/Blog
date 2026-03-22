@@ -52,7 +52,14 @@ function decodeBase64Utf8(value: string): string {
 function setButtonLoadingState(button: HTMLButtonElement | null, loading: boolean) {
 	if (!button) return;
 	button.disabled = loading;
-	button.textContent = loading ? "运行中..." : "运行";
+	button.dataset.loading = loading ? "true" : "false";
+	button.setAttribute("aria-label", loading ? "运行中" : "运行 Python");
+	button.setAttribute("title", loading ? "运行中" : "运行 Python");
+
+	const label = button.querySelector<HTMLElement>("[data-python-run-label]");
+	if (label) {
+		label.textContent = loading ? "运行中" : "运行";
+	}
 }
 
 function getOutputText(error: unknown, fallback: string): string {
@@ -145,6 +152,7 @@ function initializePythonWasmBlock(block: HTMLElement) {
 
 	const runButton = block.querySelector<HTMLButtonElement>("[data-python-run]");
 	const clearButton = block.querySelector<HTMLButtonElement>("[data-python-clear]");
+	const resultPanel = block.querySelector<HTMLElement>("[data-python-result]");
 	const status = block.querySelector<HTMLElement>("[data-python-status]");
 	const output = block.querySelector<HTMLElement>("[data-python-output]");
 	const encodedCode = block.getAttribute("data-python-code");
@@ -156,13 +164,25 @@ function initializePythonWasmBlock(block: HTMLElement) {
 				.filter(Boolean)
 		: [];
 
-	if (!runButton || !clearButton || !status || !output || !encodedCode) return;
+	if (!runButton || !clearButton || !resultPanel || !status || !output || !encodedCode) {
+		return;
+	}
 
-	const initialStatus = status.textContent || "浏览器内 Python (Pyodide)";
+	const resultContainer = resultPanel;
+	const initialStatus = status.textContent || "Pyodide";
 	const initialOutput = output.textContent || "";
+
+	function setResultVisibility(visible: boolean) {
+		if (visible) {
+			resultContainer.removeAttribute("hidden");
+			return;
+		}
+		resultContainer.setAttribute("hidden", "");
+	}
 
 	runButton.addEventListener("click", async () => {
 		setButtonLoadingState(runButton, true);
+		setResultVisibility(true);
 		block.setAttribute("data-python-state", "running");
 		status.textContent =
 			packages.length > 0
@@ -193,6 +213,7 @@ function initializePythonWasmBlock(block: HTMLElement) {
 		block.setAttribute("data-python-state", "idle");
 		status.textContent = initialStatus;
 		output.textContent = initialOutput;
+		setResultVisibility(false);
 	});
 }
 
