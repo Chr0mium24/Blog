@@ -89,12 +89,16 @@
         @apply opacity-100
     }
 
+    .python-wasm-block {
+        @apply relative;
+    }
+
     .python-wasm-panel {
-        @apply mt-1 flex flex-col gap-1.5;
+        @apply mt-0;
     }
 
     .python-wasm-toolbar {
-        @apply flex justify-end;
+        @apply absolute right-[3.75rem] top-3 z-20 flex;
     }
 
     .python-wasm-run-btn,
@@ -128,7 +132,7 @@
     }
 
     .python-wasm-result {
-        @apply overflow-hidden rounded-xl border border-black/5 bg-white/80 shadow-sm dark:border-white/10 dark:bg-[oklch(0.22_0.015_var(--hue))];
+        @apply mt-2 overflow-hidden rounded-xl border border-black/5 bg-white/80 shadow-sm dark:border-white/10 dark:bg-[oklch(0.22_0.015_var(--hue))];
     }
 
     .python-wasm-result-bar {
