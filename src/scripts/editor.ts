@@ -38,6 +38,7 @@ const ui = {
   saveBtn: document.getElementById("save-btn") as HTMLButtonElement,
   saveSpinner: document.getElementById("save-spinner") as HTMLElement,
   saveStatus: document.getElementById("save-status") as HTMLElement,
+  viewSourceBtn: document.getElementById("view-source-btn") as HTMLButtonElement,
   testOutputBtn: document.getElementById("test-output-btn") as HTMLButtonElement,
   deleteFileBtn: document.getElementById("delete-file-btn") as HTMLButtonElement,
   newFileBtn: document.getElementById("new-file-btn") as HTMLButtonElement,
@@ -59,6 +60,10 @@ const ui = {
   themeToggle: document.getElementById("theme-toggle") as HTMLButtonElement,
   newFileCancelBtn: document.getElementById("new-file-cancel-btn") as HTMLButtonElement,
   renameFileCancelBtn: document.getElementById("rename-file-cancel-btn") as HTMLButtonElement,
+  sourceModal: document.getElementById("source-modal") as HTMLElement,
+  sourceContent: document.getElementById("source-content") as HTMLTextAreaElement,
+  sourceCopyBtn: document.getElementById("source-copy-btn") as HTMLButtonElement,
+  sourceCloseBtn: document.getElementById("source-close-btn") as HTMLButtonElement,
   tagList: document.getElementById("tag-list") as HTMLElement,
   categoryList: document.getElementById("category-list") as HTMLElement,
   newTagInput: document.getElementById("new-tag-input") as HTMLInputElement,
@@ -330,6 +335,7 @@ function markAsDirty() {
     ui.saveStatus.textContent = "未保存的更改 (本地草稿将在 5 秒后更新)";
     ui.saveStatus.className = "mt-2 text-right text-orange-500";
   }
+  refreshSourceView();
 }
 
 function markAsClean() {
@@ -432,9 +438,209 @@ function showSaveStatus(message: string, isError: boolean = false) {
   setTimeout(() => (ui.saveStatus.textContent = ""), 5000);
 }
 
+function getCurrentSourceMarkdown(): string {
+  const metadata = getEditorMetadata();
+  const body = getEditorMarkdown();
+  return createFullMarkdown(metadata, body);
+}
+
+function getSourceBodyOffset(source: string): number {
+  if (!source.startsWith("---")) return 0;
+  const frontmatterMatch = source.match(/^---\n[\s\S]*?\n---\n*/);
+  return frontmatterMatch ? frontmatterMatch[0].length : 0;
+}
+
+function getMetadataSourceSelection(
+  source: string
+): { start: number; end: number } | null {
+  const activeElement = document.activeElement;
+  if (
+    !(activeElement instanceof HTMLInputElement) &&
+    !(activeElement instanceof HTMLTextAreaElement)
+  ) {
+    return null;
+  }
+
+  const fieldKeyMap: Record<string, string> = {
+    "meta-title": "title",
+    "meta-published": "published",
+    "meta-updated": "updated",
+    "meta-description": "description",
+    "meta-tags": "tags",
+    "meta-category": "category",
+  };
+
+  const fieldKey = fieldKeyMap[activeElement.id];
+  if (!fieldKey) return null;
+
+  const lines = source.split("\n");
+  let offset = 0;
+  for (const line of lines) {
+    const prefix = `${fieldKey}:`;
+    if (line.startsWith(prefix)) {
+      const cursorOffset =
+        typeof activeElement.selectionStart === "number"
+          ? activeElement.selectionStart
+          : activeElement.value.length;
+      const start = offset + prefix.length + 1 + cursorOffset;
+      return { start, end: start };
+    }
+    offset += line.length + 1;
+  }
+
+  return null;
+}
+
+function getEditorSelectionContext() {
+  const editorRoot = document.querySelector("#markdown-editor .ProseMirror");
+  if (!(editorRoot instanceof HTMLElement)) return null;
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+
+  const range = selection.getRangeAt(0);
+  if (
+    !editorRoot.contains(range.startContainer) ||
+    !editorRoot.contains(range.endContainer)
+  ) {
+    return null;
+  }
+
+  const startElement =
+    range.startContainer instanceof Element
+      ? range.startContainer
+      : range.startContainer.parentElement;
+  const blockElement = startElement?.closest(
+    "p,li,h1,h2,h3,h4,h5,h6,blockquote,pre,td,th"
+  );
+  const parentText = blockElement?.textContent?.trim() ?? "";
+
+  let parentBeforeText = "";
+  if (blockElement) {
+    const prefixRange = document.createRange();
+    prefixRange.selectNodeContents(blockElement);
+    prefixRange.setEnd(range.startContainer, range.startOffset);
+    parentBeforeText = prefixRange.toString().trim();
+  }
+
+  const selectedText = selection.toString().trim();
+  return {
+    selectedText,
+    parentText,
+    parentBeforeText,
+    aroundText: parentText,
+    selectionEmpty: selection.isCollapsed,
+  };
+}
+
+function findBestSourceSelection(source: string): { start: number; end: number } {
+  const metadataSelection = getMetadataSourceSelection(source);
+  if (metadataSelection) return metadataSelection;
+
+  const bodyOffset = getSourceBodyOffset(source);
+  const context = getEditorSelectionContext();
+  if (!context) {
+    return { start: bodyOffset, end: bodyOffset };
+  }
+
+  const directNeedles = [
+    context.selectedText,
+    context.aroundText.length >= 6 ? context.aroundText : "",
+    context.parentText,
+  ].filter((value) => value.length > 0);
+
+  for (const needle of directNeedles) {
+    const index = source.indexOf(needle, bodyOffset);
+    if (index !== -1) {
+      const end = context.selectedText && needle === context.selectedText
+        ? index + needle.length
+        : index;
+      return { start: index, end };
+    }
+  }
+
+  if (context.parentText) {
+    const lines = source.split("\n");
+    let offset = 0;
+
+    for (const line of lines) {
+      if (line.includes(context.parentText)) {
+        const lineStart = offset;
+        const prefix = context.parentBeforeText;
+        if (prefix && line.includes(prefix)) {
+          const prefixIndex = line.indexOf(prefix);
+          const cursor = lineStart + prefixIndex + prefix.length;
+          return { start: cursor, end: cursor };
+        }
+
+        const textIndex = line.indexOf(context.parentText);
+        const cursor = lineStart + textIndex;
+        return { start: cursor, end: cursor };
+      }
+      offset += line.length + 1;
+    }
+  }
+
+  return { start: bodyOffset, end: bodyOffset };
+}
+
+function focusSourceSelection(start: number, end: number = start) {
+  const max = ui.sourceContent.value.length;
+  const safeStart = Math.max(0, Math.min(start, max));
+  const safeEnd = Math.max(safeStart, Math.min(end, max));
+
+  requestAnimationFrame(() => {
+    ui.sourceContent.focus();
+    ui.sourceContent.setSelectionRange(safeStart, safeEnd);
+
+    const lineHeight =
+      Number.parseFloat(getComputedStyle(ui.sourceContent).lineHeight) || 24;
+    const linesBefore = ui.sourceContent.value.slice(0, safeStart).split("\n").length - 1;
+    ui.sourceContent.scrollTop = Math.max(0, (linesBefore - 2) * lineHeight);
+  });
+}
+
+function refreshSourceView() {
+  if (ui.sourceModal.classList.contains("hidden")) return;
+  ui.sourceContent.value = getCurrentSourceMarkdown();
+}
+
+function openSourceModal(alignWithCursor: boolean = false) {
+  if (!state.currentFile.path) {
+    showSaveStatus("请先选择或新建一篇文章。", true);
+    return;
+  }
+  const source = getCurrentSourceMarkdown();
+  ui.sourceContent.value = source;
+  ui.sourceModal.classList.remove("hidden");
+
+  if (alignWithCursor) {
+    const { start, end } = findBestSourceSelection(source);
+    focusSourceSelection(start, end);
+  }
+}
+
+function closeSourceModal() {
+  ui.sourceModal.classList.add("hidden");
+}
+
+async function handleCopySource() {
+  await navigator.clipboard.writeText(ui.sourceContent.value);
+  showSaveStatus("Markdown 源码已复制。", false);
+}
+
+function handleSourceShortcut(event: KeyboardEvent) {
+  const isShortcut = (event.metaKey || event.ctrlKey) && event.code === "Slash";
+  if (!isShortcut) return;
+
+  event.preventDefault();
+  openSourceModal(true);
+}
+
 function resetEditorState() {
   ui.editorSection.classList.add("hidden");
   ui.placeholderSection.classList.remove("hidden");
+  closeSourceModal();
   state.currentFile = { path: null, sha: null, isNew: false };
   document
     .querySelectorAll("#file-list a")
@@ -511,6 +717,7 @@ function populateEditor(metadata: Partial<Metadata>, body: string) {
     : metadata.tags || "";
   ui.meta.category.value = metadata.category || "";
   setEditorMarkdown(body);
+  refreshSourceView();
 }
 
 function setTodaysDate() {
@@ -793,9 +1000,7 @@ async function handleSave() {
 }
 
 function handleTestOutput() {
-  const metadata = getEditorMetadata();
-  const body = getEditorMarkdown();
-  const output = createFullMarkdown(metadata, body);
+  const output = getCurrentSourceMarkdown();
   console.log(output);
   showSaveStatus("内容已输出到开发者控制台。", false);
 }
@@ -928,6 +1133,7 @@ export async function initializeApp() {
   ui.logoutBtn.addEventListener("click", logout);
   ui.fileList.addEventListener("click", handleFileClick);
 
+  ui.viewSourceBtn.addEventListener("click", () => openSourceModal(true));
   ui.testOutputBtn.addEventListener("click", handleTestOutput);
   ui.saveBtn.addEventListener("click", handleSave);
 
@@ -974,6 +1180,16 @@ export async function initializeApp() {
       ui.renameFileModal.classList.add("hidden");
     }
   });
+  ui.sourceCloseBtn.addEventListener("click", closeSourceModal);
+  ui.sourceCopyBtn.addEventListener("click", () => {
+    void handleCopySource();
+  });
+  ui.sourceModal.addEventListener("click", (e) => {
+    if (e.target === ui.sourceModal) {
+      closeSourceModal();
+    }
+  });
+  document.addEventListener("keydown", handleSourceShortcut);
 
   const params = getUrlParams();
   pendingSlug = params.slug;

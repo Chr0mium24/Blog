@@ -194,3 +194,8 @@
   padding: 24px;
   min-height: 420px;
 }
+
+.editor-source-view {
+  white-space: pre;
+  tab-size: 2;
+}

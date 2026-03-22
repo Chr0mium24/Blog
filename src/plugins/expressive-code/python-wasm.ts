@@ -4,6 +4,12 @@ import { h } from "hastscript";
 
 const PYTHON_LANGUAGES = new Set(["python", "py"]);
 
+function normalizePythonLanguage(language: string): string {
+	const normalized = language.trim().toLowerCase();
+	if (PYTHON_LANGUAGES.has(normalized)) return "python";
+	return language;
+}
+
 function parsePackages(value: string | undefined): string[] {
 	if (!value) return [];
 	return value
@@ -16,9 +22,17 @@ export function pluginPythonWasm() {
 	return definePlugin({
 		name: "Python WASM Runner",
 		hooks: {
+			preprocessLanguage: (context) => {
+				const normalizedLanguage = normalizePythonLanguage(
+					context.codeBlock.language,
+				);
+				if (normalizedLanguage !== context.codeBlock.language) {
+					context.codeBlock.language = normalizedLanguage;
+				}
+			},
 			postprocessRenderedBlock: (context) => {
-				const language = context.codeBlock.language.toLowerCase();
-				if (!PYTHON_LANGUAGES.has(language)) return;
+				const language = normalizePythonLanguage(context.codeBlock.language);
+				if (language !== "python") return;
 
 				if (!context.codeBlock.metaOptions.getBoolean("run")) return;
 
