@@ -7,7 +7,7 @@ tags: []
 category: 知识
 ---
 
-```Python
+```python run
 print("Hello World!")
 ```
 
