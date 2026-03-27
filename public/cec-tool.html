@@ -1,9 +1,12 @@
 <!doctype html>
 <html lang="zh-CN">
   <head>
+    <base
+      href="https://raw.githubusercontent.com/Chr0mium24/html-manager/content/html-projects/projects/566c133b04864d95813076352f01522c/"
+    />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CEC 工具</title>
+    <title>CEC 工具 (时间同步版)</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -99,7 +102,20 @@
         font-family: monospace;
       }
 
-      /* 进度条样式 */
+      /* 警告框样式 */
+      .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-bottom: 15px;
+        display: none; /* 默认隐藏 */
+        text-align: left;
+      }
+
+      /* 进度条样式 (移除CSS动画，改为JS驱动) */
       .progress-wrapper {
         width: 180px;
         height: 6px;
@@ -111,20 +127,9 @@
       .progress-bar {
         height: 100%;
         background: #e91e63;
-        width: 0%;
+        width: 0%; /* JS控制 */
         border-radius: 3px;
-      }
-      .progress-bar.animating {
-        animation: progressFill 5s linear infinite;
-      }
-
-      @keyframes progressFill {
-        0% {
-          width: 0%;
-        }
-        100% {
-          width: 100%;
-        }
+        transition: width 0.1s linear; /* 增加平滑度 */
       }
 
       #file-input {
@@ -163,7 +168,7 @@
   </head>
   <body>
     <!-- 拖拽提示层 -->
-    <div id="drag-overlay">
+    <div id="drag-overlay" style="display: none">
       <div>📂 释放动态二维码图片以识别</div>
     </div>
 
@@ -224,13 +229,19 @@
           </button>
         </div>
 
+        <!-- 降级警告提示 -->
+        <div id="legacy-warning" class="alert-warning">
+          <strong>⚠️ 注意：</strong>
+          检测到旧链接，未包含初始扫描时间。系统将使用当前时间作为基准，可能与服务器时间存在相位偏差。
+        </div>
+
         <div class="qr-section">
           <div class="qr-title">1. 课程详情码 (Static)</div>
           <div id="static-qrcode" class="qr-holder"></div>
         </div>
 
         <div class="qr-section" style="border-bottom: none">
-          <div class="qr-title">2. 动态签到码 (5s 刷新)</div>
+          <div class="qr-title">2. 动态签到码 (5s 刷新 / 自动对齐)</div>
           <div id="dynamic-qrcode" class="qr-holder"></div>
 
           <!-- 进度条 -->
@@ -249,8 +260,9 @@
 
     <script>
       let html5QrCode;
-      let refreshInterval;
+      let refreshTimer = null; // 用于高频刷新的定时器
       let isScanning = false;
+      let lastGeneratedToken = ""; // 记录上一次生成的Token，防止重复渲染
 
       // --- 初始化与路由 ---
       window.addEventListener("load", handleRouting);
@@ -334,7 +346,9 @@
           const url = new URL(decodedText);
           const p = new URLSearchParams(url.search);
           if (p.get("scene") === "signInOut") {
-            const newHash = `hkuType=${p.get("hkuType")}&dataId=${p.get("dataId")}&id=${p.get("id")}`;
+            // [新增] 获取当前时间作为 startTime，确保后续生成基于此时间点
+            const now = Date.now();
+            const newHash = `hkuType=${p.get("hkuType")}&dataId=${p.get("dataId")}&id=${p.get("id")}&startTime=${now}`;
             window.location.hash = newHash;
           } else {
             alert("识别成功，但不是有效的动态签到码 (scene!=signInOut)");
@@ -347,7 +361,7 @@
       // --- 文件/粘贴/拖拽识别核心 ---
       function scanImageFile(file) {
         if (!file) return;
-        const scanner = new Html5Qrcode("reader"); // 使用临时实例或复用
+        const scanner = new Html5Qrcode("reader");
         scanner
           .scanFile(file, true)
           .then((decodedText) => {
@@ -359,29 +373,23 @@
           });
       }
 
-      // 1. 文件输入框监听
       document.getElementById("file-input").addEventListener("change", (e) => {
         if (e.target.files.length > 0) scanImageFile(e.target.files[0]);
       });
 
-      // 2. 全局粘贴监听 (Ctrl+V)
       document.addEventListener("paste", (e) => {
-        // 如果不在生成页面，才允许粘贴
         if (document.getElementById("scan-view").style.display === "none")
           return;
-
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;
         for (let item of items) {
           if (item.kind === "file" && item.type.startsWith("image/")) {
-            const blob = item.getAsFile();
-            scanImageFile(blob);
+            scanImageFile(item.getAsFile());
             e.preventDefault();
             return;
           }
         }
       });
 
-      // 3. 全局拖拽监听
       const dragOverlay = document.getElementById("drag-overlay");
       let dragCounter = 0;
 
@@ -407,10 +415,8 @@
         e.preventDefault();
         dragCounter = 0;
         dragOverlay.style.display = "none";
-
         if (document.getElementById("scan-view").style.display === "none")
           return;
-
         if (e.dataTransfer.files.length > 0) {
           const file = e.dataTransfer.files[0];
           if (file.type.startsWith("image/")) {
@@ -421,7 +427,7 @@
         }
       });
 
-      // --- 生成逻辑 ---
+      // --- 生成逻辑 (核心修改区) ---
       function renderQr(elementId, text) {
         const container = document.getElementById(elementId);
         container.innerHTML = "";
@@ -437,46 +443,80 @@
         const container = document.getElementById("dynamic-qrcode");
         const tokenText = document.getElementById("token-text");
         const progressBar = document.getElementById("token-progress");
+        const warningBox = document.getElementById("legacy-warning");
 
-        const update = () => {
+        // 1. 确定基准时间
+        let baseTime;
+        if (params.startTime) {
+          baseTime = parseInt(params.startTime);
+          warningBox.style.display = "none"; // 隐藏警告
+        } else {
+          // 降级处理：没有startTime参数
+          baseTime = Date.now();
+          warningBox.style.display = "block"; // 显示警告
+        }
+
+        lastGeneratedToken = ""; // 重置状态
+
+        // 2. 启动高频检测 (每50ms运行一次，保证进度条平滑且Token切换精准)
+        if (refreshTimer) clearInterval(refreshTimer);
+
+        refreshTimer = setInterval(() => {
           const now = Date.now();
-          const token = now.toString(36);
-          const dynamicUrl = `https://cesp.cuhk.edu.cn/qrcode?scene=signInOut&hkuType=${params.hkuType}&dataId=${params.dataId}&id=${params.id}&token=${token}`;
+          // 计算距离基准时间过去了多少毫秒
+          const elapsed = now - baseTime;
+          // 防止时间回调导致负数 (虽然极少见)
+          const validElapsed = Math.max(0, elapsed);
 
-          container.innerHTML = "";
-          new QRCode(container, {
-            text: dynamicUrl,
-            width: 180,
-            height: 180,
-            correctLevel: QRCode.CorrectLevel.L,
-          });
+          // A. 进度条计算
+          // 取余数：在当前的 5s 周期内跑了多少毫秒
+          const remainder = validElapsed % 5000;
+          const percent = (remainder / 5000) * 100;
+          progressBar.style.width = percent + "%";
 
-          const d = new Date(now);
-          tokenText.innerText = `Token: ${token} (${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")})`;
+          // B. Token 计算
+          // 计算当前是第几个 5s 周期
+          const steps = Math.floor(validElapsed / 5000);
+          // 当前周期对应的目标 Token 时间戳
+          const currentTokenTime = baseTime + steps * 5000;
+          // 转 36 进制
+          const token = currentTokenTime.toString(36);
 
-          // 重置并重新开始动画
-          progressBar.classList.remove("animating");
-          void progressBar.offsetWidth; // 触发回流 (Reflow) 重启动画
-          progressBar.classList.add("animating");
-        };
+          // C. 只有当 Token 发生变化时才重新渲染 QR
+          if (token !== lastGeneratedToken) {
+            const dynamicUrl = `https://cesp.cuhk.edu.cn/qrcode?scene=signInOut&hkuType=${params.hkuType}&dataId=${params.dataId}&id=${params.id}&token=${token}`;
 
-        update(); // 立即执行一次
-        if (refreshInterval) clearInterval(refreshInterval);
-        refreshInterval = setInterval(update, 5000); // 5秒循环
+            container.innerHTML = "";
+            new QRCode(container, {
+              text: dynamicUrl,
+              width: 180,
+              height: 180,
+              correctLevel: QRCode.CorrectLevel.L,
+            });
+
+            // 格式化时间显示
+            const d = new Date(currentTokenTime);
+            const timeStr = `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")}`;
+
+            tokenText.innerText = `Token: ${token} (${timeStr})`;
+            lastGeneratedToken = token;
+          }
+        }, 50); // 50ms 刷新率
       }
 
       function stopDynamicRefresh() {
-        if (refreshInterval) {
-          clearInterval(refreshInterval);
-          refreshInterval = null;
+        if (refreshTimer) {
+          clearInterval(refreshTimer);
+          refreshTimer = null;
         }
-        document.getElementById("token-progress").classList.remove("animating");
+        document.getElementById("token-progress").style.width = "0%";
       }
 
       // --- 工具函数 ---
       function getHashParams() {
         const hash = window.location.hash.substring(1);
         const params = {};
+        if (!hash) return params;
         hash.split("&").forEach((pair) => {
           const [key, value] = pair.split("=");
           if (key) params[key] = value;
@@ -490,9 +530,10 @@
 
       function copyCurrentUrl() {
         navigator.clipboard.writeText(window.location.href).then(() => {
-          alert("✅ 链接已复制！");
+          alert("✅ 链接已复制！(包含初始时间参数)");
         });
       }
     </script>
   </body>
+  <div id="immersive-translate-popup" style="all: initial"></div>
 </html>
