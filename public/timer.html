@@ -262,12 +262,25 @@
       }
 
       // 启动/重启定时器
-      function startTimer() {
-        clearInterval(countdownInterval);
-        updateTimer(); // 立即执行一次避免延迟
-        countdownInterval = setInterval(updateTimer, 1000);
-      }
+      function updateTimer() {
+        const now = new Date().getTime();
+        const distance = targetDate.getTime() - now;
 
+        if (distance <= 0) {
+          clearInterval(countdownInterval);
+          timerDisplay.innerHTML = "00:00:00";
+          titleDisplay.innerHTML = "时间到！";
+          return;
+        }
+
+        // 核心修改：直接计算总小时数，不再对 24 小时取模
+        const hours = Math.floor(distance / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        // 即使 hours 超过两位数（如 125），padStart(2, '0') 依然会正常显示 "125"
+        timerDisplay.innerHTML = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+      }
       // 事件监听：设置面板
       btnSettings.addEventListener("click", () => {
         settingsModal.classList.add("active");
