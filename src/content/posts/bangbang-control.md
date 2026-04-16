@@ -1,7 +1,7 @@
 ---
-title: 滑膜控制
+title: 滑模控制
 published: 2026-04-14
-updated: 2026-04-14
+updated: 2026-04-16
 description: ''
 tags: []
 category: 知识
