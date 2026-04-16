@@ -38,15 +38,11 @@ let workspace = NSWorkspace.shared
 
 // 1. 获取当前最前台的 App
 if let frontApp = workspace.frontmostApplication, frontApp.localizedName == targetAppName {
-    // 如果目标 App 已经在最前，调用原生方法隐藏
     frontApp.hide()
 } else {
-    // 2. 如果不在最前或未开启
     if let targetApp = workspace.runningApplications.first(where: { $0.localizedName == targetAppName }) {
-        // App 已在后台，唤醒并置顶（已移除 macOS 14 废弃的强制参数）
         targetApp.activate()
     } else {
-        // 3. App 未运行，使用 open 命令冷启动
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
         task.arguments = ["-a", targetAppName]
