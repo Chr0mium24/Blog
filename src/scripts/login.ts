@@ -44,6 +44,14 @@ function buildState(loginData: LoginData): EditorState {
   };
 }
 
+function notifyAuthChanged() {
+  window.dispatchEvent(
+    new CustomEvent("github-editor-auth-changed", {
+      detail: { storageKey: STORAGE_KEY },
+    })
+  );
+}
+
 function loadSavedLoginData(): LoginData | null {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
@@ -91,6 +99,7 @@ async function login() {
   try {
     await getFiles(buildState(loginData));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(loginData));
+    notifyAuthChanged();
     window.location.href = getNextPath();
   } catch (error) {
     const message =

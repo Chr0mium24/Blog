@@ -98,6 +98,7 @@ let cachedEntries: FileEntry[] = [];
 const CUSTOM_TAGS_KEY = "github_editor_custom_tags";
 const CUSTOM_CATEGORIES_KEY = "github_editor_custom_categories";
 const LOGIN_STORAGE_KEY = "github_editor_data";
+const UNSAVED_NEW_FILE_DRAFT_KEY = "github_editor_unsaved_new_file_draft";
 
 type FileEntry = {
   path: string;
@@ -108,6 +109,15 @@ type FileEntry = {
   sortTime: number;
   tags: string[];
   category: string;
+};
+
+type UnsavedNewFileDraft = {
+  user: string;
+  repo: string;
+  path: string;
+  metadata: Partial<Metadata>;
+  body: string;
+  savedAt: string;
 };
 
 // --- 主题功能 ---
@@ -218,6 +228,50 @@ function uniqueSorted(values: string[]): string[] {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).sort(
     (a, b) => a.localeCompare(b, "zh-Hans-CN")
   );
+}
+
+function normalizeSlug(slug: string): string {
+  return slug.replace(/^\/+/, "").replace(/\.md$/i, "").trim();
+}
+
+function pathToSlug(path: string): string {
+  const normalizedPath = path.replace(/^src\/content\/posts\//, "");
+  return normalizeSlug(normalizedPath.replace(/\/index\.md$/i, "").replace(/\.md$/i, ""));
+}
+
+function getHashSlug(): string | null {
+  const rawHash = window.location.hash.replace(/^#/, "").trim();
+  if (!rawHash) return null;
+  try {
+    return normalizeSlug(decodeURIComponent(rawHash));
+  } catch {
+    return normalizeSlug(rawHash);
+  }
+}
+
+function getQuerySlug(): string | null {
+  const urlParams = new URLSearchParams(window.location.search);
+  const slug = urlParams.get("slug");
+  return slug ? normalizeSlug(slug) : null;
+}
+
+function getSlugFromUrl(): string | null {
+  return getHashSlug() || getQuerySlug();
+}
+
+function setEditorHashByPath(path: string | null, replace: boolean = false) {
+  const currentUrl = new URL(window.location.href);
+  const nextHash = path ? `#${encodeURIComponent(pathToSlug(path))}` : "";
+  currentUrl.searchParams.delete("slug");
+
+  const nextUrl = `${currentUrl.pathname}${currentUrl.search}${nextHash}`;
+  const currentRelative = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (currentRelative === nextUrl) return;
+  if (replace) {
+    window.history.replaceState(null, "", nextUrl);
+  } else {
+    window.history.pushState(null, "", nextUrl);
+  }
 }
 
 async function buildFileEntries(files: any[]): Promise<FileEntry[]> {
@@ -372,12 +426,91 @@ function getEditorMetadata(): Partial<Metadata> {
   };
 }
 
+function saveUnsavedNewFileDraft(metadata: Partial<Metadata>, body: string) {
+  if (!state.currentFile.isNew || !state.currentFile.path) return;
+  const payload: UnsavedNewFileDraft = {
+    user: state.user,
+    repo: state.repo,
+    path: state.currentFile.path,
+    metadata,
+    body,
+    savedAt: new Date().toISOString(),
+  };
+  localStorage.setItem(UNSAVED_NEW_FILE_DRAFT_KEY, JSON.stringify(payload));
+}
+
+function clearUnsavedNewFileDraft() {
+  localStorage.removeItem(UNSAVED_NEW_FILE_DRAFT_KEY);
+}
+
+function loadUnsavedNewFileDraft(): UnsavedNewFileDraft | null {
+  const raw = localStorage.getItem(UNSAVED_NEW_FILE_DRAFT_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<UnsavedNewFileDraft>;
+    if (!parsed.user || !parsed.repo || !parsed.path) return null;
+    if (String(parsed.user) !== state.user || String(parsed.repo) !== state.repo) {
+      return null;
+    }
+    return {
+      user: String(parsed.user),
+      repo: String(parsed.repo),
+      path: String(parsed.path),
+      metadata: (parsed.metadata || {}) as Partial<Metadata>,
+      body: typeof parsed.body === "string" ? parsed.body : "",
+      savedAt:
+        typeof parsed.savedAt === "string"
+          ? parsed.savedAt
+          : new Date().toISOString(),
+    };
+  } catch {
+    localStorage.removeItem(UNSAVED_NEW_FILE_DRAFT_KEY);
+    return null;
+  }
+}
+
+function restoreUnsavedNewFileDraft() {
+  const draft = loadUnsavedNewFileDraft();
+  if (!draft) return;
+
+  const savedDate = new Date(draft.savedAt).toLocaleString();
+  const shouldRestore = confirm(
+    `发现新建文件的未上传草稿（保存于 ${savedDate}），是否恢复继续编辑？`
+  );
+  if (!shouldRestore) {
+    clearUnsavedNewFileDraft();
+    return;
+  }
+
+  state.currentFile = {
+    path: draft.path,
+    sha: null,
+    isNew: true,
+  };
+  ui.currentFileName.textContent = draft.path.split("/").pop() || "";
+  populateEditor(draft.metadata, draft.body);
+  ui.placeholderSection.classList.add("hidden");
+  ui.editorSection.classList.remove("hidden");
+  document
+    .querySelectorAll("#file-list a")
+    .forEach((el) =>
+      el.classList.remove(
+        "bg-[var(--btn-plain-bg-hover)]",
+        "text-[var(--primary)]"
+      )
+    );
+  setEditorHashByPath(draft.path, true);
+  markAsDirty();
+  showSaveStatus("已恢复新建文件草稿。", false);
+}
+
 function saveDraft() {
   if (!state.currentFile.path || !isDirty) return;
   const metadata = getEditorMetadata();
   const body = getEditorMarkdown();
   try {
       saveDraftToStorage(state, state.currentFile.path, metadata, body);
+      saveUnsavedNewFileDraft(metadata, body);
       markAsClean(); // 草稿保存成功，将状态标记为 clean (clean = 草稿已是最新的)
       ui.saveStatus.textContent = `本地草稿已保存于 ${new Date().toLocaleTimeString()}`;
       ui.saveStatus.className = "mt-2 text-right text-gray-500 text-sm";
@@ -637,11 +770,14 @@ function handleSourceShortcut(event: KeyboardEvent) {
   openSourceModal(true);
 }
 
-function resetEditorState() {
+function resetEditorState(clearHash: boolean = true) {
   ui.editorSection.classList.add("hidden");
   ui.placeholderSection.classList.remove("hidden");
   closeSourceModal();
   state.currentFile = { path: null, sha: null, isNew: false };
+  if (clearHash) {
+    setEditorHashByPath(null, true);
+  }
   document
     .querySelectorAll("#file-list a")
     .forEach((el) =>
@@ -731,6 +867,8 @@ async function applyFileContent(path: string, content: string, sha: string) {
   state.currentFile.path = path;
   state.currentFile.sha = sha;
   state.currentFile.isNew = false;
+  clearUnsavedNewFileDraft();
+  setEditorHashByPath(path);
 
   ui.placeholderSection.classList.add("hidden");
   ui.editorSection.classList.remove("hidden");
@@ -838,6 +976,8 @@ function handleCreateNewFile() {
     sha: null,
     isNew: true,
   };
+  clearUnsavedNewFileDraft();
+  setEditorHashByPath(state.currentFile.path);
   ui.currentFileName.textContent = filename;
 
   // 使用基本模板元数据初始化编辑器
@@ -901,6 +1041,7 @@ async function renameFileAction(oldPath: string, newFilename: string) {
   // 3. 更新状态
   state.currentFile.path = newPath;
   state.currentFile.sha = result.content.sha;
+  setEditorHashByPath(newPath);
 
   return result;
 }
@@ -970,6 +1111,7 @@ async function handleSave() {
 
     state.currentFile.sha = result.content.sha;
     state.currentFile.isNew = false;
+    clearUnsavedNewFileDraft();
     clearDraft(state.currentFile.path);
     markAsClean(); // <--- 成功保存到 GitHub 后，标记为 clean
     showSaveStatus("文件保存成功！", false);
@@ -1049,28 +1191,25 @@ function applyLoginData(loginData: LoginData) {
 
 function redirectToLogin() {
   const next = encodeURIComponent(
-    `${window.location.pathname}${window.location.search}`
+    `${window.location.pathname}${window.location.search}${window.location.hash}`
   );
   window.location.replace(`/login/?next=${next}`);
 }
 
 function logout() {
   localStorage.removeItem(LOGIN_STORAGE_KEY);
+  window.dispatchEvent(
+    new CustomEvent("github-editor-auth-changed", {
+      detail: { storageKey: LOGIN_STORAGE_KEY },
+    })
+  );
   state.user = state.repo = state.pat = "";
-  resetEditorState();
+  resetEditorState(false);
   redirectToLogin();
 }
 
-// --- URL 参数处理 ---
-function getUrlParams() {
-  const urlParams = new URLSearchParams(window.location.search);
-  return {
-    slug: urlParams.get("slug"),
-  };
-}
-
 async function loadFileBySlug(slug: string) {
-  const normalizedSlug = slug.replace(/^\/+/, "").replace(/\.md$/i, "");
+  const normalizedSlug = normalizeSlug(slug);
   const candidatePaths = [
     `src/content/posts/${normalizedSlug}.md`,
     `src/content/posts/${normalizedSlug}/index.md`,
@@ -1107,6 +1246,18 @@ async function loadFileBySlug(slug: string) {
       ? lastError.message
       : `未找到文章: ${slug}`;
   showSaveStatus(`加载指定文章失败: ${message}`, true);
+}
+
+function getCurrentPathSlug(): string | null {
+  if (!state.currentFile.path) return null;
+  return pathToSlug(state.currentFile.path);
+}
+
+async function handleEditorHashChange() {
+  const hashSlug = getHashSlug();
+  if (!hashSlug) return;
+  if (getCurrentPathSlug() === hashSlug) return;
+  await loadFileBySlug(hashSlug);
 }
 
 
@@ -1190,11 +1341,27 @@ export async function initializeApp() {
     }
   });
   document.addEventListener("keydown", handleSourceShortcut);
+  window.addEventListener("hashchange", () => {
+    void handleEditorHashChange();
+  });
 
-  const params = getUrlParams();
-  pendingSlug = params.slug;
+  window.addEventListener("storage", (event) => {
+    if (event.key !== LOGIN_STORAGE_KEY) return;
+    const latest = parseSavedLoginData();
+    if (!latest) {
+      showSaveStatus("登录状态已失效，请重新登录。", true);
+      logout();
+      return;
+    }
+    applyLoginData(latest);
+  });
+
+  pendingSlug = getSlugFromUrl();
 
   try {
+    if (!pendingSlug) {
+      restoreUnsavedNewFileDraft();
+    }
     await refreshFileList();
     if (pendingSlug) {
       const slug = pendingSlug;

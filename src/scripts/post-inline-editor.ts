@@ -5,6 +5,7 @@ import { replaceAll } from "@milkdown/utils";
 import type { EditorState, LoginData, Metadata } from "./types";
 import {
   createFullMarkdown,
+  getFiles,
   getFileContent,
   parseContent,
   updateFile,
@@ -62,6 +63,14 @@ const parseLoginData = (): LoginData | null => {
     localStorage.removeItem(STORAGE_KEY);
     return null;
   }
+};
+
+const notifyAuthChanged = () => {
+  window.dispatchEvent(
+    new CustomEvent("github-editor-auth-changed", {
+      detail: { storageKey: STORAGE_KEY },
+    })
+  );
 };
 
 const createState = (login: LoginData): EditorState => ({
@@ -384,6 +393,14 @@ export const initPostInlineEditor = () => {
   const init = () => {
     hydrateSummaries();
 
+    window.addEventListener("storage", (event) => {
+      if (event.key && event.key !== STORAGE_KEY) return;
+      hydrateSummaries();
+    });
+    window.addEventListener("github-editor-auth-changed", () => {
+      hydrateSummaries();
+    });
+
     document.addEventListener("click", (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
@@ -399,7 +416,7 @@ export const initPostInlineEditor = () => {
 
         if (!loginData) {
           const next = encodeURIComponent(
-            `${window.location.pathname}${window.location.search}`
+            `${window.location.pathname}${window.location.search}${window.location.hash}`
           );
           window.location.href = `/login/?next=${next}`;
           return;
@@ -413,40 +430,53 @@ export const initPostInlineEditor = () => {
 
       const loginBtn = target.closest("[data-editor-login]");
       if (loginBtn) {
-        const modalEl = loginBtn.closest("[data-editor-modal]") as HTMLElement | null;
-        const container = modalEl
-          ? resolveContainerFromModal(modalEl)
-          : loginBtn.closest("[data-editor-meta]");
-        if (!container) return;
-        const userInput = modalEl?.querySelector(
-          "[data-editor-user]"
-        ) as HTMLInputElement | null | undefined;
-        const repoInput = modalEl?.querySelector(
-          "[data-editor-repo]"
-        ) as HTMLInputElement | null | undefined;
-        const patInput = modalEl?.querySelector(
-          "[data-editor-pat]"
-        ) as HTMLInputElement | null | undefined;
-        const errorEl = modalEl?.querySelector("[data-editor-error]");
-        const summaryEl = container.querySelector("[data-editor-summary]");
-        const panelEl = container.querySelector("[data-editor-panel]");
-        const toggleStateEl = container.querySelector("[data-editor-toggle-state]");
-        const user = userInput?.value.trim();
-        const repo = repoInput?.value.trim();
-        const pat = patInput?.value.trim();
-        if (!user || !repo || !pat) {
-          if (errorEl) {
-            errorEl.textContent = "所有字段均为必填项。";
-            errorEl.classList.remove("hidden");
+        void (async () => {
+          const modalEl = loginBtn.closest("[data-editor-modal]") as HTMLElement | null;
+          const container = modalEl
+            ? resolveContainerFromModal(modalEl)
+            : loginBtn.closest("[data-editor-meta]");
+          if (!container) return;
+          const userInput = modalEl?.querySelector(
+            "[data-editor-user]"
+          ) as HTMLInputElement | null | undefined;
+          const repoInput = modalEl?.querySelector(
+            "[data-editor-repo]"
+          ) as HTMLInputElement | null | undefined;
+          const patInput = modalEl?.querySelector(
+            "[data-editor-pat]"
+          ) as HTMLInputElement | null | undefined;
+          const errorEl = modalEl?.querySelector("[data-editor-error]");
+          const summaryEl = container.querySelector("[data-editor-summary]");
+          const panelEl = container.querySelector("[data-editor-panel]");
+          const toggleStateEl = container.querySelector("[data-editor-toggle-state]");
+          const user = userInput?.value.trim();
+          const repo = repoInput?.value.trim();
+          const pat = patInput?.value.trim();
+          if (!user || !repo || !pat) {
+            if (errorEl) {
+              errorEl.textContent = "所有字段均为必填项。";
+              errorEl.classList.remove("hidden");
+            }
+            return;
           }
-          return;
-        }
-        const newData = { user, repo, pat };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-        updateAuthOnlyVisibility(newData);
-        updateSummary(summaryEl, newData);
-        if (modalEl) modalEl.classList.add("hidden");
-        setPanelOpen(panelEl, toggleStateEl, true);
+          if (errorEl) errorEl.classList.add("hidden");
+          const newData = { user, repo, pat };
+          try {
+            await getFiles(createState(newData));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+            notifyAuthChanged();
+            updateAuthOnlyVisibility(newData);
+            updateSummary(summaryEl, newData);
+            if (modalEl) modalEl.classList.add("hidden");
+            setPanelOpen(panelEl, toggleStateEl, true);
+          } catch (error) {
+            if (errorEl) {
+              errorEl.textContent =
+                error instanceof Error ? `登录失败: ${error.message}` : "登录失败，请检查输入信息。";
+              errorEl.classList.remove("hidden");
+            }
+          }
+        })();
         return;
       }
 
@@ -496,6 +526,7 @@ export const initPostInlineEditor = () => {
         const toggleStateEl = container.querySelector("[data-editor-toggle-state]");
         const summaryEl = container.querySelector("[data-editor-summary]");
         localStorage.removeItem(STORAGE_KEY);
+        notifyAuthChanged();
         updateAuthOnlyVisibility(null);
         updateSummary(summaryEl, null);
         setPanelOpen(panelEl, toggleStateEl, false);
