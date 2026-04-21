@@ -43,6 +43,11 @@ export const navBarConfig: NavBarConfig = {
 	links: [
 		LinkPreset.Home,
 		LinkPreset.Archive,
+		{
+			name: "WebPages",
+			url: "/webpages/",
+			external: false,
+		},
 		//LinkPreset.About,
 		{
 			name: "Skyzhou🥰🥰🥰",

@@ -1,0 +1,91 @@
+---
+import MainGridLayout from "@layouts/MainGridLayout.astro";
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
+
+type HtmlEntry = {
+  filename: string;
+  title: string;
+};
+
+const publicDir = join(process.cwd(), "public");
+const dirEntries = await readdir(publicDir, { withFileTypes: true });
+const htmlEntries: HtmlEntry[] = dirEntries
+  .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".html"))
+  .map((entry) => ({
+    filename: entry.name,
+    title: entry.name.replace(/\.html$/i, ""),
+  }))
+  .sort((a, b) => a.filename.localeCompare(b.filename, "zh-Hans-CN"));
+---
+
+<MainGridLayout title="WebPages">
+  <div class="card-base card-shadow p-6 md:p-8">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <h1 class="text-3xl font-bold text-90">Web Pages</h1>
+      <div class="flex items-center gap-2">
+        <a
+          href="/login/?next=/webpages/"
+          class="btn-plain px-4 py-2 rounded-lg text-sm font-medium"
+          data-public-login-btn
+        >
+          登录编辑
+        </a>
+        <a
+          href="/html-editor/"
+          class="btn-regular px-4 py-2 rounded-lg text-sm font-medium hidden"
+          data-public-new-btn
+        >
+          新建
+        </a>
+      </div>
+    </div>
+
+    <ul class="space-y-2">
+      {htmlEntries.map((item) => (
+        <li class="card-base px-4 py-3 rounded-xl border border-[var(--line-divider)]/30">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <a
+                href={`/${item.filename}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="font-medium text-90 hover:text-[var(--primary)] transition"
+              >
+                {item.title}
+              </a>
+              <div class="text-xs text-50 mt-1">{item.filename}</div>
+            </div>
+            <div class="flex items-center gap-2 hidden" data-public-auth-actions>
+              <a
+                href={`/html-editor/#${encodeURIComponent(item.filename)}`}
+                class="btn-regular px-3 py-1.5 rounded-lg text-sm font-medium"
+              >
+                编辑
+              </a>
+              <a
+                href={`/${item.filename}`}
+                download
+                class="btn-plain px-3 py-1.5 rounded-lg text-sm font-medium"
+              >
+                下载
+              </a>
+              <button
+                type="button"
+                class="btn-plain px-3 py-1.5 rounded-lg text-sm font-medium !text-red-500"
+                data-public-delete-file={item.filename}
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <script>
+    import { initializeWebPages } from "../scripts/webpages";
+    document.addEventListener("DOMContentLoaded", initializeWebPages);
+  </script>
+</MainGridLayout>
