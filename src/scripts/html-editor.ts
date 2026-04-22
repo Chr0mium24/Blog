@@ -82,10 +82,52 @@ function getCodeMirrorFactory():
         textarea: HTMLTextAreaElement,
         options: Record<string, unknown>
       ) => CodeMirrorEditor;
+      modes?: Record<string, unknown>;
     };
   };
   const factory = win.CodeMirror?.fromTextArea;
   return typeof factory === "function" ? factory : null;
+}
+
+function isHtmlModeLoaded(): boolean {
+  const win = window as unknown as {
+    CodeMirror?: { modes?: Record<string, unknown> };
+  };
+  return !!win.CodeMirror?.modes?.htmlmixed;
+}
+
+function loadExternalScript(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`) as HTMLScriptElement | null;
+    if (existing) {
+      if ((existing as any).__loaded) {
+        resolve();
+        return;
+      }
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error(`加载脚本失败: ${src}`)), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = false;
+    script.addEventListener("load", () => {
+      (script as any).__loaded = true;
+      resolve();
+    });
+    script.addEventListener("error", () => reject(new Error(`加载脚本失败: ${src}`)));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureCodeMirrorModes() {
+  if (isHtmlModeLoaded()) return;
+  const base = "https://cdn.jsdelivr.net/npm/codemirror@5.65.18/mode";
+  await loadExternalScript(`${base}/xml/xml.min.js`);
+  await loadExternalScript(`${base}/javascript/javascript.min.js`);
+  await loadExternalScript(`${base}/css/css.min.js`);
+  await loadExternalScript(`${base}/htmlmixed/htmlmixed.min.js`);
 }
 
 function getEditorValue() {
@@ -101,9 +143,10 @@ function setEditorValue(value: string) {
   ui.editor.value = value;
 }
 
-function initializeCodeEditor() {
+async function initializeCodeEditor() {
   const factory = getCodeMirrorFactory();
   if (!factory || codeEditor) return;
+  await ensureCodeMirrorModes();
   codeEditor = factory(ui.editor, {
     mode: "htmlmixed",
     lineNumbers: true,
@@ -671,7 +714,7 @@ export async function initializeHtmlEditor(): Promise<void> {
     return;
   }
   applyLoginData(loginData);
-  initializeCodeEditor();
+  await initializeCodeEditor();
   bindEvents();
   bindDropAndPaste();
   initializeAi();
