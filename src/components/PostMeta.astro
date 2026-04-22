@@ -140,24 +140,27 @@ const categoryValue = category || "";
         </div>
     )}
 
+    <!-- always-visible edit entry -->
+    {slug && (
+        <div class="flex items-center">
+            <div class="meta-icon">
+                <Icon name="material-symbols:edit-outline-rounded" class="text-xl" />
+            </div>
+            <button
+                type="button"
+                class="transition text-50 text-sm font-medium hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap"
+                title="编辑文章"
+                data-editor-toggle
+            >
+                编辑文章
+                <span class="ml-1 text-[var(--meta-divider)]" data-editor-toggle-state>关闭</span>
+            </button>
+        </div>
+    )}
+
     <!-- edit toggle -->
     {slug && (
         <div class="hidden contents" data-editor-auth-only>
-            <div class="flex items-center">
-                <div class="meta-icon">
-                    <Icon name="material-symbols:edit-outline-rounded" class="text-xl" />
-                </div>
-                <button
-                    type="button"
-                    class="transition text-50 text-sm font-medium hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap"
-                    title="编辑开关"
-                    data-editor-toggle
-                >
-                    编辑
-                    <span class="ml-1 text-[var(--meta-divider)]" data-editor-toggle-state>关闭</span>
-                </button>
-            </div>
-
             <div class="w-full hidden mt-3" data-editor-panel>
                 <div class="card-base card-shadow px-4 py-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                     <div class="text-sm text-75" data-editor-summary>未登录</div>
@@ -170,7 +173,7 @@ const categoryValue = category || "";
                             编辑当前文章
                         </button>
                         <a
-                            href={`/editor/#${encodeURIComponent(slug)}`}
+                            href={`/editor/?mode=post&post=${encodeURIComponent(slug)}`}
                             class="btn-plain px-3 py-1.5 rounded-lg text-sm font-medium"
                         >
                             打开编辑器

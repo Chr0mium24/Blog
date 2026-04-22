@@ -252,20 +252,25 @@ function getHashSlug(): string | null {
 
 function getQuerySlug(): string | null {
   const urlParams = new URLSearchParams(window.location.search);
-  const slug = urlParams.get("slug");
+  const slug = urlParams.get("post") || urlParams.get("slug");
   return slug ? normalizeSlug(slug) : null;
 }
 
 function getSlugFromUrl(): string | null {
-  return getHashSlug() || getQuerySlug();
+  return getQuerySlug() || getHashSlug();
 }
 
 function setEditorHashByPath(path: string | null, replace: boolean = false) {
   const currentUrl = new URL(window.location.href);
-  const nextHash = path ? `#${encodeURIComponent(pathToSlug(path))}` : "";
+  currentUrl.searchParams.set("mode", "post");
   currentUrl.searchParams.delete("slug");
+  if (path) {
+    currentUrl.searchParams.set("post", pathToSlug(path));
+  } else {
+    currentUrl.searchParams.delete("post");
+  }
 
-  const nextUrl = `${currentUrl.pathname}${currentUrl.search}${nextHash}`;
+  const nextUrl = `${currentUrl.pathname}${currentUrl.search}`;
   const currentRelative = `${window.location.pathname}${window.location.search}${window.location.hash}`;
   if (currentRelative === nextUrl) return;
   if (replace) {
@@ -1269,11 +1274,11 @@ function getCurrentPathSlug(): string | null {
   return pathToSlug(state.currentFile.path);
 }
 
-async function handleEditorHashChange() {
-  const hashSlug = getHashSlug();
-  if (!hashSlug) return;
-  if (getCurrentPathSlug() === hashSlug) return;
-  await loadFileBySlug(hashSlug);
+async function handleEditorLocationChange() {
+  const targetSlug = getSlugFromUrl();
+  if (!targetSlug) return;
+  if (getCurrentPathSlug() === targetSlug) return;
+  await loadFileBySlug(targetSlug);
 }
 
 
@@ -1358,7 +1363,10 @@ export async function initializeApp(): Promise<void> {
   });
   document.addEventListener("keydown", handleSourceShortcut);
   window.addEventListener("hashchange", () => {
-    void handleEditorHashChange();
+    void handleEditorLocationChange();
+  });
+  window.addEventListener("popstate", () => {
+    void handleEditorLocationChange();
   });
 
   window.addEventListener("storage", (event) => {

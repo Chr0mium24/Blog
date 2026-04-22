@@ -21,28 +21,12 @@ const htmlEntries: HtmlEntry[] = dirEntries
 
 <MainGridLayout title="WebPages">
   <div class="card-base px-6 py-6 md:px-8">
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div class="mb-6">
       <div>
         <h1 class="text-3xl font-bold text-90">Web Pages</h1>
         <p class="text-sm text-50 mt-2">
-          `public/` 目录下的 HTML 页面会直接从这里访问，登录后可继续编辑、下载和删除。
+          `public/` 目录下的 HTML 页面列表。
         </p>
-      </div>
-      <div class="flex items-center gap-2">
-        <a
-          href="/login/?next=/webpages/"
-          class="btn-plain px-4 py-2 rounded-lg text-sm font-medium"
-          data-public-login-btn
-        >
-          登录编辑
-        </a>
-        <a
-          href="/html-editor/"
-          class="btn-regular px-4 py-2 rounded-lg text-sm font-medium hidden"
-          data-public-new-btn
-        >
-          新建
-        </a>
       </div>
     </div>
 
@@ -64,39 +48,10 @@ const htmlEntries: HtmlEntry[] = dirEntries
               >
                 {item.title}
               </a>
-              <div class="text-xs md:text-sm text-50 mt-1 truncate">{item.filename}</div>
-            </div>
-
-            <div class="hidden flex shrink-0 items-center gap-2 px-2 md:px-3" data-public-auth-actions>
-              <a
-                href={`/html-editor/#${encodeURIComponent(item.filename)}`}
-                class="btn-regular px-3 py-1.5 rounded-lg text-sm font-medium"
-              >
-                编辑
-              </a>
-              <a
-                href={`/${item.filename}`}
-                download
-                class="btn-plain px-3 py-1.5 rounded-lg text-sm font-medium"
-              >
-                下载
-              </a>
-              <button
-                type="button"
-                class="btn-plain px-3 py-1.5 rounded-lg text-sm font-medium !text-red-500"
-                data-public-delete-file={item.filename}
-              >
-                删除
-              </button>
             </div>
           </div>
         </div>
       ))}
     </div>
   </div>
-
-  <script>
-    import { initializeWebPages } from "../scripts/webpages.ts";
-    document.addEventListener("DOMContentLoaded", initializeWebPages);
-  </script>
 </MainGridLayout>

@@ -130,17 +130,25 @@ function findFileByName(filename: string) {
   return files.find((file) => file.name === normalizeHtmlFilename(filename)) ?? null;
 }
 
-function setHashByFilename(filename: string | null) {
+function setUrlByFilename(filename: string | null) {
   const currentUrl = new URL(window.location.href);
-  const hash = filename ? `#${encodeURIComponent(filename)}` : "";
-  const next = `${currentUrl.pathname}${currentUrl.search}${hash}`;
+  currentUrl.searchParams.set("mode", "html");
+  if (filename) {
+    currentUrl.searchParams.set("html", filename);
+  } else {
+    currentUrl.searchParams.delete("html");
+  }
+  const next = `${currentUrl.pathname}${currentUrl.search}`;
   const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
   if (next !== current) {
     window.history.pushState(null, "", next);
   }
 }
 
-function getFilenameFromHash(): string | null {
+function getFilenameFromUrl(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = params.get("html")?.trim();
+  if (fromQuery) return fromQuery;
   const raw = window.location.hash.replace(/^#/, "").trim();
   if (!raw) return null;
   try {
@@ -195,7 +203,7 @@ async function loadFile(path: string) {
   const { content, sha } = await getFileContent(state, path);
   ui.editor.value = content;
   setCurrentFile({ path, sha, isNew: false }, pathToFilename(path));
-  setHashByFilename(pathToFilename(path));
+  setUrlByFilename(pathToFilename(path));
   markClean();
   renderFileList();
   setStatus(`已加载 ${pathToFilename(path)}`);
@@ -207,7 +215,7 @@ function createNewFileTemplate(filename?: string, content = "") {
   setCurrentFile({ path: fullPath, sha: null, isNew: true }, finalName);
   ui.editor.value = content;
   markDirty();
-  setHashByFilename(finalName);
+  setUrlByFilename(finalName);
   renderFileList();
   setStatus(`新建文件 ${finalName}（尚未保存到 GitHub）`);
 }
@@ -256,7 +264,7 @@ async function saveCurrentFile() {
       result = await createFile(state, targetPath, content);
     }
     setCurrentFile({ path: targetPath, sha: result.content.sha, isNew: false }, filename);
-    setHashByFilename(filename);
+    setUrlByFilename(filename);
     await loadFiles();
     markClean();
     setStatus("保存成功。");
@@ -586,8 +594,8 @@ function bindEvents() {
     redirectToLogin();
   });
 
-  window.addEventListener("hashchange", () => {
-    const filename = getFilenameFromHash();
+  window.addEventListener("popstate", () => {
+    const filename = getFilenameFromUrl();
     if (!filename) return;
     const file = files.find((item) => item.name === filename);
     if (file) void loadFile(file.path);
@@ -617,9 +625,9 @@ export async function initializeHtmlEditor(): Promise<void> {
 
   try {
     await loadFiles();
-    const fromHash = getFilenameFromHash();
-    if (fromHash) {
-      const target = files.find((file) => file.name === fromHash);
+    const fromUrl = getFilenameFromUrl();
+    if (fromUrl) {
+      const target = files.find((file) => file.name === fromUrl);
       if (target) {
         await loadFile(target.path);
         return;
