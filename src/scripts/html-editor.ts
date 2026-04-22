@@ -13,6 +13,14 @@ type RepoFile = {
   sha: string;
 };
 
+type CodeMirrorEditor = {
+  getValue: () => string;
+  setValue: (value: string) => void;
+  on: (event: string, listener: () => void) => void;
+  setSize: (width: string | number, height: string | number) => void;
+  refresh: () => void;
+};
+
 type AiConfig = {
   endpoint: string;
   apiKey: string;
@@ -55,6 +63,7 @@ const state: EditorState = {
 
 let files: RepoFile[] = [];
 let isDirty = false;
+let codeEditor: CodeMirrorEditor | null = null;
 
 const defaultAiConfig: AiConfig = {
   endpoint: "https://api.openai.com/v1",
@@ -63,6 +72,53 @@ const defaultAiConfig: AiConfig = {
   prompt: "请优化这份 HTML 的可读性与语义化结构，返回完整 HTML。",
   models: [],
 };
+
+function getCodeMirrorFactory():
+  | ((textarea: HTMLTextAreaElement, options: Record<string, unknown>) => CodeMirrorEditor)
+  | null {
+  const win = window as unknown as {
+    CodeMirror?: {
+      fromTextArea?: (
+        textarea: HTMLTextAreaElement,
+        options: Record<string, unknown>
+      ) => CodeMirrorEditor;
+    };
+  };
+  const factory = win.CodeMirror?.fromTextArea;
+  return typeof factory === "function" ? factory : null;
+}
+
+function getEditorValue() {
+  return codeEditor ? codeEditor.getValue() : ui.editor.value;
+}
+
+function setEditorValue(value: string) {
+  if (codeEditor) {
+    codeEditor.setValue(value);
+    codeEditor.refresh();
+    return;
+  }
+  ui.editor.value = value;
+}
+
+function initializeCodeEditor() {
+  const factory = getCodeMirrorFactory();
+  if (!factory || codeEditor) return;
+  codeEditor = factory(ui.editor, {
+    mode: "htmlmixed",
+    lineNumbers: true,
+    lineWrapping: true,
+    tabSize: 2,
+    indentUnit: 2,
+    theme: document.documentElement.classList.contains("dark")
+      ? "material-darker"
+      : "default",
+  });
+  codeEditor.setSize("100%", "68vh");
+  codeEditor.on("change", () => {
+    markDirty();
+  });
+}
 
 function setStatus(message: string, isError = false) {
   ui.status.textContent = message;
@@ -205,7 +261,7 @@ async function loadFiles() {
 
 async function loadFile(path: string) {
   const { content, sha } = await getFileContent(state, path);
-  ui.editor.value = content;
+  setEditorValue(content);
   setCurrentFile({ path, sha, isNew: false }, pathToFilename(path));
   setUrlByFilename(pathToFilename(path));
   markClean();
@@ -217,7 +273,7 @@ function createNewFileTemplate(filename?: string, content = "") {
   const finalName = normalizeHtmlFilename(filename || `page-${Date.now()}.html`);
   const fullPath = buildPublicPath(finalName);
   setCurrentFile({ path: fullPath, sha: null, isNew: true }, finalName);
-  ui.editor.value = content;
+  setEditorValue(content);
   markDirty();
   setUrlByFilename(finalName);
   renderFileList();
@@ -231,7 +287,7 @@ async function saveCurrentFile() {
   }
   const filename = normalizeHtmlFilename(ui.filenameInput.value);
   const targetPath = buildPublicPath(filename);
-  const content = ui.editor.value;
+  const content = getEditorValue();
   const existingTarget = findFileByName(filename);
 
   try {
@@ -303,7 +359,7 @@ async function deleteCurrentFile() {
 
 function downloadCurrentFile() {
   const filename = normalizeHtmlFilename(ui.filenameInput.value || "untitled.html");
-  const blob = new Blob([ui.editor.value], { type: "text/html;charset=utf-8" });
+  const blob = new Blob([getEditorValue()], { type: "text/html;charset=utf-8" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = filename;
@@ -513,7 +569,7 @@ async function applyAi() {
           },
           {
             role: "user",
-            content: `${config.prompt}\n\n当前 HTML：\n${ui.editor.value}`,
+            content: `${config.prompt}\n\n当前 HTML：\n${getEditorValue()}`,
           },
         ],
       }),
@@ -526,7 +582,7 @@ async function applyAi() {
     if (!content) {
       throw new Error("AI 没有返回可用内容。");
     }
-    ui.editor.value = stripCodeFence(content);
+    setEditorValue(stripCodeFence(content));
     markDirty();
     setAiStatus("已应用 AI 输出到编辑器。");
     setStatus("AI 内容已写入编辑器，记得保存到 GitHub。");
@@ -572,7 +628,9 @@ function bindEvents() {
     void deleteCurrentFile();
   });
   ui.downloadBtn.addEventListener("click", downloadCurrentFile);
-  ui.editor.addEventListener("input", markDirty);
+  if (!codeEditor) {
+    ui.editor.addEventListener("input", markDirty);
+  }
   ui.filenameInput.addEventListener("input", markDirty);
 
   ui.fileList.addEventListener("click", (event) => {
@@ -613,6 +671,7 @@ export async function initializeHtmlEditor(): Promise<void> {
     return;
   }
   applyLoginData(loginData);
+  initializeCodeEditor();
   bindEvents();
   bindDropAndPaste();
   initializeAi();
