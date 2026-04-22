@@ -54,4 +54,17 @@ const htmlEntries: HtmlEntry[] = dirEntries
       ))}
     </div>
   </div>
+
+  <script is:inline>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has("editor")) return;
+      const filename = params.get("html")?.trim();
+      const base = "/editor/?mode=html";
+      const target = filename
+        ? `${base}&html=${encodeURIComponent(filename)}`
+        : base;
+      window.location.replace(target);
+    })();
+  </script>
 </MainGridLayout>
