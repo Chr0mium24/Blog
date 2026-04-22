@@ -80,6 +80,12 @@ function prefillSavedData() {
   ui.patInput.value = saved.pat;
 }
 
+function redirectIfAlreadyLoggedIn() {
+  const saved = loadSavedLoginData();
+  if (!saved) return;
+  window.location.replace(getNextPath());
+}
+
 async function login() {
   hideLoginError();
   setLoading(true);
@@ -112,6 +118,7 @@ async function login() {
 }
 
 export function initializeLoginApp(): void {
+  redirectIfAlreadyLoggedIn();
   prefillSavedData();
 
   ui.loginBtn.addEventListener("click", login);

@@ -94,6 +94,7 @@ let draftInterval: number | null = null;
 let isDirty: boolean = false;
 let pendingSlug: string | null = null;
 let cachedEntries: FileEntry[] = [];
+let sourceSnapshot: string = "";
 
 const CUSTOM_TAGS_KEY = "github_editor_custom_tags";
 const CUSTOM_CATEGORIES_KEY = "github_editor_custom_categories";
@@ -735,7 +736,9 @@ function focusSourceSelection(start: number, end: number = start) {
 
 function refreshSourceView() {
   if (ui.sourceModal.classList.contains("hidden")) return;
+  if (ui.sourceContent.value !== sourceSnapshot) return;
   ui.sourceContent.value = getCurrentSourceMarkdown();
+  sourceSnapshot = ui.sourceContent.value;
 }
 
 function openSourceModal(alignWithCursor: boolean = false) {
@@ -745,6 +748,7 @@ function openSourceModal(alignWithCursor: boolean = false) {
   }
   const source = getCurrentSourceMarkdown();
   ui.sourceContent.value = source;
+  sourceSnapshot = source;
   ui.sourceModal.classList.remove("hidden");
 
   if (alignWithCursor) {
@@ -753,8 +757,20 @@ function openSourceModal(alignWithCursor: boolean = false) {
   }
 }
 
+function applySourceToEditorIfChanged() {
+  const latestSource = ui.sourceContent.value;
+  if (latestSource === sourceSnapshot) return;
+
+  const parsed = parseContent(latestSource);
+  populateEditor(parsed.metadata, parsed.body);
+  markAsDirty();
+  showSaveStatus("源码改动已同步回编辑器。", false);
+}
+
 function closeSourceModal() {
+  applySourceToEditorIfChanged();
   ui.sourceModal.classList.add("hidden");
+  sourceSnapshot = "";
 }
 
 async function handleCopySource() {
