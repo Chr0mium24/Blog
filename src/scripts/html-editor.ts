@@ -98,10 +98,14 @@ function applyLoginData(loginData: LoginData) {
 }
 
 function redirectToLogin() {
-  const next = encodeURIComponent(
-    `${window.location.pathname}${window.location.search}${window.location.hash}`
-  );
-  window.location.replace(`/login/?next=${next}`);
+  const currentUrl = new URL(window.location.href);
+  const html = currentUrl.searchParams.get("html");
+  const target = new URL("/editor/", window.location.origin);
+  target.searchParams.set("mode", "html");
+  if (html) {
+    target.searchParams.set("html", html);
+  }
+  window.location.replace(`${target.pathname}${target.search}`);
 }
 
 function normalizeHtmlFilename(name: string) {

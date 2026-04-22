@@ -44,8 +44,7 @@ function toggleAuthActions() {
 async function handleDelete(filename: string) {
   const loginData = parseLoginData();
   if (!loginData) {
-    const next = encodeURIComponent("/webpages/");
-    window.location.href = `/login/?next=${next}`;
+    window.location.href = `/editor/?mode=html`;
     return;
   }
   const yes = confirm(`确定删除 ${filename} 吗？`);

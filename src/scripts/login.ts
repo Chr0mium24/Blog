@@ -2,7 +2,7 @@ import type { EditorState, LoginData } from "./types";
 import { getFiles } from "./utils";
 
 const STORAGE_KEY = "github_editor_data";
-const DEFAULT_NEXT = "/editor/";
+const DEFAULT_NEXT = "/editor/?mode=post";
 
 const ui = {
   loginBtn: document.getElementById("login-btn") as HTMLButtonElement,

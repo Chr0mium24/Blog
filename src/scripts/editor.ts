@@ -1211,10 +1211,14 @@ function applyLoginData(loginData: LoginData) {
 }
 
 function redirectToLogin() {
-  const next = encodeURIComponent(
-    `${window.location.pathname}${window.location.search}${window.location.hash}`
-  );
-  window.location.replace(`/login/?next=${next}`);
+  const currentUrl = new URL(window.location.href);
+  const post = currentUrl.searchParams.get("post");
+  const target = new URL("/editor/", window.location.origin);
+  target.searchParams.set("mode", "post");
+  if (post) {
+    target.searchParams.set("post", post);
+  }
+  window.location.replace(`${target.pathname}${target.search}`);
 }
 
 function logout() {
