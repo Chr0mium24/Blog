@@ -28,6 +28,7 @@ const ui = {
   logoutBtn: document.getElementById("html-logout-btn") as HTMLButtonElement,
   newBtn: document.getElementById("html-new-btn") as HTMLButtonElement,
   fileList: document.getElementById("html-file-list") as HTMLElement,
+  dropzone: document.getElementById("html-dropzone") as HTMLElement,
   filenameInput: document.getElementById("html-filename-input") as HTMLInputElement,
   editor: document.getElementById("html-editor-textarea") as HTMLTextAreaElement,
   saveBtn: document.getElementById("html-save-btn") as HTMLButtonElement,
@@ -125,6 +126,10 @@ function pathToFilename(path: string) {
   return path.replace(/^public\//, "");
 }
 
+function findFileByName(filename: string) {
+  return files.find((file) => file.name === normalizeHtmlFilename(filename)) ?? null;
+}
+
 function setHashByFilename(filename: string | null) {
   const currentUrl = new URL(window.location.href);
   const hash = filename ? `#${encodeURIComponent(filename)}` : "";
@@ -215,13 +220,40 @@ async function saveCurrentFile() {
   const filename = normalizeHtmlFilename(ui.filenameInput.value);
   const targetPath = buildPublicPath(filename);
   const content = ui.editor.value;
+  const existingTarget = findFileByName(filename);
 
   try {
-    let result;
-    if (state.currentFile.isNew || !state.currentFile.sha || targetPath !== state.currentFile.path) {
-      result = await createFile(state, targetPath, content);
+    let result: any;
+    const isRename =
+      !state.currentFile.isNew &&
+      !!state.currentFile.sha &&
+      !!state.currentFile.path &&
+      targetPath !== state.currentFile.path;
+
+    if (
+      existingTarget &&
+      existingTarget.path !== state.currentFile.path &&
+      !confirm(`${filename} 已存在，确定覆盖这个文件吗？`)
+    ) {
+      setStatus("已取消保存。");
+      return;
+    }
+
+    if (isRename) {
+      result = existingTarget && existingTarget.path !== state.currentFile.path
+        ? await updateFile(state, targetPath, content, existingTarget.sha)
+        : await createFile(state, targetPath, content);
+      await deleteFile(state, state.currentFile.path, state.currentFile.sha!);
+    } else if (state.currentFile.isNew || !state.currentFile.sha) {
+      result = existingTarget && existingTarget.path !== state.currentFile.path
+        ? await updateFile(state, targetPath, content, existingTarget.sha)
+        : await createFile(state, targetPath, content);
     } else {
       result = await updateFile(state, targetPath, content, state.currentFile.sha);
+    }
+
+    if (!result?.content?.sha) {
+      result = await createFile(state, targetPath, content);
     }
     setCurrentFile({ path: targetPath, sha: result.content.sha, isNew: false }, filename);
     setHashByFilename(filename);
@@ -285,11 +317,32 @@ async function autoCreateHtml(content: string, preferredName?: string) {
 }
 
 function bindDropAndPaste() {
+  let dragDepth = 0;
+
+  const toggleDropzoneActive = (active: boolean) => {
+    ui.dropzone?.classList.toggle("border-[var(--primary)]", active);
+    ui.dropzone?.classList.toggle("bg-[var(--btn-plain-bg-hover)]", active);
+  };
+
+  window.addEventListener("dragenter", (event) => {
+    event.preventDefault();
+    dragDepth += 1;
+    toggleDropzoneActive(true);
+  });
   window.addEventListener("dragover", (event) => {
     event.preventDefault();
   });
+  window.addEventListener("dragleave", (event) => {
+    event.preventDefault();
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) {
+      toggleDropzoneActive(false);
+    }
+  });
   window.addEventListener("drop", (event) => {
     event.preventDefault();
+    dragDepth = 0;
+    toggleDropzoneActive(false);
     const dropped = event.dataTransfer?.files?.[0];
     if (!dropped) return;
     if (!dropped.name.toLowerCase().endsWith(".html")) {
@@ -311,7 +364,8 @@ function bindDropAndPaste() {
     ) {
       return;
     }
-    const text = event.clipboardData?.getData("text/plain")?.trim();
+    const html = event.clipboardData?.getData("text/html")?.trim();
+    const text = (html || event.clipboardData?.getData("text/plain") || "").trim();
     if (!text) return;
     if (!/<!doctype html|<html[\s>]/i.test(text)) return;
     void autoCreateHtml(text);
@@ -366,6 +420,13 @@ function renderModelOptions(models: string[], selectedModel: string) {
     if (model === selectedModel) option.selected = true;
     ui.ai.model.appendChild(option);
   });
+  if (selectedModel && !models.includes(selectedModel)) {
+    const option = document.createElement("option");
+    option.value = selectedModel;
+    option.textContent = `${selectedModel} (当前)`;
+    option.selected = true;
+    ui.ai.model.appendChild(option);
+  }
 }
 
 async function refreshModels() {
@@ -387,7 +448,7 @@ async function refreshModels() {
     }
     const payload = await response.json();
     const models = Array.isArray(payload?.data)
-      ? payload.data.map((item: any) => String(item.id)).filter(Boolean)
+      ? payload.data.map((item: any) => String(item.id)).filter(Boolean).sort((a: string, b: string) => a.localeCompare(b))
       : [];
     config.models = models;
     if (!config.model && models.length > 0) config.model = models[0];
@@ -471,6 +532,11 @@ function initializeAi() {
   renderModelOptions(config.models, config.model);
 
   [ui.ai.endpoint, ui.ai.apiKey, ui.ai.prompt, ui.ai.model].forEach((input) => {
+    input.addEventListener("input", () => {
+      const latest = getAiConfigFromUi();
+      latest.models = loadAiConfig().models;
+      saveAiConfig(latest);
+    });
     input.addEventListener("change", () => {
       const latest = getAiConfigFromUi();
       latest.models = loadAiConfig().models;

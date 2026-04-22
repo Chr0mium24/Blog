@@ -68,6 +68,17 @@ const configHue = siteConfig.themeColor.hue;
           </div>
 
           <div class="card-base card-shadow p-5 mt-6">
+            <h2 class="text-xl font-bold text-90 mb-3">导入 HTML</h2>
+            <div
+              id="html-dropzone"
+              class="rounded-2xl border border-dashed border-[var(--line-divider)]/60 bg-[var(--btn-plain-bg)]/40 p-4 text-sm text-75 transition"
+            >
+              <div class="font-medium text-90">拖入 `.html` 文件</div>
+              <div class="mt-2">或者在页面空白处直接粘贴完整 HTML 文本，系统会自动新建并保存。</div>
+            </div>
+          </div>
+
+          <div class="card-base card-shadow p-5 mt-6">
             <h2 class="text-xl font-bold text-90 mb-3">AI 配置</h2>
             <div class="space-y-3">
               <input id="ai-endpoint" type="text" placeholder="Endpoint, 例如 https://api.openai.com/v1" class="w-full px-3 py-2 rounded-lg bg-[var(--btn-regular-bg)]" />
@@ -98,6 +109,9 @@ const configHue = siteConfig.themeColor.hue;
               <button id="html-delete-btn" class="btn-plain px-4 py-2 rounded-lg text-sm !text-red-500">
                 删除
               </button>
+            </div>
+            <div class="mb-4 rounded-xl bg-[var(--btn-plain-bg)] px-4 py-3 text-sm text-75">
+              这个编辑器只维护一个元数据字段: 文件名。页面文件仍然直接放在 `public/` 下，提交继续走 GitHub API，再由现有 GitHub Actions 自动构建。
             </div>
             <textarea
               id="html-editor-textarea"

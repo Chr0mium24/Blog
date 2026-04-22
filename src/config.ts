@@ -44,7 +44,7 @@ export const navBarConfig: NavBarConfig = {
 		LinkPreset.Home,
 		LinkPreset.Archive,
 		{
-			name: "WebPages",
+			name: "网页",
 			url: "/webpages/",
 			external: false,
 		},
