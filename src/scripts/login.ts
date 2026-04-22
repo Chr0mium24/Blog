@@ -111,7 +111,7 @@ async function login() {
   }
 }
 
-export function initializeLoginApp() {
+export function initializeLoginApp(): void {
   prefillSavedData();
 
   ui.loginBtn.addEventListener("click", login);

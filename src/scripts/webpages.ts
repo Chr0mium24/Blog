@@ -73,7 +73,7 @@ async function handleDelete(filename: string) {
   }
 }
 
-export function initializeWebPages() {
+export function initializeWebPages(): void {
   toggleAuthActions();
   window.addEventListener("storage", (event) => {
     if (event.key && event.key !== STORAGE_KEY) return;

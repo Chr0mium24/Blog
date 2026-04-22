@@ -185,7 +185,7 @@ export function getDraftKey(state: EditorState, path: string | null): string | n
   return `draft_${state.user}_${state.repo}_${path}`;
 }
 
-export function saveDraftToStorage(state: EditorState, path: string, metadata: Partial<Metadata>, body: string) {
+export function saveDraftToStorage(state: EditorState, path: string, metadata: Partial<Metadata>, body: string): void {
     const key = getDraftKey(state, path);
     if (!key) return;
 
@@ -222,7 +222,7 @@ export function loadDraftFromStorage(state: EditorState, path: string): Draft | 
     return null;
 }
 
-export function clearDraftFromStorage(state: EditorState, path: string) {
+export function clearDraftFromStorage(state: EditorState, path: string): void {
     const key = getDraftKey(state, path);
     if (key) {
         localStorage.removeItem(key);

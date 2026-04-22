@@ -385,7 +385,7 @@ const closeInlineEditor = () => {
   setPanelOpen(panelEl, toggleStateEl, false);
 };
 
-export const initPostInlineEditor = () => {
+export const initPostInlineEditor = (): void => {
   const win = getWindow();
   if (win.__postMetaEditorInit) return;
   win.__postMetaEditorInit = true;

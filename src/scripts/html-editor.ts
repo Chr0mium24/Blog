@@ -594,7 +594,7 @@ function bindEvents() {
   });
 }
 
-export async function initializeHtmlEditor() {
+export async function initializeHtmlEditor(): Promise<void> {
   const loginData = parseLoginData();
   if (!loginData) {
     redirectToLogin();

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getCollection } from 'astro:content';
+import { type CollectionEntry, getCollection } from 'astro:content';
 import fs from 'fs';
 import path from 'path';
 
@@ -13,7 +13,7 @@ export const GET: APIRoute = async ({ params }) => {
   try {
     // Get the post from the collection to verify it exists
     const posts = await getCollection('posts');
-    const post = posts.find(p => p.slug === slug);
+    const post = posts.find((p: CollectionEntry<'posts'>) => p.slug === slug);
 
     if (!post) {
       return new Response('Post not found', { status: 404 });
@@ -42,9 +42,9 @@ export const GET: APIRoute = async ({ params }) => {
   }
 };
 
-export async function getStaticPaths() {
+export async function getStaticPaths(): Promise<{ params: { slug: string } }[]> {
   const posts = await getCollection('posts');
-  return posts.map((post) => ({
+  return posts.map((post: CollectionEntry<'posts'>) => ({
     params: { slug: post.slug },
   }));
 }

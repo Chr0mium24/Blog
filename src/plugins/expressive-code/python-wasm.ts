@@ -18,7 +18,7 @@ function parsePackages(value: string | undefined): string[] {
 		.filter(Boolean);
 }
 
-export function pluginPythonWasm() {
+export function pluginPythonWasm(): ReturnType<typeof definePlugin> {
 	return definePlugin({
 		name: "Python WASM Runner",
 		hooks: {

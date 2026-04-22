@@ -5,6 +5,7 @@ import type { APIContext } from "astro";
 import MarkdownIt from "markdown-it";
 import sanitizeHtml from "sanitize-html";
 import { siteConfig } from "@/config";
+import type { CollectionEntry } from "astro:content";
 
 const parser = new MarkdownIt();
 
@@ -16,14 +17,14 @@ function stripInvalidXmlChars(str: string): string {
 	);
 }
 
-export async function GET(context: APIContext) {
+export async function GET(context: APIContext): Promise<Response> {
 	const blog = await getSortedPosts();
 
 	return rss({
 		title: siteConfig.title,
 		description: siteConfig.subtitle || "No description",
 		site: context.site ?? "https://fuwari.vercel.app",
-		items: blog.map((post) => {
+		items: blog.map((post: CollectionEntry<"posts">) => {
 			const content =
 				typeof post.body === "string" ? post.body : String(post.body || "");
 			const cleanedContent = stripInvalidXmlChars(content);

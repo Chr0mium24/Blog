@@ -1262,7 +1262,7 @@ async function handleEditorHashChange() {
 
 
 // --- 初始化 ---
-export async function initializeApp() {
+export async function initializeApp(): Promise<void> {
   loadInitialTheme();
   const loginData = parseSavedLoginData();
   if (!loginData) {
