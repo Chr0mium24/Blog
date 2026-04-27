@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>点击弹出 hyw</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; }
+  </style>
+</head>
+<body>
+  <script>
+    let texts = [];
+
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      textAlign(CENTER, CENTER);
+      noStroke();
+    }
+
+    function draw() {
+      background(255);
+      
+      for (let i = texts.length - 1; i >= 0; i--) {
+        let t = texts[i];
+        fill(t.color[0], t.color[1], t.color[2], t.alpha);
+        textSize(t.size);
+        text("hyw", t.x, t.y);
+        
+        t.y -= 1;
+        t.alpha -= 4;
+        
+        if (t.alpha <= 0) {
+          texts.splice(i, 1);
+        }
+      }
+    }
+
+    function mousePressed() {
+      texts.push({
+        x: mouseX,
+        y: mouseY,
+        size: random(20, 80),
+        color: [random(255), random(255), random(255)],
+        alpha: 255
+      });
+    }
+
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+    }
+  </script>
+</body>
+</html>
