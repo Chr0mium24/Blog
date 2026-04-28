@@ -1,0 +1,41 @@
+---
+import { siteConfig } from "@/config";
+import {
+	AUTO_MODE,
+	BANNER_HEIGHT_EXTEND,
+	DARK_MODE,
+	DEFAULT_THEME,
+	LIGHT_MODE,
+	PAGE_WIDTH,
+} from "../constants/constants";
+
+const configHue = siteConfig.themeColor.hue;
+---
+
+<script is:inline define:vars={{DEFAULT_THEME, LIGHT_MODE, DARK_MODE, AUTO_MODE, BANNER_HEIGHT_EXTEND, PAGE_WIDTH, configHue}}>
+	// Load the theme from local storage
+	const theme = localStorage.getItem('theme') || DEFAULT_THEME;
+	switch (theme) {
+		case LIGHT_MODE:
+			document.documentElement.classList.remove('dark');
+			break
+		case DARK_MODE:
+			document.documentElement.classList.add('dark');
+			break
+		case AUTO_MODE:
+			if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+				document.documentElement.classList.add('dark');
+			} else {
+				document.documentElement.classList.remove('dark');
+			}
+	}
+
+	// Load the hue from local storage
+	const hue = localStorage.getItem('hue') || configHue;
+	document.documentElement.style.setProperty('--hue', hue);
+
+	// calculate the --banner-height-extend, which needs to be a multiple of 4 to avoid blurry text
+	let offset = Math.floor(window.innerHeight * (BANNER_HEIGHT_EXTEND / 100));
+	offset = offset - offset % 4;
+	document.documentElement.style.setProperty('--banner-height-extend', `${offset}px`);
+</script>

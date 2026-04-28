@@ -1,22 +1,24 @@
 ---
-import MainGridLayout from "@layouts/MainGridLayout.astro";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
+import MainGridLayout from "@layouts/MainGridLayout.astro";
 
 type HtmlEntry = {
-  filename: string;
-  title: string;
+	filename: string;
+	title: string;
 };
 
 const publicDir = join(process.cwd(), "public");
 const dirEntries = await readdir(publicDir, { withFileTypes: true });
 const htmlEntries: HtmlEntry[] = dirEntries
-  .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".html"))
-  .map((entry) => ({
-    filename: entry.name,
-    title: entry.name.replace(/\.html$/i, ""),
-  }))
-  .sort((a, b) => a.filename.localeCompare(b.filename, "zh-Hans-CN"));
+	.filter(
+		(entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".html"),
+	)
+	.map((entry) => ({
+		filename: entry.name,
+		title: entry.name.replace(/\.html$/i, ""),
+	}))
+	.sort((a, b) => a.filename.localeCompare(b.filename, "zh-Hans-CN"));
 ---
 
 <MainGridLayout title="WebPages">

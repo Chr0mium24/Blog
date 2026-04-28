@@ -39,9 +39,10 @@ export function pluginPythonWasm(): ReturnType<typeof definePlugin> {
 				const packages = parsePackages(
 					context.codeBlock.metaOptions.getString("packages"),
 				);
-				const encodedCode = Buffer.from(context.codeBlock.code, "utf8").toString(
-					"base64",
-				);
+				const encodedCode = Buffer.from(
+					context.codeBlock.code,
+					"utf8",
+				).toString("base64");
 				const properties = context.renderData.blockAst.properties || {};
 				const existingClassNames = Array.isArray(properties.className)
 					? properties.className
