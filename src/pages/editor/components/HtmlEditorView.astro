@@ -1,0 +1,93 @@
+<!-- HTML Editor View -->
+<div id="html-main-view" class="p-4 md:p-8 min-h-screen hidden">
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-90">编辑器</h1>
+      <div class="flex items-center gap-2 mt-3">
+        <a
+          href="/editor/?mode=post"
+          class="btn-plain px-3 py-1.5 rounded-lg text-sm font-medium"
+          data-mode-link="post"
+        >
+          博客文章
+        </a>
+        <a
+          href="/editor/?mode=html"
+          class="btn-plain px-3 py-1.5 rounded-lg text-sm font-medium"
+          data-mode-link="html"
+        >
+          HTML 页面
+        </a>
+      </div>
+    </div>
+    <button id="html-logout-btn" class="btn-regular px-4 py-2 rounded-lg text-sm font-medium">
+      登出
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+    <div class="xl:col-span-3">
+      <div class="card-base card-shadow p-5">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold text-90">HTML 文件</h2>
+          <button id="html-new-btn" class="btn-regular px-3 py-1.5 rounded-lg text-sm font-medium">
+            新建
+          </button>
+        </div>
+        <div id="html-file-list" class="space-y-1 max-h-[45vh] overflow-y-auto"></div>
+      </div>
+
+      <div class="card-base card-shadow p-5 mt-6">
+        <h2 class="text-xl font-bold text-90 mb-3">导入 HTML</h2>
+        <div
+          id="html-dropzone"
+          class="rounded-2xl border border-dashed border-[var(--line-divider)]/60 bg-[var(--btn-plain-bg)]/40 p-4 text-sm text-75 transition"
+        >
+          <div class="font-medium text-90">拖入 `.html` 文件</div>
+          <div class="mt-2">或者在页面空白处直接粘贴完整 HTML 文本，系统会自动新建并保存。</div>
+        </div>
+      </div>
+
+      <div class="card-base card-shadow p-5 mt-6">
+        <h2 class="text-xl font-bold text-90 mb-3">AI 配置</h2>
+        <div class="space-y-3">
+          <input id="ai-endpoint" type="text" placeholder="Endpoint, 例如 https://api.openai.com/v1" class="w-full px-3 py-2 rounded-lg bg-[var(--btn-regular-bg)]" />
+          <input id="ai-apikey" type="password" placeholder="API Key" class="w-full px-3 py-2 rounded-lg bg-[var(--btn-regular-bg)]" />
+          <div class="flex gap-2">
+            <select id="ai-model" class="flex-1 px-3 py-2 rounded-lg bg-[var(--btn-regular-bg)]"></select>
+            <button id="ai-refresh-models-btn" class="btn-plain px-3 py-2 rounded-lg text-sm">刷新模型</button>
+          </div>
+          <textarea id="ai-prompt" rows="5" placeholder="告诉 AI 如何修改当前 HTML" class="w-full px-3 py-2 rounded-lg bg-[var(--btn-regular-bg)]"></textarea>
+          <button id="ai-apply-btn" class="btn-regular w-full px-3 py-2 rounded-lg text-sm font-medium">
+            AI 修改 HTML
+          </button>
+          <div id="ai-status" class="text-xs text-75"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="xl:col-span-9">
+      <div class="card-base card-shadow p-5">
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+          <input id="html-filename-input" type="text" placeholder="文件名，例如 demo.html" class="flex-1 min-w-[220px] px-3 py-2 rounded-lg bg-[var(--btn-regular-bg)]" />
+          <button id="html-save-btn" class="btn-regular px-4 py-2 rounded-lg text-sm font-medium">
+            保存到 GitHub
+          </button>
+          <button id="html-download-btn" class="btn-plain px-4 py-2 rounded-lg text-sm">
+            下载
+          </button>
+          <button id="html-delete-btn" class="btn-plain px-4 py-2 rounded-lg text-sm !text-red-500">
+            删除
+          </button>
+        </div>
+        <textarea
+          id="html-editor-textarea"
+          spellcheck="false"
+          class="w-full min-h-[68vh] px-4 py-3 rounded-xl bg-[var(--btn-regular-bg)] text-90 border border-transparent focus:border-[var(--primary)] focus:outline-none transition resize-y font-mono text-sm leading-6"
+          placeholder="支持拖拽 html 文件到页面，或在页面粘贴 html 文本自动新建..."
+        ></textarea>
+        <div id="html-status" class="mt-3 text-sm text-75"></div>
+      </div>
+    </div>
+  </div>
+</div>

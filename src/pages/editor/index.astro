@@ -1,0 +1,113 @@
+---
+// src/pages/editor/index.astro
+import "@fontsource/roboto/400.css";
+import "@fontsource/roboto/500.css";
+import "@fontsource/roboto/700.css";
+
+import "../../styles/editor.css";
+import LoginView from "./components/LoginView.astro";
+import PostEditorView from "./components/PostEditorView.astro";
+import HtmlEditorView from "./components/HtmlEditorView.astro";
+import EditorModals from "./components/EditorModals.astro";
+
+import { siteConfig } from "@/config";
+
+const configHue = siteConfig.themeColor.hue;
+---
+
+<!doctype html>
+<html
+  lang="zh-CN"
+  class="bg-[var(--page-bg)] transition text-[14px] md:text-[16px]"
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>编辑器 - Cr's Blog</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/lib/codemirror.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/theme/material-darker.css" />
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.18/lib/codemirror.min.js"></script>
+
+    <script is:inline>
+      const savedTheme = localStorage.getItem("github_editor_theme");
+      const systemPrefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
+      const theme = savedTheme || (systemPrefersDark ? "dark" : "light");
+
+      if (theme === "dark") {
+        document.documentElement.classList.add("dark");
+      }
+    </script>
+
+    <style define:vars={{ configHue }}>
+      :root {
+        --configHue: var(--configHue);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen transition">
+    <div id="app">
+      <LoginView />
+      <PostEditorView />
+      <HtmlEditorView />
+    </div>
+
+    <EditorModals />
+
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"
+    ></script>
+
+    <script>
+      import { initializeApp } from "../../scripts/editor.ts";
+      import { initializeHtmlEditor } from "../../scripts/html-editor.ts";
+      import { initializeLoginApp } from "../../scripts/login.ts";
+
+      function getMode() {
+        const params = new URLSearchParams(window.location.search);
+        const mode = (params.get("mode") || "").trim().toLowerCase();
+        return mode === "html" ? "html" : "post";
+      }
+
+      function markActiveMode(mode) {
+        document.querySelectorAll("[data-mode-link]").forEach((el) => {
+          const target = el.getAttribute("data-mode-link");
+          const isActive = target === mode;
+          el.classList.toggle("btn-regular", isActive);
+          el.classList.toggle("btn-plain", !isActive);
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const mode = getMode();
+        const savedLogin = localStorage.getItem("github_editor_data");
+        const loginView = document.getElementById("login-view");
+        const postView = document.getElementById("post-main-view");
+        const htmlView = document.getElementById("html-main-view");
+        const loggedIn = !!savedLogin;
+
+        if (!loggedIn) {
+          loginView?.classList.remove("hidden");
+          postView?.classList.add("hidden");
+          htmlView?.classList.add("hidden");
+          initializeLoginApp();
+          return;
+        }
+
+        loginView?.classList.add("hidden");
+        markActiveMode(mode);
+
+        if (mode === "html") {
+          postView?.classList.add("hidden");
+          htmlView?.classList.remove("hidden");
+          initializeHtmlEditor();
+          return;
+        }
+
+        htmlView?.classList.add("hidden");
+        postView?.classList.remove("hidden");
+        initializeApp();
+      });
+    </script>
+  </body>
+</html>

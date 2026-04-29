@@ -1,0 +1,101 @@
+<!-- New File Modal -->
+<div
+  id="new-file-modal"
+  class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+>
+  <div class="card-base card-shadow p-6 max-w-md w-full">
+    <h3 class="font-bold text-lg text-90 mb-4">创建新文件</h3>
+    <div class="mb-4">
+      <label class="block text-75 mb-2 text-sm"
+        >文件名 (例如 my-new-post)</label
+      >
+      <input
+        id="new-filename-input"
+        type="text"
+        placeholder="请输入文件名"
+        class="w-full px-4 py-2 rounded-lg bg-[var(--btn-regular-bg)] text-90 border border-transparent focus:border-[var(--primary)] focus:outline-none transition"
+      />
+      <div id="new-file-error" class="text-red-500 mt-2 text-sm"></div>
+    </div>
+    <div class="flex justify-end gap-3">
+      <button
+        id="new-file-cancel-btn"
+        class="btn-plain px-4 py-2 rounded-lg">取消</button
+      >
+      <button
+        id="create-file-confirm-btn"
+        class="btn-regular px-4 py-2 rounded-lg font-medium"
+      >
+        创建
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename File Modal -->
+<div
+  id="rename-file-modal"
+  class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+>
+  <div class="card-base card-shadow p-6 max-w-md w-full">
+    <h3 class="font-bold text-lg text-90 mb-4">重命名文件</h3>
+    <div class="mb-4">
+      <label class="block text-75 mb-2 text-sm"
+        >新文件名 (不含 .md 后缀)</label
+      >
+      <input
+        id="rename-filename-input"
+        type="text"
+        placeholder="请输入新文件名"
+        class="w-full px-4 py-2 rounded-lg bg-[var(--btn-regular-bg)] text-90 border border-transparent focus:border-[var(--primary)] focus:outline-none transition"
+      />
+      <div id="rename-file-error" class="text-red-500 mt-2 text-sm"></div>
+    </div>
+    <div class="flex justify-end gap-3">
+      <button
+        id="rename-file-cancel-btn"
+        class="btn-plain px-4 py-2 rounded-lg">取消</button
+      >
+      <button
+        id="rename-file-confirm-btn"
+        class="btn-regular px-4 py-2 rounded-lg font-medium"
+      >
+        确认重命名
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Markdown Source Modal -->
+<div
+  id="source-modal"
+  class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+>
+  <div class="card-base card-shadow p-6 max-w-5xl w-full max-h-[85vh] flex flex-col gap-4">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <h3 class="font-bold text-lg text-90">Markdown 源码</h3>
+        <p class="text-75 text-sm mt-1">当前 frontmatter 与正文拼接后的完整 Markdown。</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button
+          id="source-copy-btn"
+          class="btn-plain px-4 py-2 rounded-lg text-sm"
+        >
+          复制源码
+        </button>
+        <button
+          id="source-close-btn"
+          class="btn-regular px-4 py-2 rounded-lg text-sm font-medium"
+        >
+          关闭
+        </button>
+      </div>
+    </div>
+    <textarea
+      id="source-content"
+      spellcheck="false"
+      class="editor-source-view w-full flex-1 min-h-[420px] px-4 py-3 rounded-xl bg-[var(--btn-regular-bg)] text-90 border border-transparent focus:border-[var(--primary)] focus:outline-none transition resize-none font-mono text-sm leading-6"
+    ></textarea>
+  </div>
+</div>
