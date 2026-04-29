@@ -1,6 +1,6 @@
 // src/scripts/editor.ts
 
-import type { EditorState, LoginData, Metadata, ParsedContent } from "./types";
+import type { EditorState, LoginData, Metadata } from "./types";
 import {
 	clearDraftFromStorage,
 	createFile,
@@ -15,90 +15,7 @@ import {
 	updateFile,
 } from "./utils";
 
-import "@milkdown/crepe/theme/common/style.css";
-import "@milkdown/crepe/theme/nord.css";
-import { Crepe } from "@milkdown/crepe";
-import { replaceAll } from "@milkdown/utils";
-
-// UI 元素引用
-const ui = {
-	logoutBtn: document.getElementById("logout-btn") as HTMLButtonElement,
-	fileList: document.getElementById("file-list") as HTMLUListElement,
-	editorSection: document.getElementById("editor-section") as HTMLElement,
-	placeholderSection: document.getElementById(
-		"placeholder-section",
-	) as HTMLElement,
-	currentFileName: document.getElementById("current-file-name") as HTMLElement,
-	saveBtn: document.getElementById("save-btn") as HTMLButtonElement,
-	saveSpinner: document.getElementById("save-spinner") as HTMLElement,
-	saveStatus: document.getElementById("save-status") as HTMLElement,
-	viewSourceBtn: document.getElementById(
-		"view-source-btn",
-	) as HTMLButtonElement,
-	testOutputBtn: document.getElementById(
-		"test-output-btn",
-	) as HTMLButtonElement,
-	deleteFileBtn: document.getElementById(
-		"delete-file-btn",
-	) as HTMLButtonElement,
-	newFileBtn: document.getElementById("new-file-btn") as HTMLButtonElement,
-	newFileModal: document.getElementById("new-file-modal") as HTMLElement,
-	newFileInput: document.getElementById(
-		"new-filename-input",
-	) as HTMLInputElement,
-	newFileError: document.getElementById("new-file-error") as HTMLElement,
-	createFileConfirmBtn: document.getElementById(
-		"create-file-confirm-btn",
-	) as HTMLButtonElement,
-	renameFileBtn: document.getElementById(
-		"rename-file-btn",
-	) as HTMLButtonElement,
-	renameFileModal: document.getElementById("rename-file-modal") as HTMLElement,
-	renameFileInput: document.getElementById(
-		"rename-filename-input",
-	) as HTMLInputElement,
-	renameFileError: document.getElementById("rename-file-error") as HTMLElement,
-	renameFileConfirmBtn: document.getElementById(
-		"rename-file-confirm-btn",
-	) as HTMLButtonElement,
-	themeToggle: document.getElementById("theme-toggle") as HTMLButtonElement,
-	newFileCancelBtn: document.getElementById(
-		"new-file-cancel-btn",
-	) as HTMLButtonElement,
-	renameFileCancelBtn: document.getElementById(
-		"rename-file-cancel-btn",
-	) as HTMLButtonElement,
-	sourceModal: document.getElementById("source-modal") as HTMLElement,
-	sourceContent: document.getElementById(
-		"source-content",
-	) as HTMLTextAreaElement,
-	sourceCopyBtn: document.getElementById(
-		"source-copy-btn",
-	) as HTMLButtonElement,
-	sourceCloseBtn: document.getElementById(
-		"source-close-btn",
-	) as HTMLButtonElement,
-	tagList: document.getElementById("tag-list") as HTMLElement,
-	categoryList: document.getElementById("category-list") as HTMLElement,
-	newTagInput: document.getElementById("new-tag-input") as HTMLInputElement,
-	newCategoryInput: document.getElementById(
-		"new-category-input",
-	) as HTMLInputElement,
-	addTagBtn: document.getElementById("add-tag-btn") as HTMLButtonElement,
-	addCategoryBtn: document.getElementById(
-		"add-category-btn",
-	) as HTMLButtonElement,
-	meta: {
-		title: document.getElementById("meta-title") as HTMLInputElement,
-		published: document.getElementById("meta-published") as HTMLInputElement,
-		updated: document.getElementById("meta-updated") as HTMLInputElement,
-		description: document.getElementById(
-			"meta-description",
-		) as HTMLTextAreaElement,
-		tags: document.getElementById("meta-tags") as HTMLInputElement,
-		category: document.getElementById("meta-category") as HTMLInputElement,
-	},
-};
+import { applyTheme, handleThemeToggle, loadInitialTheme } from "./editor-theme";
 
 const state: EditorState = {
 	user: "",
@@ -141,39 +58,56 @@ type UnsavedNewFileDraft = {
 	savedAt: string;
 };
 
-// --- 主题功能 ---
+// UI 元素引用
+const ui = {
+	logoutBtn: document.getElementById("logout-btn") as HTMLButtonElement,
+	fileList: document.getElementById("file-list") as HTMLUListElement,
+	editorSection: document.getElementById("editor-section") as HTMLElement,
+	placeholderSection: document.getElementById("placeholder-section") as HTMLElement,
+	currentFileName: document.getElementById("current-file-name") as HTMLElement,
+	saveBtn: document.getElementById("save-btn") as HTMLButtonElement,
+	saveSpinner: document.getElementById("save-spinner") as HTMLElement,
+	saveStatus: document.getElementById("save-status") as HTMLElement,
+	viewSourceBtn: document.getElementById("view-source-btn") as HTMLButtonElement,
+	testOutputBtn: document.getElementById("test-output-btn") as HTMLButtonElement,
+	deleteFileBtn: document.getElementById("delete-file-btn") as HTMLButtonElement,
+	newFileBtn: document.getElementById("new-file-btn") as HTMLButtonElement,
+	newFileModal: document.getElementById("new-file-modal") as HTMLElement,
+	newFileInput: document.getElementById("new-filename-input") as HTMLInputElement,
+	newFileError: document.getElementById("new-file-error") as HTMLElement,
+	createFileConfirmBtn: document.getElementById("create-file-confirm-btn") as HTMLButtonElement,
+	renameFileBtn: document.getElementById("rename-file-btn") as HTMLButtonElement,
+	renameFileModal: document.getElementById("rename-file-modal") as HTMLElement,
+	renameFileInput: document.getElementById("rename-filename-input") as HTMLInputElement,
+	renameFileError: document.getElementById("rename-file-error") as HTMLElement,
+	renameFileConfirmBtn: document.getElementById("rename-file-confirm-btn") as HTMLButtonElement,
+	themeToggle: document.getElementById("theme-toggle") as HTMLButtonElement,
+	newFileCancelBtn: document.getElementById("new-file-cancel-btn") as HTMLButtonElement,
+	renameFileCancelBtn: document.getElementById("rename-file-cancel-btn") as HTMLButtonElement,
+	sourceModal: document.getElementById("source-modal") as HTMLElement,
+	sourceContent: document.getElementById("source-content") as HTMLTextAreaElement,
+	sourceCopyBtn: document.getElementById("source-copy-btn") as HTMLButtonElement,
+	sourceCloseBtn: document.getElementById("source-close-btn") as HTMLButtonElement,
+	tagList: document.getElementById("tag-list") as HTMLElement,
+	categoryList: document.getElementById("category-list") as HTMLElement,
+	newTagInput: document.getElementById("new-tag-input") as HTMLInputElement,
+	newCategoryInput: document.getElementById("new-category-input") as HTMLInputElement,
+	addTagBtn: document.getElementById("add-tag-btn") as HTMLButtonElement,
+	addCategoryBtn: document.getElementById("add-category-btn") as HTMLButtonElement,
+	meta: {
+		title: document.getElementById("meta-title") as HTMLInputElement,
+		published: document.getElementById("meta-published") as HTMLInputElement,
+		updated: document.getElementById("meta-updated") as HTMLInputElement,
+		description: document.getElementById("meta-description") as HTMLTextAreaElement,
+		tags: document.getElementById("meta-tags") as HTMLInputElement,
+		category: document.getElementById("meta-category") as HTMLInputElement,
+	},
+};
 
-function applyTheme(theme: string) {
-	const html = document.documentElement;
-	const lightIcon = document.getElementById("theme-icon-light");
-	const darkIcon = document.getElementById("theme-icon-dark");
-
-	if (theme === "dark") {
-		html.classList.add("dark");
-		lightIcon?.classList.remove("hidden");
-		darkIcon?.classList.add("hidden");
-	} else {
-		html.classList.remove("dark");
-		lightIcon?.classList.add("hidden");
-		darkIcon?.classList.remove("hidden");
-	}
-}
-
-function handleThemeToggle() {
-	const currentTheme = localStorage.getItem("github_editor_theme") || "light";
-	const newTheme = currentTheme === "dark" ? "light" : "dark";
-	localStorage.setItem("github_editor_theme", newTheme);
-	applyTheme(newTheme);
-}
-
-function loadInitialTheme() {
-	const savedTheme = localStorage.getItem("github_editor_theme");
-	const systemPrefersDark = window.matchMedia(
-		"(prefers-color-scheme: dark)",
-	).matches;
-	const theme = savedTheme || (systemPrefersDark ? "dark" : "light");
-	applyTheme(theme);
-}
+import "@milkdown/crepe/theme/common/style.css";
+import "@milkdown/crepe/theme/nord.css";
+import { Crepe } from "@milkdown/crepe";
+import { replaceAll } from "@milkdown/utils";
 
 async function ensureEditorReady() {
 	if (crepeInstance && crepeReady) return crepeReady;
@@ -200,17 +134,6 @@ function setEditorMarkdown(value: string) {
 	suppressCrepeDirty = true;
 	crepeInstance.editor.action(replaceAll(value));
 	suppressCrepeDirty = false;
-}
-
-function parseTags(tags: Metadata["tags"] | undefined): string[] {
-	if (!tags) return [];
-	if (Array.isArray(tags)) {
-		return tags.map((tag) => tag.trim()).filter(Boolean);
-	}
-	return tags
-		.split(",")
-		.map((tag) => tag.trim())
-		.filter(Boolean);
 }
 
 function parseDateValue(value: unknown): number {
@@ -464,10 +387,6 @@ function saveUnsavedNewFileDraft(metadata: Partial<Metadata>, body: string) {
 	localStorage.setItem(UNSAVED_NEW_FILE_DRAFT_KEY, JSON.stringify(payload));
 }
 
-function clearUnsavedNewFileDraft() {
-	localStorage.removeItem(UNSAVED_NEW_FILE_DRAFT_KEY);
-}
-
 function loadUnsavedNewFileDraft(): UnsavedNewFileDraft | null {
 	const raw = localStorage.getItem(UNSAVED_NEW_FILE_DRAFT_KEY);
 	if (!raw) return null;
@@ -496,6 +415,12 @@ function loadUnsavedNewFileDraft(): UnsavedNewFileDraft | null {
 		return null;
 	}
 }
+
+function clearUnsavedNewFileDraft() {
+	localStorage.removeItem(UNSAVED_NEW_FILE_DRAFT_KEY);
+}
+
+
 
 function restoreUnsavedNewFileDraft() {
 	const draft = loadUnsavedNewFileDraft();
