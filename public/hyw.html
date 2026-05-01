@@ -13,6 +13,7 @@
 <body>
   <script>
     let texts = [];
+    const fonts = ['Arial', 'Georgia', 'Times New Roman', 'Verdana', 'Courier New', 'Impact', 'Comic Sans MS', 'Trebuchet MS', 'Lucida Console', 'Palatino Linotype'];
 
     function setup() {
       createCanvas(windowWidth, windowHeight);
@@ -27,6 +28,7 @@
         let t = texts[i];
         fill(t.color[0], t.color[1], t.color[2], t.alpha);
         textSize(t.size);
+        textFont(t.font);
         text("hyw", t.x, t.y);
         
         t.y -= 1;
@@ -43,6 +45,7 @@
         x: mouseX,
         y: mouseY,
         size: random(20, 80),
+        font: random(fonts),
         color: [random(255), random(255), random(255)],
         alpha: 255
       });
