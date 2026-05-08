@@ -1,0 +1,2724 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Markdown A4 Studio</title>
+<style>
+@page {
+  size: A4 landscape;
+  margin: 3mm;
+}
+
+:root {
+  --page-width: 291mm;
+  --page-height: 204mm;
+  --columns: 5;
+  --font-family: "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  --font-size: 5.5px;
+  --math-size: 0.8em;
+  --column-gap: 1.5mm;
+  --ui-scale: 1;
+
+  --ui-bg: rgba(255, 255, 255, 0.92);
+  --ui-bg-strong: #ffffff;
+  --ui-bg-soft: #f6f7fb;
+  --ui-line: rgba(17, 24, 39, 0.12);
+  --ui-line-strong: rgba(17, 24, 39, 0.2);
+  --ui-text: #111827;
+  --ui-muted: #6b7280;
+  --ui-primary: #2563eb;
+  --ui-primary-hover: #1d4ed8;
+  --ui-primary-soft: #eff6ff;
+  --ui-danger: #dc2626;
+  --ui-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+  --ui-radius: 18px;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 34rem),
+    linear-gradient(135deg, #e5e7eb, #d1d5db);
+  color: #000;
+  font-family: "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.toolbar {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 10;
+  width: min(348px, calc(100vw - 28px));
+  overflow: visible;
+  transform: scale(var(--ui-scale));
+  transform-origin: top left;
+  color: var(--ui-text);
+  transition:
+    width 220ms ease,
+    height 220ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.toolbar-panel {
+  width: 100%;
+  overflow: hidden;
+  opacity: 1;
+  transform: scale(1);
+  transform-origin: top left;
+  visibility: visible;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  box-shadow: var(--ui-shadow);
+  backdrop-filter: blur(18px) saturate(1.2);
+  transition:
+    opacity 180ms ease,
+    transform 220ms ease,
+    visibility 0s linear 0s;
+}
+
+.toolbar.collapsed {
+  width: 56px;
+  height: 56px;
+  pointer-events: none;
+}
+
+.toolbar.collapsed .toolbar-panel {
+  opacity: 0;
+  transform: scale(0.94);
+  visibility: hidden;
+  transition:
+    opacity 150ms ease,
+    transform 180ms ease,
+    visibility 0s linear 180ms;
+}
+
+.toolbar.collapsed .collapse-tab {
+  pointer-events: auto;
+}
+
+.toolbar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 12px 10px 16px;
+  border-bottom: 1px solid var(--ui-line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9));
+  cursor: move;
+  user-select: none;
+}
+
+.toolbar-title-wrap {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.toolbar-title {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.toolbar-subtitle {
+  color: var(--ui-muted);
+  font-size: 11px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+  background: var(--ui-bg-strong);
+  color: var(--ui-text);
+  font-size: 14px;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.icon-button:hover {
+  border-color: var(--ui-line-strong);
+  background: #f8fafc;
+}
+
+.collapse-tab {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-grid;
+  place-items: center;
+  grid-template-columns: 1fr;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 1px solid var(--ui-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ui-text);
+  box-shadow: 14px 18px 42px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(16px) saturate(1.2);
+  font-size: 22px;
+  font-weight: 800;
+  opacity: 0;
+  transform: scale(0.82);
+  visibility: hidden;
+  transition:
+    opacity 150ms ease,
+    transform 180ms ease,
+    visibility 0s linear 150ms;
+}
+
+.collapse-tab::before {
+  content: none;
+}
+
+.toolbar:not(.collapsed) .collapse-tab {
+  pointer-events: none;
+}
+
+.toolbar.collapsed .collapse-tab {
+  opacity: 1;
+  transform: scale(1);
+  visibility: visible;
+  transition:
+    opacity 180ms ease 90ms,
+    transform 220ms ease 70ms,
+    visibility 0s linear 0s;
+}
+
+.toolbar-body {
+  display: grid;
+  gap: 8px;
+  overflow: visible;
+  padding: 8px;
+}
+
+.card {
+  min-width: 0;
+  border: 1px solid var(--ui-line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.card-section {
+  min-width: 0;
+  padding: 8px;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 0 8px;
+  color: var(--ui-text);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.card-title span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ui-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  min-width: 0;
+}
+
+.field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+label {
+  color: #374151;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+input,
+select,
+textarea,
+button {
+  box-sizing: border-box;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--ui-line);
+  border-radius: 11px;
+  background: var(--ui-bg-strong);
+  color: var(--ui-text);
+  outline: none;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
+}
+
+input,
+select {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: rgba(37, 99, 235, 0.72);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.select-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.select-row select {
+  grid-column: 1 / -1;
+}
+
+.custom-font-field {
+  display: none;
+}
+
+.custom-font-field.is-visible {
+  display: grid;
+}
+
+.upload-editor {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--ui-line);
+  border-radius: 14px;
+  background: var(--ui-bg-strong);
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
+}
+
+.upload-editor.dragging {
+  border-color: rgba(37, 99, 235, 0.8);
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.12),
+    0 18px 44px rgba(37, 99, 235, 0.12);
+  background: var(--ui-primary-soft);
+}
+
+.editor-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--ui-line);
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.editor-hint {
+  min-width: 0;
+  color: var(--ui-muted);
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.small-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: max-content;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--ui-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ui-text);
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.small-button:hover {
+  border-color: var(--ui-line-strong);
+  background: #f8fafc;
+}
+
+textarea {
+  display: block;
+  min-height: 118px;
+  max-height: 38vh;
+  padding: 8px;
+  resize: vertical;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-family: "Menlo", "SFMono-Regular", "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: none !important;
+}
+
+.upload-editor-empty textarea {
+  min-height: 118px;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.action-button {
+  width: 100%;
+  height: 34px;
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+  background: var(--ui-bg-strong);
+  color: var(--ui-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.action-button:hover {
+  border-color: var(--ui-line-strong);
+  background: #f8fafc;
+}
+
+.primary {
+  border-color: var(--ui-primary);
+  background: var(--ui-primary);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+}
+
+.primary:hover {
+  border-color: var(--ui-primary-hover);
+  background: var(--ui-primary-hover);
+}
+
+.danger {
+  color: var(--ui-danger);
+}
+
+.page-wrap {
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 100%;
+  padding: 18px;
+}
+
+.page {
+  box-sizing: border-box;
+  width: var(--page-width);
+  height: var(--page-height);
+  margin: 0 auto;
+  padding: 0;
+  overflow: visible;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.16),
+    0 18px 60px rgba(15, 23, 42, 0.22);
+}
+
+.preview {
+  height: 100%;
+  color: #000;
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  line-height: 1.18;
+  text-align: left;
+  column-count: var(--columns);
+  column-gap: var(--column-gap);
+  column-fill: auto;
+}
+
+.preview p,
+.preview ol,
+.preview ul,
+.preview blockquote,
+.preview pre {
+  margin: 0 0 0.22em;
+}
+
+.preview h1,
+.preview h2,
+.preview h3,
+.preview h4,
+.preview h5,
+.preview h6 {
+  margin: 0 0 0.18em;
+  font-size: 1em;
+  line-height: 1.08;
+}
+
+.preview table {
+  border-collapse: collapse;
+}
+
+.preview td,
+.preview th {
+  padding: 0 0.2em;
+}
+
+.preview img {
+  max-width: 100%;
+}
+
+.preview code {
+  font-family: "Menlo", "SFMono-Regular", monospace;
+  font-size: 0.92em;
+}
+
+.preview .math {
+  break-inside: avoid;
+}
+
+.preview mjx-container {
+  font-size: var(--math-size) !important;
+  line-height: 0 !important;
+}
+
+.preview mjx-container[display="true"] {
+  margin: 0.08em 0 !important;
+  overflow-x: hidden;
+  overflow-y: visible;
+  max-width: 100%;
+}
+
+@media (max-width: 760px) {
+  .toolbar {
+    width: min(348px, calc(100vw - 28px));
+  }
+
+  .controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .field-wide {
+    grid-column: 1 / -1;
+  }
+
+  .actions {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media print {
+  html,
+  body {
+    width: auto;
+    height: auto;
+    background: #fff;
+  }
+
+  .toolbar {
+    display: none !important;
+  }
+
+  .page-wrap {
+    padding: 0;
+  }
+
+  .page {
+    width: var(--page-width);
+    height: var(--page-height);
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .preview {
+    width: 100%;
+    height: 100%;
+  }
+}
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+    displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
+    processEscapes: true
+  },
+  svg: {
+    fontCache: 'global',
+    mtextInheritFont: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg-full.js"></script>
+</head>
+<body>
+<aside class="toolbar" id="toolbar">
+  <button type="button" class="collapse-tab" id="expandButton" title="展开工具">≡</button>
+
+  <div class="toolbar-panel">
+    <div class="toolbar-header" id="toolbarHandle">
+      <div class="toolbar-title-wrap">
+        <div class="toolbar-title">A4 Markdown Studio</div>
+        <div class="toolbar-subtitle">编辑 · 上传 · 排版 · 打印</div>
+      </div>
+
+      <div class="header-actions">
+        <button type="button" class="icon-button" id="collapseButton" title="收起工具">‹</button>
+      </div>
+    </div>
+
+    <div class="toolbar-body">
+      <div class="card">
+        <div class="card-section">
+          <div class="card-title">
+            页面设置
+          </div>
+
+          <div class="controls">
+            <div class="field">
+              <label for="columnsInput">分栏</label>
+              <input id="columnsInput" type="number" min="1" max="12" step="1" value="5">
+            </div>
+
+            <div class="field">
+              <label for="columnGapInput">栏距</label>
+              <input id="columnGapInput" type="text" value="1.5mm" placeholder="如 1.5mm">
+            </div>
+
+            <div class="field">
+              <label for="fontSizeInput">正文字号</label>
+              <input id="fontSizeInput" type="text" value="5.5px" placeholder="如 5.5px">
+            </div>
+
+            <div class="field">
+              <label for="mathSizeInput">公式字号</label>
+              <input id="mathSizeInput" type="text" value="0.8em" placeholder="如 0.8em">
+            </div>
+
+            <div class="field field-wide">
+              <label for="fontPresetInput">字体预设</label>
+              <div class="select-row">
+                <select id="fontPresetInput">
+                  <option value='"PingFang SC", "Helvetica Neue", Arial, sans-serif'>苹方 / Helvetica / Arial</option>
+                  <option value='"Microsoft YaHei", "PingFang SC", Arial, sans-serif'>微软雅黑 / 苹方</option>
+                  <option value='"Songti SC", "STSong", "SimSun", serif'>宋体 / 教材风</option>
+                  <option value='"Times New Roman", "Songti SC", serif'>Times / 宋体</option>
+                  <option value='Arial, "PingFang SC", sans-serif'>Arial / 苹方</option>
+                  <option value='"Noto Serif CJK SC", "Songti SC", serif'>Noto Serif / 宋体</option>
+                  <option value='custom'>自定义字体栈</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field field-wide custom-font-field" id="customFontField">
+              <label for="fontFamilyInput">自定义字体栈</label>
+              <div class="select-row">
+                <input
+                  id="fontFamilyInput"
+                  type="text"
+                  value='"PingFang SC", "Helvetica Neue", Arial, sans-serif'
+                  list="fontSuggestions"
+                  placeholder='"PingFang SC", Arial, sans-serif'
+                >
+                <button type="button" class="small-button" id="applyFontButton" title="应用自定义字体">应用</button>
+              </div>
+              <datalist id="fontSuggestions">
+                <option value='"PingFang SC", "Helvetica Neue", Arial, sans-serif"></option>
+                <option value='"Microsoft YaHei", "PingFang SC", Arial, sans-serif"></option>
+                <option value='"Songti SC", "STSong", "SimSun", serif"></option>
+                <option value='"Times New Roman", "Songti SC", serif"></option>
+                <option value='"Noto Serif CJK SC", "Songti SC", serif"></option>
+                <option value='"LXGW WenKai", "PingFang SC", cursive"></option>
+                <option value='Georgia, "Songti SC", serif'></option>
+                <option value='Arial, "PingFang SC", sans-serif'></option>
+              </datalist>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-section">
+          <div class="card-title">
+            Markdown 输入
+            <span id="fileStatus">可编辑 / 可拖拽 / 可点选上传</span>
+          </div>
+
+          <div class="upload-editor upload-editor-empty" id="uploadEditor">
+            <div class="editor-topbar">
+              <div class="editor-hint" id="editorHint">
+                支持 .md / .markdown / .txt，拖到编辑区即可导入
+              </div>
+
+              <div class="editor-actions">
+                <button type="button" class="small-button" id="chooseButton">选择文件</button>
+                <button type="button" class="small-button danger" id="clearButton">清空</button>
+              </div>
+            </div>
+
+            <textarea
+              id="markdownInput"
+              spellcheck="false"
+              placeholder="在这里粘贴或编辑 Markdown，也可以把文件拖进这个编辑区。"
+            ></textarea>
+          </div>
+
+          <input id="fileInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" multiple hidden>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="action-button" id="sampleButton">示例</button>
+        <button type="button" class="action-button primary" id="printButton">打印</button>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<main class="page-wrap">
+  <section class="page">
+    <article class="preview" id="preview"></article>
+  </section>
+</main>
+
+<script>
+const markdownInput = document.getElementById('markdownInput');
+const preview = document.getElementById('preview');
+const uploadEditor = document.getElementById('uploadEditor');
+const editorHint = document.getElementById('editorHint');
+const fileStatus = document.getElementById('fileStatus');
+const fileInput = document.getElementById('fileInput');
+const chooseButton = document.getElementById('chooseButton');
+const printButton = document.getElementById('printButton');
+const clearButton = document.getElementById('clearButton');
+const collapseButton = document.getElementById('collapseButton');
+const expandButton = document.getElementById('expandButton');
+const sampleButton = document.getElementById('sampleButton');
+const toolbar = document.getElementById('toolbar');
+const toolbarHandle = document.getElementById('toolbarHandle');
+const applyFontButton = document.getElementById('applyFontButton');
+const customFontField = document.getElementById('customFontField');
+
+const controls = {
+  columns: document.getElementById('columnsInput'),
+  columnGap: document.getElementById('columnGapInput'),
+  fontSize: document.getElementById('fontSizeInput'),
+  mathSize: document.getElementById('mathSizeInput'),
+  fontPreset: document.getElementById('fontPresetInput'),
+  fontFamily: document.getElementById('fontFamilyInput')
+};
+
+let renderTimer = 0;
+
+function setRootVar(name, value) {
+  document.documentElement.style.setProperty(name, value);
+}
+
+function getFontFamilyValue() {
+  if (controls.fontPreset.value === 'custom') {
+    return controls.fontFamily.value || '"PingFang SC", "Helvetica Neue", Arial, sans-serif';
+  }
+  return controls.fontPreset.value;
+}
+
+function updateSettings() {
+  const fontFamily = getFontFamilyValue();
+  customFontField.classList.toggle('is-visible', controls.fontPreset.value === 'custom');
+
+  setRootVar('--columns', controls.columns.value || '5');
+  setRootVar('--column-gap', controls.columnGap.value || '1.5mm');
+  setRootVar('--font-size', controls.fontSize.value || '5.5px');
+  setRootVar('--math-size', controls.mathSize.value || '0.8em');
+  setRootVar('--font-family', fontFamily);
+
+  if (controls.fontPreset.value !== 'custom') {
+    controls.fontFamily.value = fontFamily;
+  }
+}
+
+function updateEditorEmptyState() {
+  const isEmpty = markdownInput.value.trim().length === 0;
+  uploadEditor.classList.toggle('upload-editor-empty', isEmpty);
+}
+
+function updateUiScale() {
+  const scale = window.visualViewport?.scale || 1;
+  document.documentElement.style.setProperty('--ui-scale', String(1 / scale));
+  clampToolbarPosition();
+}
+
+function setToolbarCollapsed(collapsed) {
+  toolbar.classList.toggle('collapsed', collapsed);
+  clampToolbarPosition();
+}
+
+function clampToolbarPosition() {
+  const viewport = window.visualViewport;
+  const viewportWidth = viewport?.width || window.innerWidth;
+  const viewportHeight = viewport?.height || window.innerHeight;
+  const scale = 1 / (viewport?.scale || 1);
+  const rect = toolbar.getBoundingClientRect();
+  const margin = 8;
+  const width = rect.width || toolbar.offsetWidth * scale;
+  const height = rect.height || toolbar.offsetHeight * scale;
+  const maxX = Math.max(margin, viewportWidth - width - margin);
+  const maxY = Math.max(margin, viewportHeight - height - margin);
+  const currentX = parseFloat(toolbar.style.left || toolbar.getBoundingClientRect().left || 16);
+  const currentY = parseFloat(toolbar.style.top || toolbar.getBoundingClientRect().top || 16);
+  const nextX = Math.min(Math.max(margin, currentX), maxX);
+  const nextY = Math.min(Math.max(margin, currentY), maxY);
+
+  toolbar.style.left = `${nextX}px`;
+  toolbar.style.top = `${nextY}px`;
+}
+
+function escapeScriptText(text) {
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/`/g, '\\`')
+    .replace(/\$\{/g, '\\${')
+    .replace(/<\/script/gi, '<\\/script');
+}
+
+function getPrintSettings() {
+  updateSettings();
+  return {
+    columns: controls.columns.value || '5',
+    columnGap: controls.columnGap.value || '1.5mm',
+    fontSize: controls.fontSize.value || '5.5px',
+    mathSize: controls.mathSize.value || '0.8em',
+    fontFamily: getFontFamilyValue()
+  };
+}
+
+function buildPrintDocument(markdown, settings) {
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A4 Markdown Print</title>
+<style>
+@page {
+  size: A4 landscape;
+  margin: 3mm;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  color: #000;
+  background: #fff;
+  font-family: ${settings.fontFamily};
+  font-size: ${settings.fontSize};
+  line-height: 1.18;
+  text-align: left;
+  column-count: ${settings.columns};
+  column-gap: ${settings.columnGap};
+  column-fill: auto;
+}
+
+p,
+ol,
+ul,
+blockquote,
+pre {
+  margin: 0 0 0.22em;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0 0 0.18em;
+  font-size: 1em;
+  line-height: 1.08;
+}
+
+strong,
+b {
+  font-weight: 700;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+td,
+th {
+  padding: 0 0.2em;
+}
+
+img {
+  max-width: 100%;
+}
+
+code {
+  font-family: "Menlo", "SFMono-Regular", monospace;
+  font-size: 0.92em;
+}
+
+.math {
+  break-inside: avoid;
+}
+
+mjx-container {
+  font-size: ${settings.mathSize} !important;
+  line-height: 0 !important;
+}
+
+mjx-container[display="true"] {
+  margin: 0.08em 0 !important;
+  overflow-x: hidden;
+  overflow-y: visible;
+  max-width: 100%;
+}
+
+@media screen {
+  html {
+    background: #d8d8d8;
+  }
+
+  body {
+    width: 291mm;
+    min-height: 204mm;
+    margin: 0 auto;
+    padding: 3mm;
+    box-shadow: 0 0 0 1px #bbb, 0 8px 28px rgba(0, 0, 0, 0.18);
+  }
+}
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\\\\\\\(', '\\\\\\\\)']],
+    displayMath: [['$$', '$$'], ['\\\\\\\\[', '\\\\\\\\]']],
+    processEscapes: true
+  },
+  svg: {
+    fontCache: 'global',
+    mtextInheritFont: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  }
+};
+<\\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg-full.js"><\\/script>
+</head>
+<body>
+<script>
+const markdownSource = \`${escapeScriptText(markdown)}\`;
+
+function configureMarked() {
+  if (!window.marked) {
+    return;
+  }
+
+  marked.setOptions({
+    breaks: false,
+    gfm: true
+  });
+}
+
+function renderForPrint() {
+  if (!window.marked) {
+    window.setTimeout(renderForPrint, 50);
+    return;
+  }
+
+  configureMarked();
+  document.body.innerHTML = marked.parse(markdownSource || '');
+
+  if (window.MathJax?.typesetPromise) {
+    MathJax.typesetPromise([document.body]);
+  } else {
+    window.setTimeout(renderForPrint, 50);
+  }
+}
+
+renderForPrint();
+<\\/script>
+</body>
+</html>`;
+}
+
+function openPrintPage() {
+  const printWindow = window.open('', '_blank');
+
+  if (!printWindow) {
+    alert('浏览器拦截了新窗口，请允许弹出窗口后再打印。');
+    return;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(buildPrintDocument(markdownInput.value || '', getPrintSettings()));
+  printWindow.document.close();
+}
+
+function configureMarked() {
+  if (!window.marked) {
+    return;
+  }
+
+  marked.setOptions({
+    breaks: false,
+    gfm: true
+  });
+}
+
+function renderMarkdown() {
+  updateSettings();
+  updateEditorEmptyState();
+
+  if (!window.marked) {
+    scheduleRender();
+    return;
+  }
+
+  configureMarked();
+  preview.innerHTML = marked.parse(markdownInput.value || '');
+
+  if (window.MathJax?.typesetPromise) {
+    MathJax.typesetClear([preview]);
+    MathJax.typesetPromise([preview]);
+  }
+}
+
+function scheduleRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(renderMarkdown, 120);
+}
+
+function setEditorStatus(text) {
+  editorHint.textContent = text;
+  fileStatus.textContent = text;
+}
+
+async function readFiles(files) {
+  const allFiles = [...files];
+  const markdownFiles = allFiles.filter(file => /\.(md|markdown|txt)$/i.test(file.name));
+
+  if (markdownFiles.length === 0) {
+    setEditorStatus('未识别到 .md / .markdown / .txt 文件');
+    return;
+  }
+
+  const texts = await Promise.all(
+    markdownFiles.map(async file => {
+      const text = await file.text();
+      return `<!-- ${file.name} -->\n${text}`;
+    })
+  );
+
+  markdownInput.value = texts.join('\n\n');
+  setEditorStatus(`已导入 ${markdownFiles.length} 个文件`);
+  updateEditorEmptyState();
+  renderMarkdown();
+
+  fileInput.value = '';
+}
+
+function handleDragEnter(event) {
+  event.preventDefault();
+  uploadEditor.classList.add('dragging');
+}
+
+function handleDragOver(event) {
+  event.preventDefault();
+  uploadEditor.classList.add('dragging');
+}
+
+function handleDragLeave(event) {
+  if (!uploadEditor.contains(event.relatedTarget)) {
+    uploadEditor.classList.remove('dragging');
+  }
+}
+
+function handleDrop(event) {
+  event.preventDefault();
+  uploadEditor.classList.remove('dragging');
+  readFiles(event.dataTransfer.files);
+}
+
+function insertSample() {
+  markdownInput.value = String.raw`**1. 非均匀杆的静力平衡**
+
+背景：水平杆长 $L$、质量 $M$，左、右绳张力分别为 $T_L,T_R$，左绳与竖直方向夹角为 $\alpha$，右绳与竖直方向夹角为 $\beta$，质心距左端为 $x$。
+
+(a) **求：杆的质心位置 $x$**。解：杆静止，满足力和力矩平衡。水平方向有 $T_L\sin\alpha=T_R\sin\beta$，绕左端取力矩有 $Mgx=T_RL\cos\beta$。由两式消去张力，并结合竖直方向平衡 $T_L\cos\alpha+T_R\cos\beta=Mg$，得 $x=\frac{\sin\alpha\cos\beta}{\sin(\alpha+\beta)}L$。
+
+(b) **求：左、右绳张力 $T_L$ 与 $T_R$**。解：由 $Mgx=T_RL\cos\beta$ 得 $T_R=\frac{Mgx}{L\cos\beta}$，代入上问结果得 $T_R=\frac{Mg\sin\alpha}{\sin(\alpha+\beta)}$；再由 $T_L\sin\alpha=T_R\sin\beta$ 得 $T_L=\frac{Mg\sin\beta}{\sin(\alpha+\beta)}$。
+
+**2. 均匀细杆与质点的引力势能和引力**
+
+背景：细杆长 $L$、质量 $M$，质点质量 $m$，质点位于杆中垂线上，距杆中心为 $a$，取杆中心为坐标原点，杆元位置为 $x$，$dM=\frac{M}{L}dx$，距离 $r=\sqrt{x^2+a^2}$。
+
+(a) **求：杆与质点间总引力势能 $U$**。解：杆元势能为 $dU=-\frac{Gm,dM}{r}=-\frac{GMm}{L}\frac{dx}{\sqrt{x^2+a^2}}$，积分区间为 $x\in[-L/2,L/2]$，故 $U=-\frac{GMm}{L}\int_{-L/2}^{L/2}\frac{dx}{\sqrt{x^2+a^2}}$。利用积分公式得 $U=-\frac{GMm}{L}\ln\frac{\sqrt{L^2/4+a^2}+L/2}{\sqrt{L^2/4+a^2}-L/2}$。
+
+(b) **求：杆与质点间引力大小 $F$**。解：由对称性，水平方向分量相互抵消，只保留沿中垂线方向的分量，杆元贡献为 $dF_y=\frac{Gm,dM}{r^2}\frac{a}{r}=\frac{GMm}{L}\frac{a,dx}{(x^2+a^2)^{3/2}}$，故 $F=2\frac{GMm}{L}a\int_0^{L/2}\frac{dx}{(x^2+a^2)^{3/2}}=\frac{GMm}{a\sqrt{L^2/4+a^2}}$。
+
+**3. 分流管中的连续性方程**
+
+背景：入口直径为 $d_1$，两出口直径为 $d_2,d_3$，对应流速为 $v_1,v_2,v_3$，流体不可压缩。
+
+(a) **求：通过管道的体积流率**。解：入口体积流率为 $Q=A_1v_1=\frac{\pi d_1^2}{4}v_1$。
+
+(b) **求：出口 3 的流速 $v_3$**。解：连续性方程为 $A_1v_1=A_2v_2+A_3v_3$，即 $\frac{\pi d_1^2}{4}v_1=\frac{\pi d_2^2}{4}v_2+\frac{\pi d_3^2}{4}v_3$，解得 $v_3=\frac{d_1^2v_1-d_2^2v_2}{d_3^2}$。
+
+**4. 四弹簧并联的简谐振子**
+
+背景：质量块质量为 $m$，四个弹簧劲度系数为 $k_1,k_2,k_3,k_4$，小位移为 $x$，等效劲度系数为 $k_{\rm eff}=k_1+k_2+k_3+k_4$。
+
+(a) **求：系统的运动方程**。解：四个并联弹簧的回复力同向叠加，合力为 $F=-k_{\rm eff}x$，由牛顿第二定律得 $m\ddot{x}=-(k_1+k_2+k_3+k_4)x$。
+
+(b) **求：振子的角频率 $\omega$**。解：将运动方程写成 $\ddot{x}+\frac{k_{\rm eff}}{m}x=0$，与简谐运动标准形式比较，得 $\omega=\sqrt{\frac{k_{\rm eff}}{m}}=\sqrt{\frac{k_1+k_2+k_3+k_4}{m}}$；若四个弹簧均为 $k$，则 $\omega=\sqrt{\frac{4k}{m}}$。
+
+(c) **求：振子的频率 $f$ 与周期 $T$**。解：由角频率关系得 $f=\frac{\omega}{2\pi}$，$T=\frac{2\pi}{\omega}$，因此 $f=\frac{1}{2\pi}\sqrt{\frac{k_{\rm eff}}{m}}$，$T=2\pi\sqrt{\frac{m}{k_{\rm eff}}}$。
+
+**5. 线性阻尼振子**
+
+背景：运动方程为 $m\ddot{x}=-b\dot{x}-kx$，设 $x(t)=A_0e^{-bt/(2m)}\cos(\omega t)$，相位常数取零。
+
+(a) **求：证明给定形式满足阻尼振子方程并确定 $\omega$ 的条件**。解：令 $\gamma=\frac{b}{2m}$，则 $x=A_0e^{-\gamma t}\cos\omega t$。代入 $m\ddot{x}+b\dot{x}+kx=0$ 后，$\sin\omega t$ 项相互抵消，$\cos\omega t$ 项要求 $m(\gamma^2-\omega^2)-b\gamma+k=0$。由 $\gamma=\frac{b}{2m}$ 得 $\omega^2=\frac{k}{m}-\frac{b^2}{4m^2}$，即 $\omega=\sqrt{\frac{k}{m}-\frac{b^2}{4m^2}}$。
+
+(b) **求：阻尼振子的角频率 $\omega$**。解：由上问直接得 $\omega=\sqrt{\frac{k}{m}-\frac{b^2}{4m^2}}$。
+
+(c) **求：初速度 $v_0=\dot{x}(0)$**。解：对 $x(t)=A_0e^{-bt/(2m)}\cos\omega t$ 求导，得 $\dot{x}=-\frac{b}{2m}A_0e^{-bt/(2m)}\cos\omega t-\omega A_0e^{-bt/(2m)}\sin\omega t$，令 $t=0$，得 $v_0=-\frac{b}{2m}A_0$。
+
+(d) **求：时刻 $t$ 的振幅 $A(t)$，特别是题给时刻的振幅**。解：阻尼振幅为指数包络 $A(t)=A_0e^{-bt/(2m)}$；若题给时刻记为 $t_0$，则 $A(t_0)=A_0e^{-bt_0/(2m)}$。
+
+**6. 横波波函数**
+
+背景：波函数写成 $y(x,t)=A\cos(kx-\omega t)$，其中 $A$ 为振幅，$k$ 为波数，$\omega$ 为角频率。
+
+(a) **求：波的振幅 $A$**。解：振幅是余弦函数前的系数，故 $A$ 等于题给波函数中 $\cos(kx-\omega t)$ 前的常数因子。
+
+(b) **求：波的传播方向**。解：相位为 $kx-\omega t$，保持相位不变有 $kx-\omega t=\text{常数}$，因此 $x$ 随 $t$ 增大而增大，波沿 $+x$ 方向传播。
+
+(c) **求：波速 $v$**。解：对 $y=A\cos(kx-\omega t)$，波速为 $v=\frac{\omega}{k}$。
+
+(d) **求：波长 $\lambda$、频率 $f$ 与周期 $T$**。解：波数与波长关系为 $k=\frac{2\pi}{\lambda}$，故 $\lambda=\frac{2\pi}{k}$；角频率与频率关系为 $\omega=2\pi f$，故 $f=\frac{\omega}{2\pi}$；周期为 $T=\frac{1}{f}=\frac{2\pi}{\omega}$。
+
+(e) **求：绳上任一点的最大振动速度**。解：横向速度为 $v_y=\frac{\partial y}{\partial t}=\omega A\sin(kx-\omega t)$，其最大值为 $v_{y,\max}=\omega A$。
+
+(f) **求：产生该正弦波所需的平均功率 $P_{\rm av}$**。解：题给平均功率公式为 $P_{\rm av}=\frac{1}{2}\mu v\omega^2A^2$，其中 $v=\frac{\omega}{k}$，故 $P_{\rm av}=\frac{1}{2}\mu\frac{\omega}{k}\omega^2A^2$，也可写成 $P_{\rm av}=\frac{1}{2}\mu v(v_{y,\max})^2$。
+
+**7. 绳上的脉冲波**
+
+背景：绳长为 $L$，张力为 $\mathcal{T}$，扰动传播时间为 $\Delta t$，线密度为 $\mu$。
+
+(a) **求：绳上的波是横波还是纵波，并说明原因**。解：这是横波，因为绳元的位移方向垂直于波的传播方向。
+
+(b) **求：波速 $v$**。解：扰动用时间 $\Delta t$ 传播距离 $L$，故 $v=\frac{L}{\Delta t}$。
+
+(c) **求：绳的线密度 $\mu$**。解：绳波速度满足 $v=\sqrt{\frac{\mathcal{T}}{\mu}}$，因此 $\mu=\frac{\mathcal{T}}{v^2}=\frac{\mathcal{T}\Delta t^2}{L^2}$。
+
+(d) **求：绳的总质量 $M$**。解：总质量为 $M=\mu L=\frac{\mathcal{T}\Delta t^2}{L}$。
+
+**8. 一端封闭一端开口的瓶中声波**
+
+背景：瓶内空气柱等效为一端封闭、一端开口的管，空气柱长度为 $\ell=H-h$，声速为 $v$，目标基频为 $f$。
+
+(a) **求：该声波是横波还是纵波，并说明原因**。解：声波是纵波，因为空气分子的振动方向与声波传播方向平行。
+
+(b) **求：一端封闭一端开口管的共振波长**。解：封闭端为位移节点，开口端为位移腹，满足 $\ell=\frac{2n+1}{4}\lambda_n$，其中 $n=0,1,2,\cdots$，故 $\lambda_n=\frac{4\ell}{2n+1}$。
+
+(c) **求：为产生基频，水应装到多高 $h$**。解：基频对应 $n=0$，有 $f=\frac{v}{4\ell}$，故 $\ell=\frac{v}{4f}$。由于 $\ell=H-h$，所以 $h=H-\frac{v}{4f}$。
+
+(d) **求：下一谐波频率**。解：一端封闭一端开口管只允许奇次谐波，频率为 $f_n=(2n+1)\frac{v}{4\ell}$。基频为 $f$，下一谐波对应 $n=1$，故 $f_{\rm next}=3f$。
+
+**9. 火车鸣笛与悬崖反射的多普勒效应**
+
+背景：声速为 $c$，火车速度为 $u$，静止时汽笛频率为 $f$，火车向隧道入口和悬崖靠近。
+
+(a) **求：隧道口静止观察者直接听到的频率 $f'$**。解：声源向静止观察者靠近，探测者速度为零，声源速度为 $u$，多普勒公式给出 $f'=\frac{c}{c-u}f$。
+
+(b) **求：悬崖反射声波的频率**。解：悬崖静止，反射只改变声波传播方向，不改变悬崖接收到并重新发出的频率，因此反射声频率仍为 $f'=\frac{c}{c-u}f$。
+
+(c) **求：火车工程师听到的反射声频率 $f''$**。解：反射声可看作由静止悬崖发出、向运动工程师传播的声波，工程师向声源方向运动，故 $f''=\frac{c+u}{c}f'=\frac{c+u}{c-u}f$。
+
+**10. 水箱小孔出流**
+
+背景：水面到孔的深度为 $h$，水箱水高为 $H$，孔离地高度为 $H-h$，忽略水面下降速度和空气阻力。
+
+(a) **求：水离开小孔时的速度 $v$**。解：在自由液面与小孔处用伯努利方程，二者压强均为大气压，且液面速度可忽略，得 $\rho gh=\frac{1}{2}\rho v^2$，所以 $v=\sqrt{2gh}$。
+
+(b) **求：水流落地点到孔的水平距离 $x$**。解：水流以水平速度 $v$ 射出，竖直下落距离为 $H-h$，故 $H-h=\frac{1}{2}gt^2$，得 $t=\sqrt{\frac{2(H-h)}{g}}$。水平距离为 $x=vt=\sqrt{2gh}\sqrt{\frac{2(H-h)}{g}}=2\sqrt{h(H-h)}$。
+
+(c) **求：使水平距离 $x$ 最大的小孔深度 $h$**。解：最大化 $x$ 等价于最大化 $x^2=4h(H-h)$，令 $\frac{d}{dh}[h(H-h)]=H-2h=0$，得 $h=\frac{H}{2}$。
+
+**11. 质点与均匀细杆端点的弹性碰撞**
+
+背景：质点质量为 $m$、初速为 $v$，均匀细杆质量为 $M$、长度为 $L$，碰后质点静止，杆质心速度为 $V_{\rm cm}$，角速度为 $\omega$，杆绕质心转动惯量为 $I_{\rm cm}=\frac{1}{12}ML^2$。
+
+(a) **求：使质点碰后静止的质量比 $M/m$**。解：线动量守恒给出 $mv=MV_{\rm cm}$。绕杆质心取角动量守恒，碰撞前质点角动量为 $mv\frac{L}{2}$，碰后为 $I_{\rm cm}\omega$，故 $mv\frac{L}{2}=I_{\rm cm}\omega$。弹性碰撞满足机械能守恒，$\frac{1}{2}mv^2=\frac{1}{2}MV_{\rm cm}^2+\frac{1}{2}I_{\rm cm}\omega^2$。代入 $V_{\rm cm}=\frac{m}{M}v$ 与 $\omega=\frac{mvL}{2I_{\rm cm}}$，并用 $I_{\rm cm}=\frac{1}{12}ML^2$，化简得 $M=4m$，因此 $\frac{M}{m}=4$。
+
+(b) **求：碰后杆的质心速度 $V_{\rm cm}$ 与角速度 $\omega$**。解：由 $mv=MV_{\rm cm}$ 且 $M=4m$，得 $V_{\rm cm}=\frac{v}{4}$。由 $mv\frac{L}{2}=I_{\rm cm}\omega$ 与 $I_{\rm cm}=\frac{1}{12}ML^2$，再代入 $M=4m$，得 $\omega=\frac{3v}{2L}$。
+
+**12. 拉普拉斯-龙格-楞次矢量**
+
+背景：行星质量为 $m$，恒星质量为 $M$ 且近似静止在焦点 $O$，轨道半长轴为 $a$，偏心率为 $e$，角动量为 $\vec{L}=\vec{r}\times\vec{p}$，LRL 矢量定义为 $\vec{A}=\vec{v}\times\vec{L}-GMm\hat{r}$。轨道逆时针运动，$\hat{x},\hat{y}$ 在轨道平面内，$\hat{z}$ 垂直纸面向外。
+
+(a) **求：角动量 $\vec{L}$ 的方向，并判断是否守恒**。解：轨道逆时针，按右手定则 $\vec{L}$ 沿 $+\hat{z}$ 方向。引力为中心力，力矩 $\vec{\tau}=\vec{r}\times\vec{F}=0$，故 $\vec{L}$ 守恒。
+
+(b) **求：说明 LRL 矢量 $\vec{A}$ 位于 $x$-$y$ 平面内**。解：速度 $\vec{v}$ 位于轨道平面内，角动量 $\vec{L}$ 沿 $\hat{z}$ 方向，因此 $\vec{v}\times\vec{L}$ 位于 $x$-$y$ 平面内；同时 $\hat{r}$ 也位于 $x$-$y$ 平面内，所以 $\vec{A}=\vec{v}\times\vec{L}-GMm\hat{r}$ 位于 $x$-$y$ 平面内。
+
+(c) **求：近日点 $P_1$ 与远日点 $P_2$ 的速率**。解：椭圆轨道的 vis-viva 关系为 $v^2=GM\left(\frac{2}{r}-\frac{1}{a}\right)$。近日点距离为 $r_p=a(1-e)$，故 $v_p=\sqrt{\frac{GM}{a}\frac{1+e}{1-e}}$；远日点距离为 $r_a=a(1+e)$，故 $v_a=\sqrt{\frac{GM}{a}\frac{1-e}{1+e}}$。
+
+(d) **求：在 $P_1$ 或 $P_2$ 处的 LRL 矢量大小和方向**。解：在近日点 $P_1$，$\hat{r}=-\hat{x}$，速度沿 $-\hat{y}$，且 $\vec{L}$ 沿 $+\hat{z}$，所以 $\vec{v}\times\vec{L}$ 沿 $-\hat{x}$。由 $r_p=a(1-e)$ 与 $v_p^2=\frac{GM}{a}\frac{1+e}{1-e}$ 得 $|\vec{v}\times\vec{L}|=m r_p v_p^2=GMm(1+e)$，因此 $\vec{A}=-GMm(1+e)\hat{x}+GMm\hat{x}=-GMme\hat{x}$。故 $|\vec{A}|=GMme$，方向为 $-\hat{x}$。
+
+(e) **求：在 $P_3$ 或 $P_4$ 处的 LRL 矢量**。解：以 $P_3$ 为例，几何关系为 $\vec{r}_3=ea\hat{x}-b\hat{y}$，其中 $b=a\sqrt{1-e^2}$，且该处速率满足 $v_3=\sqrt{\frac{GM}{a}}$。由 $\vec{L}=m\vec{r}_3\times\vec{v}_3$ 可得 $|\vec{L}|=m b v_3$，代入 $\vec{A}=\vec{v}\times\vec{L}-GMm\hat{r}$ 后，$\hat{y}$ 分量相互抵消，剩余 $\vec{A}=-GMme\hat{x}$；在 $P_4$ 处同理也得到 $\vec{A}=-GMme\hat{x}$。
+
+(f) **求：证明 LRL 矢量在轨道任意点守恒**。解：对 $\vec{A}=\vec{v}\times\vec{L}-GMm\hat{r}$ 求导，得 $\frac{d\vec{A}}{dt}=\vec{a}\times\vec{L}+\vec{v}\times\frac{d\vec{L}}{dt}-GMm\frac{d\hat{r}}{dt}$。中心力使 $\frac{d\vec{L}}{dt}=0$，且 $\vec{a}=-\frac{GM}{r^2}\hat{r}$。在极坐标中 $\vec{L}=mr^2\dot{\theta}\hat{z}$，并有 $\frac{d\hat{r}}{dt}=\dot{\theta}\hat{\theta}$，所以 $\vec{a}\times\vec{L}=-\frac{GM}{r^2}\hat{r}\times mr^2\dot{\theta}\hat{z}=GMm\dot{\theta}\hat{\theta}$。因此 $\frac{d\vec{A}}{dt}=GMm\dot{\theta}\hat{\theta}-GMm\dot{\theta}\hat{\theta}=0$，故 $\vec{A}$ 守恒。**1. 初始自旋实心球的滑动与滚动**
+
+背景：均匀实心球质量 $M$、半径 $R$，初始角速度为顺时针 $\omega_0$，初始质心速度为 $0$，水平面动摩擦系数为 $\mu_k$，取向右为正。
+
+(a) **求：球开始向左还是向右运动**。解：球底部接触点因顺时针转动相对地面向左滑动，因此动摩擦力方向向右，球的质心开始向右运动。
+
+(b) **求：球刚放到地面瞬间的加速度**。解：水平方向只有动摩擦力 $f_k=\mu_k N=\mu_k Mg$，故质心加速度为 $a=\frac{f_k}{M}=\mu_k g$，方向向右。
+
+(c) **求：证明对应角加速度为 $\alpha=\frac{5\mu_k g}{2R}$**。解：以质心为转轴，动摩擦力产生逆时针力矩 $\tau=f_kR$，实心球转动惯量为 $I=\frac{2}{5}MR^2$，故 $\alpha=\frac{\tau}{I}=\frac{\mu_kMgR}{(2/5)MR^2}=\frac{5\mu_k g}{2R}$，方向为逆时针。
+
+(d) **求：球达到纯滚动所需时间**。解：设顺时针为负，则 $\omega=-\omega_0+\alpha t$，质心速度 $v=at$。纯滚动条件为 $\omega R+v=0$，代入得 $(-\omega_0+\alpha t)R+at=0$，所以 $t=\frac{\omega_0R}{\alpha R+a}=\frac{2\omega_0R}{7\mu_k g}$。
+
+**2. 斜面上由绕线牵引的静止圆柱**
+
+背景：均匀实心圆柱质量 $M$，斜面倾角为 $\theta$，细线沿斜面方向拉圆柱，静摩擦系数为 $\mu_s$，圆柱处于静力平衡。
+
+(a) **求：说明为什么必须有摩擦力才能平衡**。解：若无摩擦力，细线张力 $T$ 对圆柱质心产生力矩，而重力和支持力均过质心不产生关于质心的力矩，因此无法满足转动平衡，所以接触面必须提供摩擦力。
+
+(b) **求：由力矩方程证明摩擦力 $f$ 等于张力 $T$**。解：以圆柱质心为转轴，张力和摩擦力的力臂均为 $R$，平衡时净力矩为零，即 $fR-TR=0$，故 $f=T$。
+
+(c) **求：保持圆柱静止所需摩擦力**。解：沿斜面方向受力平衡给出 $f+T-Mg\sin\theta=0$，又 $f=T$，所以 $f=T=\frac{1}{2}Mg\sin\theta$，摩擦力沿斜面向上。
+
+(d) **求：斜面对圆柱的支持力 $N$**。解：垂直斜面方向受力平衡为 $N-Mg\cos\theta=0$，故 $N=Mg\cos\theta$。
+
+(e) **求：圆柱能保持静止的最大倾角**。解：静摩擦条件为 $f\leq \mu_sN$，代入 $f=\frac{1}{2}Mg\sin\theta$ 和 $N=Mg\cos\theta$ 得 $\tan\theta\leq 2\mu_s$，所以 $\theta_{\max}=\arctan(2\mu_s)$；当 $\mu_s=\frac{1}{2}$ 时，$\theta_{\max}=\frac{\pi}{4}$。
+
+**3. 质点与均匀细杆间的引力**
+
+背景：质点质量为 $m_1$，位于均匀细杆一端外侧距离 $d$ 处；细杆长度 $L$、质量 $M$，线密度为 $\lambda=\frac{M}{L}$。
+
+(a) **求：细杆对质点的万有引力大小**。解：取杆上一小段质量 $dm=\lambda dr=\frac{M}{L}dr$，距质点距离为 $r$，微元引力为 $dF=\frac{Gm_1dm}{r^2}$。积分范围为 $r=d$ 到 $r=d+L$，故 $F=\frac{Gm_1M}{L}\int_d^{d+L}\frac{dr}{r^2}=\frac{Gm_1M}{d(d+L)}$，方向指向细杆。
+
+(b) **求：质点与细杆之间的引力势能 $U$**。解：取无穷远处势能为零，微元势能为 $dU=-\frac{Gm_1dm}{r}$，故 $U=-\frac{Gm_1M}{L}\int_d^{d+L}\frac{dr}{r}=-\frac{Gm_1M}{L}\ln\frac{d+L}{d}$。
+
+**4. 浸没岩石的浮力问题**
+
+背景：岩石在空气中悬挂时绳张力为 $T_1$，完全浸没在水中时张力为 $T_2$，水密度为 $\rho_w$，完全浸没在未知液体中时张力为 $T_3$，忽略空气浮力。
+
+(a) **求：岩石体积**。解：空气中 $T_1=W$，水中 $T_2=W-\rho_w gV$，相减得 $T_1-T_2=\rho_w gV$，所以 $V=\frac{T_1-T_2}{\rho_w g}$。
+
+(b) **求：岩石平均密度**。解：岩石质量满足 $W=T_1=\rho_R gV$，故 $\rho_R=\frac{T_1}{gV}=\frac{\rho_wT_1}{T_1-T_2}$。
+
+(c) **求：未知液体密度**。解：未知液体中 $T_3=W-\rho_u gV$，故 $\rho_u=\frac{T_1-T_3}{gV}=\rho_w\frac{T_1-T_3}{T_1-T_2}$。
+
+**5. 水坝管道与塞子**
+
+背景：水面到管道深度为 $d$，管道内外截面积分别为 $S_1$ 和 $S_2$，水密度为 $\rho$，大气压为 $P_{\rm atm}$，管道直径远小于水深尺度。
+
+(a) **求：水平管中的表压**。解：静水压强随深度增加，管道处绝对压强为 $P=P_{\rm atm}+\rho gd$，故表压为 $\Delta P=P-P_{\rm atm}=\rho gd$。
+
+(b) **求：塞子与管壁之间摩擦力大小**。解：塞子静止时，水对塞子的压力由管口截面积 $S_2$ 给出，摩擦力平衡该压力，因此 $f=\Delta P,S_2=\rho gdS_2$。
+
+(c) **求：拔掉塞子后单位时间内流出的水量，并求给定时间 $\Delta t$ 内流出体积**。解：由伯努利方程，水面和出口均受大气压，出口在水面下深度 $d$，故出口速度 $v_2=\sqrt{2gd}$。体积流量为 $Q=S_2v_2=S_2\sqrt{2gd}$，时间 $\Delta t$ 内流出体积为 $V_{\rm out}=Q\Delta t=S_2\sqrt{2gd},\Delta t$。
+
+(d) **求：流过截面 $S_1$ 的水速**。解：由连续性方程 $S_1v_1=S_2v_2$，得 $v_1=\frac{S_2}{S_1}\sqrt{2gd}$。
+
+**6. 双星绕质心运动**
+
+背景：两颗恒星质量为 $M_1$ 和 $M_2$，分别距质心 $R_1$ 和 $R_2$，以相同角速度 $\omega$ 做圆周运动，双星距离为 $R_1+R_2$。
+
+(a) **求：一颗恒星对另一颗恒星的万有引力大小和方向**。解：两星间距为 $R_1+R_2$，引力大小为 $F=\frac{GM_1M_2}{(R_1+R_2)^2}$，方向沿两星连线，指向另一颗恒星，即为相互吸引力。
+
+(b) **求：证明 $M_1R_1=M_2R_2$**。解：两星受同样大小的万有引力并以同角速度绕质心圆周运动，故 $M_1\omega^2R_1=M_2\omega^2R_2$，于是 $M_1R_1=M_2R_2$。
+
+(c) **求：证明 $(R_1+R_2)^3\omega^2=G(M_1+M_2)$**。解：对 $M_1$ 有 $\frac{GM_1M_2}{(R_1+R_2)^2}=M_1\omega^2R_1$，对 $M_2$ 有 $\frac{GM_1M_2}{(R_1+R_2)^2}=M_2\omega^2R_2$。两式化为 $\omega^2R_1=\frac{GM_2}{(R_1+R_2)^2}$ 与 $\omega^2R_2=\frac{GM_1}{(R_1+R_2)^2}$，相加得 $\omega^2(R_1+R_2)=\frac{G(M_1+M_2)}{(R_1+R_2)^2}$，即 $(R_1+R_2)^3\omega^2=G(M_1+M_2)$。
+
+(d) **求：恒星 $M_1$ 关于质心的角动量大小和方向**。解：$M_1$ 的速率为 $v_1=\omega R_1$，其角动量大小为 $L_1=M_1R_1v_1=M_1\omega R_1^2$。按图示运动方向用右手定则判断，角动量方向指向纸内；若轨道方向相反，则指向纸外。
+
+(e) **求：将两颗恒星分离到无穷远所需能量**。解：两星系统总机械能为 $E=K+U$，圆周运动满足 $K=\frac{1}{2}\frac{GM_1M_2}{R_1+R_2}$，势能为 $U=-\frac{GM_1M_2}{R_1+R_2}$，故 $E=-\frac{GM_1M_2}{2(R_1+R_2)}$。分离到无穷远且最终静止时能量为零，所需能量为 $\Delta E=\frac{GM_1M_2}{2(R_1+R_2)}$。
+
+**7. 开普勒第二定律的证明**
+
+背景：行星质量为 $m$，太阳质量为 $M_s$，行星相对太阳的位置矢量为 $\vec r$。
+
+(a) **求：太阳对行星的万有引力 $\vec F_g$**。解：万有引力为中心力，矢量形式可写为 $\vec F_g=-\frac{GM_sm}{r^2}\hat r=-\frac{GM_sm}{r^3}\vec r$。
+
+(b) **求：证明行星角动量守恒**。解：行星关于太阳的力矩为 $\vec\tau=\vec r\times\vec F_g$。由于 $\vec F_g$ 与 $\vec r$ 反向共线，故 $\vec\tau=0$，于是 $\frac{d\vec L}{dt}=\vec\tau=0$，所以 $\vec L$ 守恒。
+
+(c) **求：证明单位时间扫过面积 $\frac{dA}{dt}=\frac{L}{2m}$**。解：短时间 $dt$ 内扫过的面积为 $dA=\frac{1}{2}|\vec r\times d\vec r|=\frac{1}{2}|\vec r\times\vec v|dt$，又 $\vec L=\vec r\times m\vec v$，故 $\frac{dA}{dt}=\frac{|\vec r\times\vec v|}{2}=\frac{L}{2m}$。
+
+(d) **求：证明开普勒第二定律成立**。解：由 (b) 知 $L$ 为常量，而 $m$ 也为常量，因此 $\frac{dA}{dt}=\frac{L}{2m}$ 为常量，所以行星在相等时间内扫过相等面积。
+
+**8. 两个弹簧的振动**
+
+背景：两弹簧原长相同，劲度系数分别为 $k_1$ 和 $k_2$，物块质量为 $m$，水平面光滑，位移均记为 $x$。
+
+(a) **求：图 (a) 情形的运动方程和角频率**。解：图 (a) 中物块连接两弹簧，位移 $x$ 时两个弹簧均提供回复力，总回复力为 $F=-(k_1+k_2)x$，故运动方程为 $m\frac{d^2x}{dt^2}=-(k_1+k_2)x$，角频率为 $\omega_a=\sqrt{\frac{k_1+k_2}{m}}$。
+
+(b) **求：图 (b) 情形的运动方程和角频率**。解：图 (b) 中两弹簧同样并联地对物块提供回复力，总回复力仍为 $F=-(k_1+k_2)x$，故 $m\frac{d^2x}{dt^2}=-(k_1+k_2)x$，角频率为 $\omega_b=\sqrt{\frac{k_1+k_2}{m}}$。
+
+(c) **求：图 (c) 情形的运动方程和角频率**。解：图 (c) 中两弹簧串联，设总伸长为 $x=x_1+x_2$，串联弹簧受力相同，故 $k_1x_1=k_2x_2$，等效劲度系数满足 $k_{\rm eq}=\frac{k_1k_2}{k_1+k_2}$。运动方程为 $m\frac{d^2x}{dt^2}=-k_{\rm eq}x=-\frac{k_1k_2}{k_1+k_2}x$，角频率为 $\omega_c=\sqrt{\frac{k_1k_2}{m(k_1+k_2)}}$。
+
+**9. 绳上的行波、反射与驻波**
+
+背景：入射波为 $y_1(x,t)=A\cos 2\pi(\frac{x}{\lambda}-\frac{t}{T})$，其中 $A$ 为振幅，$\lambda$ 为波长，$T$ 为周期；绳的线密度为 $\mu$。反射波为 $y_2(x,t)=-A\cos 2\pi(\frac{x}{\lambda}+\frac{t}{T})$。
+
+(a) **求：波的传播方向**。解：$y_1=A\cos(kx-\omega t)$ 表示沿 $+x$ 方向传播，因此该波向 $+x$ 方向传播。
+
+(b) **求：波的振幅**。解：与标准形式比较，振幅为 $A$。
+
+(c) **求：波长**。解：与 $y_1=A\cos 2\pi(\frac{x}{\lambda}-\frac{t}{T})$ 比较，波长为 $\lambda$。
+
+(d) **求：周期**。解：与标准形式比较，周期为 $T$。
+
+(e) **求：波速**。解：行波速度为 $v=\frac{\lambda}{T}$。
+
+(f) **求：绳中张力 $F_T$**。解：绳波速度满足 $v=\sqrt{\frac{F_T}{\mu}}$，因此 $F_T=\mu v^2=\mu\frac{\lambda^2}{T^2}$。
+
+(g) **求：该波的平均功率 $P_{\rm av}$**。解：角频率为 $\omega=\frac{2\pi}{T}$，平均功率为 $P_{\rm av}=\frac{1}{2}\mu v\omega^2A^2=\frac{1}{2}\mu\frac{\lambda}{T}(\frac{2\pi}{T})^2A^2$。
+
+(h) **求：叠加形成的驻波表达式和波节位置**。解：设 $k=\frac{2\pi}{\lambda}$、$\omega=\frac{2\pi}{T}$，则 $y=y_1+y_2=A\cos(kx-\omega t)-A\cos(kx+\omega t)=2A\sin(kx)\sin(\omega t)$。波节满足 $\sin(kx)=0$，故 $kx=n\pi$，即 $x=\frac{n\lambda}{2}$，其中 $n=0,1,2,\cdots$。
+
+**10. 多普勒效应**
+
+背景：声速为 $v$，声源频率为 $f$。观察者速度记为 $v_d$，声源速度记为 $v_s$，多普勒公式按接近时频率升高、远离时频率降低选取符号。
+
+(a) **求：消防车静止时声波波长**。解：静止声源满足 $v=f\lambda$，故 $\lambda=\frac{v}{f}$。
+
+(b) **求：声源以速度 $v_s$ 向静止听者运动时听到的频率**。解：声源靠近、观察者静止，故 $f'=\frac{v}{v-v_s}f$。
+
+(c) **求：声源以速度 $v_s$ 远离静止听者时听到的频率**。解：声源远离、观察者静止，故 $f'=\frac{v}{v+v_s}f$。
+
+(d) **求：消防车静止、听者以速度 $v_d$ 向声源运动时听到的频率**。解：观察者靠近静止声源，故 $f'=\frac{v+v_d}{v}f$。
+
+(e) **求：消防车静止、听者以速度 $v_d$ 远离声源时听到的频率**。解：观察者远离静止声源，故 $f'=\frac{v-v_d}{v}f$。
+
+**11. 绕盘阿特伍德机**
+
+背景：圆盘质量 $M$、半径 $R$，两侧悬挂质量 $m_1$ 与 $m_2$，且 $m_2>m_1$。绳不打滑时满足 $a=R\alpha$，圆盘转动惯量为 $I=\frac{1}{2}MR^2$。
+
+(a) **求：当圆盘质量 $M=0$ 时两侧张力 $T_1,T_2$**。解：圆盘无质量时绳张力处处相等，设加速度大小为 $a=\frac{m_2-m_1}{m_1+m_2}g$，则 $T_1-m_1g=m_1a$ 且 $m_2g-T_2=m_2a$，故 $T_1=T_2=\frac{2m_1m_2}{m_1+m_2}g$。
+
+(b) **求：圆盘质量非零且绳不打滑时 $T_1,T_2$**。解：取 $m_2$ 向下、$m_1$ 向上为正，有 $T_1-m_1g=m_1a$，$m_2g-T_2=m_2a$，圆盘转动方程为 $(T_2-T_1)R=I\alpha=\frac{1}{2}MR^2\frac{a}{R}$。联立得 $a=\frac{(m_2-m_1)g}{m_1+m_2+\frac{1}{2}M}$，所以 $T_1=m_1g+m_1a=\frac{m_1(2m_2+\frac{1}{2}M)}{m_1+m_2+\frac{1}{2}M}g$，$T_2=m_2g-m_2a=\frac{m_2(2m_1+\frac{1}{2}M)}{m_1+m_2+\frac{1}{2}M}g$。
+
+(c) **求：当 $m_2$ 下降高度 $h$ 时圆盘角速度**。解：由能量守恒，重力势能减少 $(m_2-m_1)gh$ 转化为两物块平动动能和圆盘转动动能，即 $(m_2-m_1)gh=\frac{1}{2}m_1v^2+\frac{1}{2}m_2v^2+\frac{1}{2}I\omega^2$，且 $v=R\omega$、$I=\frac{1}{2}MR^2$。整理得 $\omega=\frac{1}{R}\sqrt{\frac{2(m_2-m_1)gh}{m_1+m_2+\frac{1}{2}M}}$。
+
+**12. 一般振动**
+
+背景：一维振子质量为 $m$，位移为 $x$，振幅为 $A$，势能零点取 $U(0)=0$。
+
+(a) **求：简谐振子 $F_x=-kx$ 的势能函数**。解：保守力满足 $F_x=-\frac{dU}{dx}$，所以 $\frac{dU}{dx}=kx$，积分并用 $U(0)=0$ 得 $U(x)=\frac{1}{2}kx^2$。
+
+(b) **求：由能量守恒证明速度 $v_x$ 与 $x$ 的关系**。解：振幅处总能量为 $E=\frac{1}{2}kA^2$，任意位置满足 $\frac{1}{2}mv_x^2+\frac{1}{2}kx^2=\frac{1}{2}kA^2$，故 $v_x=\frac{dx}{dt}=\sqrt{\frac{k}{m}(A^2-x^2)}$。
+
+(c) **求：分离变量并求简谐振子的周期 $T$**。解：由 $\frac{dx}{dt}=\sqrt{\frac{k}{m}}\sqrt{A^2-x^2}$ 得 $\frac{dx}{\sqrt{A^2-x^2}}=\sqrt{\frac{k}{m}}dt$。从 $x=0$ 到 $x=A$ 的时间为 $\frac{T}{4}$，令 $u=\frac{x}{A}$，有 $\int_0^1\frac{du}{\sqrt{1-u^2}}=\sqrt{\frac{k}{m}}\frac{T}{4}$。利用 $\int_0^1\frac{du}{\sqrt{1-u^2}}=\frac{\pi}{2}$，得 $T=2\pi\sqrt{\frac{m}{k}}$。
+
+(d) **求：第二个振子 $F_x=-cx^3$ 的势能函数**。解：由 $F_x=-\frac{dU}{dx}$ 得 $\frac{dU}{dx}=cx^3$，积分并用 $U(0)=0$ 得 $U(x)=\frac{1}{4}cx^4$。
+
+(e) **求：第二个振子的周期 $T_2$**。解：振幅处总能量为 $E=\frac{1}{4}cA^4$，任意位置满足 $\frac{1}{2}mv_x^2+\frac{1}{4}cx^4=\frac{1}{4}cA^4$，故 $v_x=\sqrt{\frac{c}{2m}(A^4-x^4)}$。四分之一周期满足 $\frac{T_2}{4}=\int_0^A\frac{dx}{\sqrt{\frac{c}{2m}(A^4-x^4)}}=\frac{1}{A}\sqrt{\frac{2m}{c}}\int_0^1\frac{du}{\sqrt{1-u^4}}$。利用 $\int_0^1\frac{du}{\sqrt{1-u^4}}=1.31$，得 $T_2=\frac{4(1.31)}{A}\sqrt{\frac{2m}{c}}$。
+
+(f) **求：$T_2$ 是否依赖振幅 $A$，以及该振动是否为简谐振动**。解：由 $T_2=\frac{4(1.31)}{A}\sqrt{\frac{2m}{c}}$ 可知周期依赖振幅 $A$；该回复力不是位移的一次函数，因此不是简谐振动。以下整理基于用户上传的 PHY1001 2023-2024 Term 2 Final Examination 试卷。
+
+**1. 斜面上无滑动滚动的均匀实心圆柱**
+
+背景：圆柱质量 $M$，半径 $R$，斜面角 $\theta$，重力加速度 $g$，实心圆柱转动惯量 $I=\frac12MR^2$，从静止开始纯滚动下滑。
+
+(a) **求：圆柱纯滚动时质心线加速度大小**。解：沿斜面方向有 $Mg\sin\theta-f=Ma$，绕质心有 $fR=I\alpha$，纯滚动条件为 $a=\alpha R$。代入 $I=\frac12MR^2$ 得 $a=\frac{g\sin\theta}{1+I/(MR^2)}=\frac{2}{3}g\sin\theta$。
+
+(b) **求：所需最小静摩擦因数**。解：由 $fR=I(a/R)$ 得 $f=\frac12Ma=\frac13Mg\sin\theta$，法向力为 $N=Mg\cos\theta$，临界条件 $f=\mu_sN$，故 $\mu_{s,\min}=\frac{f}{N}=\frac13\tan\theta$。
+
+**2. 初始自转后放到水平面上的实心圆柱**
+
+背景：取向右为 $+x$，逆时针角速度为正。圆柱质量 $M$，半径 $R$，初始角速度大小 $\omega_0$ 且方向为顺时针，初始质心速度为 $0$，动摩擦因数为 $\mu_k$，转动惯量 $I=\frac12MR^2$。
+
+(a) **求：圆柱将向左还是向右运动**。解：顺时针转动时接触点相对地面向左滑动，因此地面对圆柱的动摩擦力向右，圆柱质心向右运动。
+
+(b) **求：圆柱刚接触地面时的线加速度大小和方向**。解：水平方向唯一外力为动摩擦力 $f_k=\mu_kMg$，故 $a=\frac{f_k}{M}=\mu_kg$，方向向右。
+
+(c) **求：对应角加速度大小和方向**。解：摩擦力对质心的力矩大小为 $f_kR$，方向为逆时针，故 $\alpha=\frac{f_kR}{I}=\frac{2\mu_kg}{R}$，方向逆时针。
+
+(d) **求：达到无滑动滚动所需时间**。解：设顺时针初始角速度为 $\omega(0)=-\omega_0$，则 $\omega(t)=-\omega_0+\frac{2\mu_kg}{R}t$，质心速度 $v(t)=\mu_kgt$。无滑动条件为 $\omega R+v=0$，代入得 $-\omega_0R+3\mu_kgt=0$，故 $t=\frac{\omega_0R}{3\mu_kg}$。
+
+**3. 消防员在靠墙梯子上的静力平衡**
+
+背景：梯长 $L$，质量 $m$，上端高度 $h$，下端到墙水平距离 $a=\sqrt{L^2-h^2}$。墙光滑，墙对梯子的法向力为 $N_w$；地面对梯子的摩擦力为 $f$，地面对梯子的法向力为 $N_f$。梯子质心距下端 $L/3$，消防员质量 $M$，其质心距下端 $L/2$。
+
+(a) **求：墙对梯子的法向力大小和方向**。解：取梯子下端为转轴，墙的法向力力臂为 $h$，梯子重力水平力臂为 $a/3$，消防员重力水平力臂为 $a/2$，力矩平衡得 $N_wh=mg\frac{a}{3}+Mg\frac{a}{2}$，故 $N_w=\frac{ag}{h}\left(\frac{m}{3}+\frac{M}{2}\right)$，方向水平向右。
+
+(b) **求：地面对梯子的摩擦力大小和方向**。解：水平方向平衡要求 $f=N_w$，故 $f=\frac{ag}{h}\left(\frac{m}{3}+\frac{M}{2}\right)$，方向水平向左。
+
+(c) **求：地面对梯子的法向力大小和方向**。解：竖直方向只有地面法向力平衡梯子和消防员总重力，故 $N_f=(m+M)g$，方向竖直向上。
+
+**4. 小块与可转动杆的完全非弹性碰撞**
+
+背景：小块质量 $m$，从高度 $h$ 无摩擦下滑后粘在均匀杆末端；杆质量 $M$，长度 $\ell$，绕上端点 $O$ 转动，杆初始竖直，转动惯量 $I_{\text{rod}}=\frac13M\ell^2$，碰后系统转到角度 $\theta$ 后瞬时静止。
+
+(a) **求：碰撞前小块速度**。解：小块下滑过程中机械能守恒，$mgh=\frac12mv^2$，故 $v=\sqrt{2gh}$。
+
+(b) **求：碰撞后块-杆系统的角速度**。解：碰撞瞬间关于转轴 $O$ 的角动量守恒，碰前角动量为 $mv\ell$，碰后转动惯量为 $I=\frac13M\ell^2+m\ell^2$，故 $mv\ell=I\omega$，代入 $v=\sqrt{2gh}$ 得 $\omega=\frac{m\sqrt{2gh}}{(m+M/3)\ell}$。
+
+(c) **求：$\cos\theta$ 的值**。解：碰后转动动能转化为重力势能，$\frac12I\omega^2=g\ell(1-\cos\theta)\left(m+\frac{M}{2}\right)$。代入 $I=(m+M/3)\ell^2$ 和上式 $\omega$，得 $\cos\theta=1-\frac{m^2h}{\ell(m+M/3)(m+M/2)}$。
+
+**5. 岩石浸没在水中的浮力**
+
+背景：岩石在空气中静止时绳张力为 $T_a$，完全浸没水中静止时绳张力为 $T_w$，水密度为 $\rho_w$，重力加速度为 $g$。
+
+(a) **求：水对岩石的浮力大小和方向**。解：空气中 $T_a=mg$，水中 $T_w+F_B=mg$，故 $F_B=T_a-T_w$，方向竖直向上。
+
+(b) **求：岩石对水的反作用力大小和方向**。解：由牛顿第三定律，岩石对水的作用力大小等于浮力，故 $F_{\text{rock on water}}=T_a-T_w$，方向竖直向下。
+
+(c) **求：岩石体积**。解：完全浸没时 $F_B=\rho_wgV$，故 $V=\frac{T_a-T_w}{\rho_wg}$。
+
+(d) **求：岩石密度**。解：岩石质量为 $m=\frac{T_a}{g}$，体积为 $V=\frac{T_a-T_w}{\rho_wg}$，故 $\rho_{\text{rock}}=\frac{m}{V}=\rho_w\frac{T_a}{T_a-T_w}$。
+
+**6. 文丘里管与 U 形压强计**
+
+背景：水平管中流体密度为 $\rho$，大截面面积 $A_1$、速度 $v_1$、压强 $p_1$，小截面面积 $A_2$、速度 $v_2$、压强 $p_2$。压强计高度差为 $h$。第三问中管内流体密度为 $\rho_1$，压强计液体密度为 $\rho_2$，且 $\rho_1<\rho_2$。
+
+(a) **求：水平管的连续性方程**。解：稳定不可压缩流动满足体积流量守恒，故 $A_1v_1=A_2v_2$。
+
+(b) **求：用伯努利方程证明 $v_1$ 的表达式**。解：水平管两处高度相同，伯努利方程给出 $p_1+\frac12\rho v_1^2=p_2+\frac12\rho v_2^2$，由连续性方程 $v_2=\frac{A_1}{A_2}v_1$，代入得 $p_1-p_2=\frac12\rho v_1^2\left[\left(\frac{A_1}{A_2}\right)^2-1\right]$，故 $v_1=\sqrt{\frac{2(p_1-p_2)}{\rho[(A_1/A_2)^2-1]}}$。
+
+(c) **求：用 $\rho_1,\rho_2,A_1,A_2,h$ 表示 $v_1$**。解：U 形压强计给出压强差 $p_1-p_2=(\rho_2-\rho_1)gh$，将其代入上一问并令管内流体密度为 $\rho_1$，得 $v_1=\sqrt{\frac{2(\rho_2-\rho_1)gh}{\rho_1[(A_1/A_2)^2-1]}}$。
+
+**7. 钢琴弦上的正弦行波**
+
+背景：弦质量 $m$，长度 $\ell$，线密度 $\mu=\frac{m}{\ell}$，频率 $f$，波长 $\lambda$，振幅 $A$，波速 $v$，张力 $F_T$。
+
+(a) **求：波数 $k$**。解：波数定义为 $k=\frac{2\pi}{\lambda}$。
+
+(b) **求：角频率 $\omega$**。解：角频率与频率关系为 $\omega=2\pi f$。
+
+(c) **求：周期 $T$**。解：周期为频率倒数，$T=\frac{1}{f}$。
+
+(d) **求：波传播速度 $v$**。解：行波速度满足 $v=f\lambda$。
+
+(e) **求：弦的张力 $F_T$**。解：弦波速度满足 $v=\sqrt{F_T/\mu}$，故 $F_T=\mu v^2=\frac{m}{\ell}(f\lambda)^2$。
+
+(f) **求：产生一个周期波所需功 $W$**。解：平均功率为 $P_{\text{av}}=\frac12\sqrt{\mu F_T}\omega^2A^2$，一个周期内所做功为 $W=P_{\text{av}}T$。用 $T=\frac1f$、$\omega=2\pi f$ 得 $W=2\pi^2\sqrt{\mu F_T}A^2f$；若再用 $v=f\lambda$，则 $W=2\pi^2\mu\lambda A^2f^2$。
+
+(g) **求：频率变为 $f'=2f$ 后一个周期所需功 $W'$**。解：若同一根弦张力不变，则 $\mu$ 与 $F_T$ 不变，故 $W\propto f$，因此 $W'=2W$。
+
+**8. 两列相反传播波的驻波**
+
+背景：两波为 $y_1=A\sin(kx-\omega t)$ 与 $y_2=A\sin(kx+\omega t)$，其中 $A$ 为单列波振幅，$k$ 为波数，$\omega$ 为角频率。
+
+(a) **求：两列波的传播方向**。解：形如 $\sin(kx-\omega t)$ 的波向 $+x$ 方向传播，形如 $\sin(kx+\omega t)$ 的波向 $-x$ 方向传播，故 $y_1$ 向 $+x$ 方向传播，$y_2$ 向 $-x$ 方向传播。
+
+(b) **求：叠加后的驻波函数**。解：由恒等式 $\sin A+\sin B=2\sin\frac{A+B}{2}\cos\frac{A-B}{2}$，得 $y=y_1+y_2=2A\sin(kx)\cos(\omega t)$。
+
+(c) **求：驻波上任一点可能达到的最大位移 $y_{\max}$**。解：驻波振幅包络为 $2A|\sin(kx)|$，最大值出现在波腹处，故 $y_{\max}=2A$。
+
+(d) **求：波腹位置**。解：波腹满足 $|\sin(kx)|=1$，即 $kx=\frac{(2n+1)\pi}{2}$，故 $x=\frac{(2n+1)\pi}{2k}$，其中 $n$ 为整数。
+
+(e) **求：波节位置**。解：波节满足 $\sin(kx)=0$，即 $kx=n\pi$，故 $x=\frac{n\pi}{k}$，其中 $n$ 为整数。
+
+(f) **求：驻波上质点的振动速度函数 $v_y$**。解：质点速度为 $v_y=\frac{\partial y}{\partial t}$，由 $y=2A\sin(kx)\cos(\omega t)$ 得 $v_y=-2A\omega\sin(kx)\sin(\omega t)$。
+
+(g) **求：最大质点速度 $v_{y,\max}$**。解：速度幅值为 $2A\omega|\sin(kx)|$，最大值出现在 $|\sin(kx)|=1$，故 $v_{y,\max}=2A\omega$。
+
+(h) **求：最大质点速度出现于波节还是波腹**。解：最大速度要求 $|\sin(kx)|=1$，这正是波腹条件，因此最大质点速度出现在波腹位置。
+
+**9. 潜艇声呐的多普勒效应**
+
+背景：声速为 $v$，声源速度为 $v_S$，探测器速度为 $v_D$，发射频率为 $f$。当探测器朝来波方向运动时分子取 $v+v_D$，当探测器远离来波时取 $v-v_D$；当声源朝探测器运动时分母取 $v-v_S$，当声源远离探测器时分母取 $v+v_S$。潜艇 A 在 B 左侧，C 在 B 右侧，A 与 C 均向左运动，B 静止。
+
+(a) **求：B 探测到 A 的频率 $f_{AB}$**。解：A 发出的波向右传播到 B，而 A 向左运动，声源远离 B，B 静止，故 $f_{AB}=\frac{v}{v+v_A}f$。
+
+(b) **求：C 探测到 B 的频率 $f_{BC}$**。解：B 发出的波向右传播到 C，C 向左运动迎向来波，声源 B 静止，故 $f_{BC}=\frac{v+v_C}{v}f$。
+
+(c) **求：C 探测到 A 的频率 $f_{AC}$**。解：A 发出的波向右传播到 C，A 向左远离 C，C 向左迎向来波，故 $f_{AC}=\frac{v+v_C}{v+v_A}f$。若 $v_A=v_C$，则 $f_{AC}=f$。
+
+(d) **求：A 探测到 B 的频率 $f_{BA}$**。解：B 发出的波向左传播到 A，A 向左与波同向运动并远离 B，因此探测器相对波速为 $v-v_A$，故 $f_{BA}=\frac{v-v_A}{v}f$。
+
+(e) **求：A 加速后 B 探测 A 的频率 $f'\*{AB}$ 与 A 探测 B 的频率 $f'\*{BA}$**。解：令加速后 A 的速度为 $v'*A$。B 探测 A 时，声源 A 远离 B，故 $f'*{AB}=\frac{v}{v+v'*A}f$；A 探测 B 时，探测器 A 与向左传播的波同向运动并远离 B，故 $f'*{BA}=\frac{v-v'_A}{v}f$。
+
+**10. 地球绕太阳的轨道角动量**
+
+背景：太阳质量 $M_S$，地球质量 $M_E$，且 $M_S\gg M_E$。地球作半径 $R$ 的圆轨道，太阳在 $O$，点 $O'$ 位于 $O$ 正上方距离 $R$ 处。取图示瞬间地球在 $+y$ 轴上，速度指向 $-x$，轨道角速度为 $\Omega$。
+
+(a) **求：地球绕太阳一周的周期 $T_0$**。解：万有引力提供向心力，$\frac{GM_SM_E}{R^2}=M_E\frac{v^2}{R}$，故 $v=\sqrt{\frac{GM_S}{R}}$，周期为 $T_0=\frac{2\pi R}{v}=2\pi\sqrt{\frac{R^3}{GM_S}}$。
+
+(b) **求：以 $O$ 为参考点的地球轨道角动量 $\vec L_0$**。解：以 $O$ 为参考点时 $|\vec r|=R$ 且 $\vec r\perp\vec v$，故 $L_0=M_ERv=M_E\sqrt{GM_SR}$。图示瞬间 $\vec r=R\hat y$，$\vec v=-v\hat x$，所以 $\vec L_0=M_ERv,\hat z$，方向为 $+\hat z$。
+
+(c) **求：以 $O'$ 为参考点的地球轨道角动量 $\vec L$**。解：图示瞬间相对 $O'$ 的位置矢量为 $\vec r'=R\hat y-R\hat z$，速度为 $\vec v=-v\hat x$，故 $\vec L=M_E\vec r'\times\vec v=M_ERv(\hat y+\hat z)$，大小为 $L=\sqrt2M_ERv=\sqrt2M_E\sqrt{GM_SR}$，方向沿 $\hat y+\hat z$。
+
+(d) **求：以 $O'$ 为参考点时太阳引力对地球的力矩 $\vec\tau$**。解：太阳对地球的引力为 $\vec F=-\frac{GM_SM_E}{R^2}\hat y$，相对 $O'$ 的位置矢量为 $\vec r'=R\hat y-R\hat z$，故 $\vec\tau=\vec r'\times\vec F=-\frac{GM_SM_E}{R}\hat x$，大小为 $\tau=\frac{GM_SM_E}{R}$，方向为 $-\hat x$。
+
+(e) **求：用 $\vec\tau=\frac{d\vec L}{dt}$ 解释角动量变化，并求该“旋转”的角频率 $\Omega$**。解：以 $O'$ 为参考点时，$\vec L$ 不是常矢量，其水平分量随地球绕太阳运动而转动；由圆轨道角速度关系 $\Omega=\frac{v}{R}$，得 $\Omega=\sqrt{\frac{GM_S}{R^3}}$，并且 $|\frac{d\vec L}{dt}|=M_ER^2\Omega^2=\frac{GM_SM_E}{R}$，与上一问力矩大小一致。
+
+**11. 摆珠在摆线轨道上的振动**
+
+背景：摆线轨道参数方程为 $x=R(\theta+\sin\theta)$，$y=R(1-\cos\theta)$，其中 $-\pi\le\theta\le\pi$，重力沿 $-y$ 方向，摆珠质量为 $m$，令 $\dot\theta=\frac{d\theta}{dt}$。
+
+(a) **求：摆珠速度的 $x$ 与 $y$ 分量**。解：对参数方程求时间导数，得 $v_x=\frac{dx}{dt}=R(1+\cos\theta)\dot\theta$，$v_y=\frac{dy}{dt}=R\sin\theta,\dot\theta$。
+
+(b) **求：摆珠沿轨道滑动的动能**。解：动能为 $K=\frac12m(v_x^2+v_y^2)$，代入上式并用 $(1+\cos\theta)^2+\sin^2\theta=2(1+\cos\theta)$，得 $K=mR^2(1+\cos\theta)\dot\theta^2$。
+
+(c) **求：证明机械能 $E=mR^2\dot\theta^2(1+\cos\theta)+mgR(1-\cos\theta)$ 为常量**。解：轨道光滑，支持力始终不做功，只有重力做功，因此机械能守恒；由上一问 $K=mR^2(1+\cos\theta)\dot\theta^2$，重力势能取 $U=mgy=mgR(1-\cos\theta)$，故 $E=K+U=mR^2\dot\theta^2(1+\cos\theta)+mgR(1-\cos\theta)$ 为常量。
+
+(d) **求：令 $u=\sin\frac{\theta}{2}$ 后重写能量表达式**。解：由 $1-\cos\theta=2u^2$、$1+\cos\theta=2\cos^2\frac{\theta}{2}$，且 $\dot u=\frac12\cos\frac{\theta}{2}\dot\theta$，可得 $\dot\theta=\frac{2\dot u}{\cos(\theta/2)}$。代入能量式得 $E=8mR^2\dot u^2+2mgRu^2$。
+
+(e) **求：由 $E(u,\dot u)$ 推导运动方程**。解：因 $E$ 为常量，$\frac{dE}{dt}=0$，对 $E=8mR^2\dot u^2+2mgRu^2$ 求导得 $16mR^2\dot u\ddot u+4mgRu\dot u=0$，非静止情形约去公共因子后得 $\ddot u+\frac{g}{4R}u=0$。
+
+(f) **求：摆珠关于 $x=0$ 的振动是否为简谐运动**。解：运动方程 $\ddot u+\frac{g}{4R}u=0$ 与简谐振动标准形式相同，因此是简谐运动。
+
+(g) **求：摆珠在摆线轨道上振动的角频率 $\omega$**。解：由标准形式 $\ddot u+\omega^2u=0$，可得 $\omega^2=\frac{g}{4R}$，故 $\omega=\frac12\sqrt{\frac{g}{R}}$。
+
+**12. 等质量双星系统的限制性三体问题**
+
+背景：两颗等质量恒星各质量为 $M$，绕共同质心作半径 $R$ 的圆周运动，恒星位置可取为 $x=\pm R$。星舰质量 $m$ 可忽略，只需与双星保持相同角速度。设系统角速度为 $\Omega$。
+
+(a) **求：双星系统角速度大小**。解：每颗恒星受到另一颗恒星的引力 $\frac{GM^2}{(2R)^2}$，该力提供半径 $R$ 的向心力 $MR\Omega^2$，故 $MR\Omega^2=\frac{GM^2}{4R^2}$，得到 $\Omega=\sqrt{\frac{GM}{4R^3}}$。
+
+(b) **求：决定 $L_2$ 与 $L_3$ 位置的方程**。解：设星舰在 $x$ 轴上，令无量纲坐标 $\xi=\frac{x}{R}$，两颗恒星在 $\xi=\pm1$。共转圆周运动要求引力加速度等于向心加速度，因此满足 $\frac{\xi-1}{|\xi-1|^3}+\frac{\xi+1}{|\xi+1|^3}=\frac{\xi}{4}$。其中 $L_2$ 对应 $\xi>1$，$L_3$ 对应 $\xi<-1$，该方程即为所求位置方程。
+
+(c) **求：$L_4$ 与 $L_5$ 的 $y$ 坐标**。解：令星舰在 $y$ 轴上，位置为 $(0,y)$，到两颗恒星距离均为 $s=\sqrt{R^2+y^2}$。两恒星引力的水平分量抵消，竖直分量合力大小为 $\frac{2GMm|y|}{s^3}$，向心力大小为 $m\Omega^2|y|$。对 $y\ne0$ 有 $\frac{2GM}{s^3}=\Omega^2=\frac{GM}{4R^3}$，故 $s=2R$，因此 $y=\pm\sqrt3R$，即 $L_4$ 在 $y=+\sqrt3R$，$L_5$ 在 $y=-\sqrt3R$。
+
+(d) **求：两颗恒星质量变为 $M_1$ 与 $M_2$、距离仍为 $2R$ 时的角速度大小**。解：双体圆周运动角速度满足 $\Omega^2=\frac{G(M_1+M_2)}{d^3}$，其中星间距 $d=2R$，故 $\Omega=\sqrt{\frac{G(M_1+M_2)}{8R^3}}$。
+
+(e) **求：质量不等时 $L_4$ 与 $L_5$ 的位置是否会相对等质量情形改变**。解：会改变，因此答案为 Yes。**1. 悬臂梁、绳与水平缆索的静力平衡**
+
+背景：梁铰接于墙，末端水平距离为 $a$、竖直高度为 $b$，梁长为 $\sqrt{a^2+b^2}$。重物质量 $M$ 挂在梁端，均匀梁质量为 $m$，缆索水平，绳和缆索质量忽略。
+
+(a) **求：画出梁所受力**。解：梁受四类力：末端缆索张力 $T_c$ 水平向左，末端重物通过绳对梁的拉力 $Mg$ 竖直向下，梁自身重力 $mg$ 作用于梁中点并竖直向下，铰链对梁的支持力分解为水平分量 $H_x$ 和竖直分量 $H_y$。
+
+(b) **求：缆索张力 $T_c$ 的大小**。解：取铰链为转轴，静力平衡要求总力矩为零，缆索张力的力臂为 $b$，重物重力的力臂为 $a$，梁重力的力臂为 $a/2$，故 $T_cb=Mga+mg\frac{a}{2}$，得 $T_c=\frac{ag(M+m/2)}{b}$。
+
+(c) **求：铰链对梁的合力大小**。解：水平方向平衡给出 $H_x=T_c=\frac{ag(M+m/2)}{b}$，竖直方向平衡给出 $H_y=(M+m)g$，所以铰链合力大小为 $H=\sqrt{H_x^2+H_y^2}=g\sqrt{\left[\frac{a(M+m/2)}{b}\right]^2+(M+m)^2}$。
+
+(d) **求：该合力是否沿梁方向，并解释原因**。解：若合力沿梁方向，应满足 $\frac{H_y}{H_x}=\frac{b}{a}$；但实际 $\frac{H_y}{H_x}=\frac{b(M+m)}{a(M+m/2)}\ne\frac{b}{a}$，因此合力不沿梁方向。原因是缆索水平拉力和两个竖直重力共同决定铰链反力，其方向不必与梁共线。
+
+**2. 圆柱体在一层与两层液体中的浮力平衡**
+
+背景：圆柱密度为 $\rho$，截面积为 $s$，长度为 $l$。第一种液体密度为 $\rho_1$，且 $\rho<\rho_1$；第二种液体密度为 $\rho_2$，且 $\rho_2<\rho$。忽略空气浮力。
+
+(a) **求：圆柱重力大小**。解：圆柱体积为 $sl$，质量为 $\rho sl$，所以重力大小为 $W=\rho slg$。
+
+(b) **求：由平衡条件确定液体对圆柱的浮力大小与方向**。解：圆柱静止平衡，竖直方向合力为零，因此浮力大小等于重力，方向竖直向上，即 $F_B=\rho slg$，方向向上。
+
+(c) **求：露出液面高度为 $h_1$ 时，按阿基米德原理写出浮力大小**。解：浸入第一种液体的长度为 $l-h_1$，排开液体体积为 $s(l-h_1)$，故浮力大小为 $F_B=\rho_1gs(l-h_1)$。
+
+(d) **求：$h_1$ 关于其余参数的表达式**。解：由平衡 $\rho_1gs(l-h_1)=\rho slg$，消去 $sg$ 得 $\rho_1(l-h_1)=\rho l$，所以 $h_1=l\left(1-\frac{\rho}{\rho_1}\right)$。
+
+(e) **求：加入第二种液体并完全浸没圆柱后，圆柱在第二种液体中的长度 $h_2$**。解：圆柱有长度 $h_2$ 位于第二种液体中，长度 $l-h_2$ 位于第一种液体中，总浮力为 $F_B=\rho_2gsh_2+\rho_1gs(l-h_2)$。平衡条件为 $\rho_2h_2+\rho_1(l-h_2)=\rho l$，解得 $h_2=\frac{(\rho_1-\rho)l}{\rho_1-\rho_2}$。当 $\rho_2=0$ 时，得 $h_2=l\left(1-\frac{\rho}{\rho_1}\right)$，与上一问一致。
+
+**3. 弹簧耦合摆的小振动**
+
+背景：摆球质量为 $m$，无质量细杆长为 $L$，两侧弹簧劲度系数均为 $k$。摆球在最低点时两弹簧均未伸长，令小角位移为 $\theta$。
+
+(a) **求：小振动时摆球的运动方程**。解：摆球水平位移为 $x=L\sin\theta$，两弹簧合水平回复力为 $-2kx=-2kL\sin\theta$，其对悬点力矩为 $-2kL^2\sin\theta\cos\theta$；重力力矩为 $-mgL\sin\theta$。由转动方程得 $mL^2\ddot{\theta}=-mgL\sin\theta-2kL^2\sin\theta\cos\theta$。
+
+(b) **求：证明该振动为简谐运动**。解：小角近似下 $\sin\theta\approx\theta$、$\cos\theta\approx1$，运动方程化为 $mL^2\ddot{\theta}=-(mgL+2kL^2)\theta$，即 $\ddot{\theta}+\left(\frac{g}{L}+\frac{2k}{m}\right)\theta=0$。该方程为标准简谐运动方程。
+
+(c) **求：小振幅振动周期**。解：由 $\Omega^2=\frac{g}{L}+\frac{2k}{m}$，周期为 $T=\frac{2\pi}{\Omega}=\frac{2\pi}{\sqrt{g/L+2k/m}}$。
+
+**4. 两物块与滑轮系统**
+
+背景：悬挂物块质量为 $m_1$，桌面物块质量为 $m_2$，桌面无摩擦。滑轮半径为 $R$，若有质量则为薄圆盘，转动惯量 $I=\frac{1}{2}MR^2$。绳不伸长且不打滑。
+
+(a) **求：滑轮无质量时两物块刚开始运动的加速度大小与方向**。解：无质量滑轮两侧张力相同。对悬挂物块有 $m_1g-T=m_1a$，对桌面物块有 $T=m_2a$，联立得 $a=\frac{m_1g}{m_1+m_2}$。方向为 $m_1$ 向下、$m_2$ 向滑轮方向运动。
+
+(b) **求：滑轮无质量时绳中张力大小**。解：由 $T=m_2a$，代入上一问结果得 $T=\frac{m_1m_2g}{m_1+m_2}$。
+
+(c) **求：滑轮有质量时两物块刚开始运动的加速度大小与方向**。解：设悬挂侧张力为 $T_1$，桌面侧张力为 $T_2$。方程为 $m_1g-T_1=m_1a$，$T_2=m_2a$，$(T_1-T_2)R=I\alpha$，且 $a=R\alpha$。代入 $I=\frac{1}{2}MR^2$，得 $T_1-T_2=\frac{1}{2}Ma$，所以 $a=\frac{m_1g}{m_1+m_2+M/2}$。方向仍为 $m_1$ 向下、$m_2$ 向滑轮方向运动。
+
+(d) **求：滑轮有质量时两侧绳张力大小**。解：悬挂侧张力 $T_1=m_1g-m_1a=m_1g\frac{m_2+M/2}{m_1+m_2+M/2}$；桌面侧张力 $T_2=m_2a=\frac{m_1m_2g}{m_1+m_2+M/2}$。
+
+(e) **求：悬挂物块刚到地面时，$m_1$、$m_2$ 和滑轮的动能**。解：设此时绳速为 $v$，由机械能守恒 $m_1gh=\frac{1}{2}m_1v^2+\frac{1}{2}m_2v^2+\frac{1}{2}I\frac{v^2}{R^2}$，得 $v^2=\frac{2m_1gh}{m_1+m_2+M/2}$。因此 $K_1=\frac{1}{2}m_1v^2=\frac{m_1^2gh}{m_1+m_2+M/2}$，$K_2=\frac{1}{2}m_2v^2=\frac{m_1m_2gh}{m_1+m_2+M/2}$，$K_M=\frac{1}{2}I\frac{v^2}{R^2}=\frac{(M/2)m_1gh}{m_1+m_2+M/2}$。
+
+(f) **求：总动能并验证合理性**。解：总动能为 $K_{\rm tot}=K_1+K_2+K_M=m_1gh$，正好等于悬挂物块减少的重力势能，符合机械能守恒。
+
+**5. 虹吸管中的伯努利方程**
+
+背景：水库液面高度为 $h_1$，出口 $B$ 高度为 $h_2$，水平管段高度为 $h_3$。管内普通截面积为 $s_1$，扩张段截面积为 $s_2$。大气压为 $P_0$，水密度为 $\rho$，水库极大，液面速度近似为零。
+
+(a) **求：水库液面外部点 $A$ 的压强 $P_A$**。解：点 $A$ 与大气相通，所以 $P_A=P_0$。
+
+(b) **求：管口出口点 $B$ 的压强 $P_B$**。解：点 $B$ 也与大气相通，所以 $P_B=P_0$。
+
+(c) **求：出口点 $B$ 的水速 $v_B$**。解：对 $A$ 与 $B$ 用伯努利方程，$P_0+\rho gh_1=P_0+\rho gh_2+\frac{1}{2}\rho v_B^2$，得 $v_B=\sqrt{2g(h_1-h_2)}$。
+
+(d) **求：水库液面处管内点 $C$ 的水速 $v_C$**。解：点 $C$ 与出口 $B$ 位于同一截面积 $s_1$ 的连续管路中，稳恒不可压缩流满足连续性，因此 $v_C=v_B=\sqrt{2g(h_1-h_2)}$。
+
+(e) **求：点 $C$ 的压强 $P_C$**。解：点 $A$ 与 $C$ 高度相同，且 $v_A\approx0$，由伯努利方程 $P_0=P_C+\frac{1}{2}\rho v_C^2$，得 $P_C=P_0-\frac{1}{2}\rho v_C^2=P_0-\rho g(h_1-h_2)$。
+
+(f) **求：扩张段点 $D$ 的水速 $v_D$**。解：由连续性 $s_1v_B=s_2v_D$，得 $v_D=\frac{s_1}{s_2}v_B=\frac{s_1}{s_2}\sqrt{2g(h_1-h_2)}$。
+
+(g) **求：扩张段点 $D$ 的压强 $P_D$**。解：对 $D$ 与 $B$ 用伯努利方程，$P_D+\rho gh_3+\frac{1}{2}\rho v_D^2=P_0+\rho gh_2+\frac{1}{2}\rho v_B^2$，所以 $P_D=P_0+\rho g(h_2-h_3)+\frac{1}{2}\rho(v_B^2-v_D^2)$。代入 $v_D=\frac{s_1}{s_2}v_B$ 与 $v_B^2=2g(h_1-h_2)$，得 $P_D=P_0+\rho g\left[h_1-h_3-(h_1-h_2)\frac{s_1^2}{s_2^2}\right]$。
+
+**6. 实心圆柱沿斜面滚动与打滑**
+
+背景：均匀实心圆柱质量为 $m$，半径为 $R$，转动惯量 $I=\frac{1}{2}mR^2$。斜面倾角为 $\theta$，静摩擦系数为 $\mu_s$，动摩擦系数为 $\mu_k$，圆柱从竖直高度 $h$ 处由静止释放。
+
+(a) **求：当 $\theta<\theta_C$ 且无滑动滚动时，圆柱质心加速度**。解：沿斜面方向有 $mg\sin\theta-f=ma$，转动方程为 $fR=I\alpha$，无滑动条件为 $a=R\alpha$。代入 $I=\frac{1}{2}mR^2$ 得 $a=\frac{2}{3}g\sin\theta$，方向沿斜面向下。
+
+(b) **求：$\tan\theta_C$**。解：无滑动所需静摩擦为 $f=\frac{1}{3}mg\sin\theta$，最大静摩擦为 $f_{s,\max}=\mu_smg\cos\theta$。临界时 $\frac{1}{3}mg\sin\theta_C=\mu_smg\cos\theta_C$，故 $\tan\theta_C=3\mu_s$。
+
+(c) **求：当 $\theta>\theta_C$ 且圆柱滚动伴随打滑时的各量**。解：i. 摩擦为动摩擦，大小 $f_k=\mu_kmg\cos\theta$，方向沿斜面向上。ii. 质心加速度由 $mg\sin\theta-f_k=ma_{\rm cm}$ 得 $a_{\rm cm}=g(\sin\theta-\mu_k\cos\theta)$，角加速度大小由 $f_kR=I\alpha$ 得 $\alpha=\frac{2\mu_kg\cos\theta}{R}$。iii. 质心到达地面所走距离为斜面长度 $L_{\rm cm}=\frac{h}{\sin\theta}$。iv. 由 $L_{\rm cm}=\frac{1}{2}a_{\rm cm}t^2$ 与 $\Delta\theta=\frac{1}{2}\alpha t^2$，得 $\Delta\theta=\frac{\alpha L_{\rm cm}}{a_{\rm cm}}=\frac{2\mu_kh\cos\theta}{R\sin\theta(\sin\theta-\mu_k\cos\theta)}$。v. 一般 $L_{\rm cm}\ne R\Delta\theta$，因为发生相对滑动，无滑动约束 $a_{\rm cm}=R\alpha$ 不成立。
+
+**7. 扭摆的简谐振动、阻尼与受迫振动**
+
+背景：圆盘质量为 $M$，半径为 $R$，转动惯量 $I=\frac{1}{2}MR^2$。扭转常数为 $\kappa$，回复力矩为 $\tau=-\kappa\theta$，初始释放角为 $\theta_m$ 且初始角速度为零。
+
+(a) **求：释放后圆盘是否做简谐运动**。解：是。由 $I\ddot{\theta}=-\kappa\theta$ 得 $\ddot{\theta}+\frac{\kappa}{I}\theta=0$，这是简谐运动方程。
+
+(b) **求：振动角频率 $\Omega$**。解：由 $\Omega^2=\frac{\kappa}{I}$ 且 $I=\frac{1}{2}MR^2$，得 $\Omega=\sqrt{\frac{2\kappa}{MR^2}}$。
+
+(c) **求：角位移 $\theta(t)$**。解：释放条件为 $\theta(0)=\theta_m$、$\omega(0)=0$，故 $\theta(t)=\theta_m\cos(\Omega t)$。
+
+(d) **求：角速度 $\omega(t)$**。解：角速度为 $\omega(t)=\dot{\theta}(t)=-\Omega\theta_m\sin(\Omega t)$。
+
+(e) **求：圆盘动能 $K(t)$**。解：转动动能为 $K(t)=\frac{1}{2}I\omega^2(t)=\frac{1}{2}\kappa\theta_m^2\sin^2(\Omega t)$。
+
+(f) **求：振动总机械能**。解：总机械能等于最大弹性势能，即 $E=\frac{1}{2}\kappa\theta_m^2$。
+
+(g) **求：有轻微阻尼力矩 $\tau_d=-b\omega$ 时的运动方程**。解：总力矩为 $-\kappa\theta-b\dot{\theta}$，故方程为 $I\ddot{\theta}+b\dot{\theta}+\kappa\theta=0$，即 $\frac{1}{2}MR^2\ddot{\theta}+b\dot{\theta}+\kappa\theta=0$。
+
+(h) **求：无阻尼受迫振动时使振幅最大的驱动角频率**。解：无阻尼时共振发生在驱动角频率等于固有角频率处，因此 $\Omega_{\rm ex}=\Omega=\sqrt{\frac{2\kappa}{MR^2}}$。
+
+**8. 开管与闭管中的驻波共振**
+
+背景：声波速度为 $v_s$，管长为 $L$。开口端为空气位移波腹，闭口端为空气位移波节。
+
+(a) **求：两端开口管的前三个谐波，并标出波节与波腹**。解：两端开口均为位移波腹。第一谐波为 $A-N-A$，即两端为波腹、中点为波节；第二谐波为 $A-N-A-N-A$，即 $x=0,L/2,L$ 为波腹，$x=L/4,3L/4$ 为波节；第三谐波为 $A-N-A-N-A-N-A$，即 $x=0,L/3,2L/3,L$ 为波腹，$x=L/6,L/2,5L/6$ 为波节。
+
+(b) **求：两端开口管第 $N$ 次谐波的共振波长与频率**。解：两端开口管满足 $L=N\frac{\lambda_N}{2}$，其中 $N=1,2,3,\ldots$，所以 $\lambda_N=\frac{2L}{N}$，$f_N=\frac{v_s}{\lambda_N}=\frac{Nv_s}{2L}$。
+
+(c) **求：一端封闭管的前三个谐波，并标出波节与波腹**。解：闭口端为位移波节，开口端为位移波腹。第一谐波为 $N-A$；第二个允许模态为 $N-A-N-A$；第三个允许模态为 $N-A-N-A-N-A$。对应地，管长分别含有 $1$、$3$、$5$ 个四分之一波长。
+
+(d) **求：一端封闭管第 $N$ 次允许谐波的共振波长与频率**。解：一端封闭管满足 $L=(2N-1)\frac{\lambda_N}{4}$，其中 $N=1,2,3,\ldots$，所以 $\lambda_N=\frac{4L}{2N-1}$，$f_N=\frac{v_s}{\lambda_N}=\frac{(2N-1)v_s}{4L}$。
+
+**9. 声速的牛顿理论与拉普拉斯理论**
+
+背景：纵波声速为 $v=\sqrt{\frac{B}{\rho}}$，体积模量定义为 $B=-\frac{\Delta p}{\Delta V/V}$。理想气体满足 $pV=RT$，空气密度为 $\rho_{\rm air}$，压强为 $p_0$，绝热指数为 $\gamma$。
+
+(a) **求：牛顿等温理论下的体积模量 $B$**。解：等温时 $pV=RT=\text{constant}$，微分得 $pdV+Vdp=0$，所以 $dp=-\frac{p}{V}dV$。由 $B=-\frac{dp}{dV/V}$ 得 $B=p$；在大气条件下 $B_N=p_0$。
+
+(b) **求：拉普拉斯绝热理论下的体积模量 $B$**。解：绝热过程满足 $pV^\gamma=\text{constant}$，微分得 $V^\gamma dp+\gamma pV^{\gamma-1}dV=0$，即 $dp=-\gamma\frac{p}{V}dV$。因此 $B=-\frac{dp}{dV/V}=\gamma p$；在大气条件下 $B_L=\gamma p_0$。
+
+(c) **求：牛顿理论与拉普拉斯理论给出的声速**。解：牛顿理论给出 $v_N=\sqrt{\frac{p_0}{\rho_{\rm air}}}$；拉普拉斯理论给出 $v_L=\sqrt{\frac{\gamma p_0}{\rho_{\rm air}}}$。
+
+(d) **求：哪一个更接近实验测量，并给出物理解释**。解：拉普拉斯理论更接近实验。声波传播很快，气体压缩和稀疏过程中来不及与外界充分热交换，因此过程近似绝热而非等温，故应使用 $B=\gamma p$。
+
+**10. 两相干点波源的水波干涉**
+
+背景：两点源 $S_1$ 与 $S_2$ 发出同频同波长水波，源间距为 $d$，波长为 $\lambda$，任一点 $P$ 的路程差为 $\Delta L=|PS_1-PS_2|$。
+
+(a) **求：两源同相时任一点 $P$ 的相长干涉条件**。解：同相源的相位差只来自路程差，相长干涉要求路程差为波长整数倍，因此 $\Delta L=n\lambda$，其中 $n=0,1,2,\ldots$。
+
+(b) **求：两源反相时任一点 $P$ 的相长干涉条件**。解：两源初相差为 $\pi$，若传播引起的相位差再提供奇数个 $\pi$，总相位差为 $2\pi$ 的整数倍，因此相长条件为 $\Delta L=\left(n+\frac{1}{2}\right)\lambda$，其中 $n=0,1,2,\ldots$。
+
+(c) **求：同相与反相时水面干涉图样是否相同**。解：不同。同相时 $\Delta L=n\lambda$ 为相长、$\Delta L=\left(n+\frac{1}{2}\right)\lambda$ 为相消；反相时两者互换，因此节点线和波腹线位置互换。
+
+(d) **求：同相且远场时第 $n$ 条节点线满足的角度关系**。解：远场近似下路程差为 $\Delta L=d\sin\theta_n$。同相源的节点线为相消干涉，满足 $\Delta L=\left(n-\frac{1}{2}\right)\lambda$，其中 $n=1,2,3,\ldots$，故 $\sin\theta_n=\left(n-\frac{1}{2}\right)\frac{\lambda}{d}$。
+
+(e) **求：同相且 $d=3\lambda$ 时上半平面的节点线条数**。解：节点线存在要求 $\sin\theta_n\le1$，即 $\left(n-\frac{1}{2}\right)\frac{\lambda}{d}\le1$。当 $d=3\lambda$ 时，$n-\frac{1}{2}\le3$，所以 $n=1,2,3$。每个 $n$ 在上半平面左右各一条节点线，故共有 $6$ 条。
+
+(f) **求：没有节点线时 $d$ 与 $\lambda$ 的关系**。解：最小相消路程差为 $\frac{\lambda}{2}$，而最大可能路程差不超过 $d$。若 $d<\frac{\lambda}{2}$，则无法满足相消条件，因此没有节点线。
+
+**11. 圆轨道、径向坠落与开普勒第三定律**
+
+背景：中心天体质量为 $M$，且 $M\gg m_1,m_2$。物体 $m_1$ 绕 $M$ 做半径 $r_0$ 的圆周运动；物体 $m_2$ 从距中心 $2r_0$ 处由静止释放并径向下落。
+
+(a) **求：圆轨道角速度 $\omega$ 的大小**。解：万有引力提供向心力，$\frac{GMm_1}{r_0^2}=m_1r_0\omega^2$，得 $\omega=\sqrt{\frac{GM}{r_0^3}}$。
+
+(b) **求：$m_1$ 从 $a$ 到 $b$ 经过半圆的时间 $t_{ab}$**。解：半圆所需时间为周期的一半，故 $t_{ab}=\frac{\pi}{\omega}=\pi\sqrt{\frac{r_0^3}{GM}}$。
+
+(c) **求：$m_2$ 在距中心 $r$ 处的速度 $v$**。解：机械能守恒给出 $\frac{1}{2}v^2-\frac{GM}{r}=-\frac{GM}{2r_0}$，所以 $v=\sqrt{2GM\left(\frac{1}{r}-\frac{1}{2r_0}\right)}$。
+
+(d) **求：证明 $t_{co}=\sqrt{\frac{4r_0^3}{GM}}\int_0^1\sqrt{\frac{u}{1-u}}du$，其中 $u=\frac{r}{2r_0}$**。解：径向下落时间为 $t_{co}=\int_0^{2r_0}\frac{dr}{v}$。令 $u=\frac{r}{2r_0}$，则 $dr=2r_0du$，且 $v=\sqrt{\frac{GM}{r_0}\frac{1-u}{u}}$。代入得 $t_{co}=\sqrt{\frac{4r_0^3}{GM}}\int_0^1\sqrt{\frac{u}{1-u}}du$。
+
+(e) **求：用 $u=\sin^2\theta$ 计算 $t_{co}$**。解：令 $u=\sin^2\theta$，则 $du=2\sin\theta\cos\theta d\theta$，$\sqrt{\frac{u}{1-u}}=\tan\theta$，积分化为 $\int_0^1\sqrt{\frac{u}{1-u}}du=\int_0^{\pi/2}2\sin^2\theta d\theta=\frac{\pi}{2}$，因此 $t_{co}=\pi\sqrt{\frac{r_0^3}{GM}}$。
+
+(f) **求：解释为何 (b) 与 (e) 结果相同**。解：径向下落可看成偏心率 $e=1$ 的退化椭圆轨道，从远日点到近日点经历半个周期；该退化椭圆半长轴为 $r_0$，与半径 $r_0$ 的圆轨道半长轴相同。由开普勒第三定律，周期只由半长轴决定，因此两者半周期相同。
+
+**12. 拉普拉斯-龙格-楞次矢量与水星近日点进动**
+
+背景：行星质量为 $m$，太阳质量为 $M$，轨道半长轴为 $a$，偏心率为 $e$。LRL 矢量定义为 $\vec A=\vec v\times\vec L-GMm\hat r$。图中近日点在 $-\hat x$ 方向，行星逆时针运动。
+
+(a) **求：水星角动量 $\vec L=\vec r\times\vec p$ 的方向**。解：逆时针轨道中，$\vec r\times\vec p$ 指向纸面外，即 $\vec L$ 沿 $+\hat k$ 方向。
+
+(b) **求：证明引力沿 $\vec r$ 方向时 $\vec L$ 守恒**。解：角动量变化率为 $\frac{d\vec L}{dt}=\vec\tau=\vec r\times\vec F$。万有引力方向沿 $\vec r$ 或 $-\vec r$，故 $\vec r\times\vec F=0$，所以 $\frac{d\vec L}{dt}=0$，角动量守恒。
+
+(c) **求：用近日点或远日点计算 LRL 矢量 $\vec A$**。解：在近日点 $P_1$，$\hat r=-\hat x$，$r_p=a(1-e)$，速度大小 $v_p=\sqrt{\frac{GM}{a}\frac{1+e}{1-e}}$，方向沿 $-\hat y$，角动量大小为 $L=mr_pv_p$。于是 $\vec v\times\vec L=-v_pL\hat x=-GMm(1+e)\hat x$，且 $-GMm\hat r=+GMm\hat x$，所以 $\vec A=-GMme\hat x$，方向沿 $-\hat x$。
+
+(d) **求：广义相对论修正力下 $\frac{d\vec A}{dt}=D\frac{GML^2\omega}{mc^2r^2}\hat\theta$ 中的 $D$**。解：修正力为 $\vec F_{\rm GR}=-\frac{GMm}{r^2}\left(1+\frac{3L^2}{m^2c^2r^2}\right)\hat r$，牛顿部分对 $\frac{d\vec A}{dt}$ 的贡献相互抵消，只保留修正项。代入 $\vec L=mr^2\omega\hat k$ 后得 $\frac{d\vec A}{dt}=3\frac{GML^2\omega}{mc^2r^2}\hat\theta$，故 $D=3$。
+
+(e) **求：将 $\frac{d\vec A}{dt}$ 投影到 $x,y$ 轴并对一周期积分，求 $\delta A_x$ 与 $\delta A_y$**。解：有 $\frac{d\vec A}{dt}=3\frac{GML^2\omega}{mc^2r^2}\hat\theta$，且 $\hat\theta=-\sin\theta\hat x+\cos\theta\hat y$，用 $d\theta=\omega dt$ 得 $\delta A_x=\frac{3GML^2}{mc^2}\int_0^{2\pi}\frac{-\sin\theta}{r^2}d\theta$，$\delta A_y=\frac{3GML^2}{mc^2}\int_0^{2\pi}\frac{\cos\theta}{r^2}d\theta$。由 $r(\theta)=\frac{a(1-e^2)}{1-e\cos\theta}$ 可得 $\delta A_x=0$，并用题给积分结果得 $\delta A_y=-\frac{6\pi GML^2e}{mc^2a^2(1-e^2)^2}$。再用 $L^2=GMm^2a(1-e^2)$，得 $\delta A_y=-\frac{6\pi (GM)^2me}{c^2a(1-e^2)}$。
+
+(f) **求：证明每圈近日点进动角 $\delta\phi=\frac{6\pi GM}{c^2a(1-e^2)}$**。解：初始 $\vec A=-GMme\hat x$，其大小为 $A=GMme$。一圈后 $\delta A_x=0$，小角度转动满足 $\delta\phi=\frac{|\delta A_y|}{A}$，代入上一问结果得 $\delta\phi=\frac{6\pi GM}{c^2a(1-e^2)}$。
+
+(g) **求：将进动角换算为角秒每世纪**。解：每圈进动为 $\delta\phi=\frac{6\pi GM}{c^2a(1-e^2)}$，每世纪轨道圈数为 $\frac{100}{T_m}$，且 $1,\mathrm{rad}=206265,\mathrm{arcsec}$，所以 $\delta\phi_{\rm century}=\frac{6\pi GM}{c^2a(1-e^2)}\frac{100}{T_m}\times206265\ \mathrm{arcsec/century}$，代入题给参数可得约 $43\ \mathrm{arcsec/century}$。$\nabla U = \frac{\partial U}{\partial x} \hat{i} + \frac{\partial U}{\partial y} \hat{j} + \frac{\partial U}{\partial z} \hat{k}$
+
+$\nabla \cdot \vec{F} = \frac{\partial F_x}{\partial x} + \frac{\partial F_y}{\partial y} + \frac{\partial F_z}{\partial z} , \vec{F} = F_x \hat{i} + F_y \hat{j} + F_z \hat{k}$
+
+$\nabla \times \vec{F} = \begin{vmatrix} \hat{i} & \hat{j} & \hat{k} \\ \frac{\partial}{\partial x} & \frac{\partial}{\partial y} & \frac{\partial}{\partial z} \\ F_x & F_y & F_z \end{vmatrix} = (\frac{\partial F_z}{\partial y} - \frac{\partial F_y}{\partial z})\hat{i} + (\frac{\partial F_x}{\partial z} - \frac{\partial F_z}{\partial x})\hat{j} + (\frac{\partial F_y}{\partial x} - \frac{\partial F_x}{\partial y})\hat{k}$
+
+一阶线性
+
+$\frac{dy}{dx} + P(x)y = Q(x) , \mu(x) = e^{\int P(x)dx}$ 同乘，左= $\frac{d[\mu(x)y]}{dx}$
+
+$y = \frac{1}{\mu(x)} \left[ \int \mu(x)Q(x)dx + C \right]$
+
+-Bernoulli
+
+$\frac{dy}{dx} + P(x)y = Q(x)y^n , v = y^{1-n}$
+
+二阶常系数
+
+$ay'' + by' + cy = 0 , y = e^{rx} , ar^2 + br + c = 0$
+
+$\begin{cases} y = C_1 e^{r_1 x} + C_2 e^{r_2 x} , \Delta > 0 \\ y = (C_1 + C_2 x) e^{rx} , \Delta = 0 \\ y = e^{\alpha x} (C_1 \cos\beta x + C_2 \sin\beta x) , \Delta < 0 , r = \alpha \pm i\beta \end{cases}$
+
+二阶非齐次
+
+$ay'' + by' + cy = g(x) , y_p + y_h = y$
+
+| $g(x)$                       | $Y_p$ Trial                                     |
+| ------------------------------ | ------------------------------------------------- |
+| $k$                          | $A$                                             |
+| $kx^n$                       | $A_n x^n + A_{n-1} x^{n-1} + \dots + A_0$       |
+| $ke^{ax}$                    | $Ae^{ax}$                                       |
+| $k\cos(\beta x)$             | $A\cos(\beta x) + B\sin(\beta x)$               |
+| $ke^{\alpha x}\cos(\beta x)$ | $e^{\alpha x}(A\cos(\beta x) + B\sin(\beta x))$ |
+
+if $Y_h$ 中的某一项出现在$ Y_p$ , 把 $Y_p$ Trial 乘 $x$ ($x^2$)
+
+Cauchy-Euler
+
+$ax^2 y'' + bxy' + cy = 0 , y = x^r , y' = rx^{r-1} , y'' = r(r-1)x^{r-2}$
+
+$ar^2 + (b-a)r + c = 0$
+
+$\begin{cases} y = C_1 x^{r_1} + C_2 x^{r_2} , r_1 \neq r_2 \\ y = (C_1 + C_2 \ln|x|)x^r , r_1 = r_2 = r \\ y = x^{\alpha} [C_1 \cos(\beta \ln|x|) + C_2 \sin(\beta \ln|x|)] , r = \alpha \pm i\beta \end{cases}$
+$P_i = mv + dm \cdot v_0$
+
+$P_f = (m + dm)(v + dv)$
+
+$P_f - P_i = F \cdot dt$
+
+$\frac{d(mv)}{dt} - v_0 \frac{dm}{dt} = F$, $\begin{cases} v_0 \text{ 表示 } dm \text{ 并入前速度}, dm > 0 \\ v_0 \text{ 表示 } dm \text{ 喷出后速度}, dm < 0 \end{cases}$
+
+$a = \frac{dv}{dt} = \frac{dv}{dx}\frac{dx}{dt} = v\frac{dv}{dx} = \frac{1}{2}\frac{dv^2}{dx}$
+
+$\vec{a}_{tan} = \vec{\alpha} \times \vec{r}, \quad \vec{a}_{rad} = -\omega^2 \vec{r}$
+
+极坐标
+$\vec{r}(t) = r\cos\theta \hat{i} + r\sin\theta \hat{j} \quad \vec{v} = \vec{\omega} \times \vec{r} \quad \vec{r} = r(t)\hat{r}$
+$\hat{r} = \cos\theta \hat{i} + \sin\theta \hat{j} \quad \frac{d\hat{r}}{dt} = \omega\hat{\theta} \quad \vec{v} = \dot{r}\hat{r} + r\dot{\theta}\hat{\theta}$
+$\hat{\theta} = -\sin\theta \hat{i} + \cos\theta \hat{j} \quad \frac{d\hat{\theta}}{dt} = -\omega\hat{r} \quad \vec{a} = (\ddot{r} - r\dot{\theta}^2)\hat{r} + (r\ddot{\theta} + 2\dot{r}\dot{\theta})\hat{\theta} \stackrel{r=R}{=} -R\dot{\theta}^2\hat{r} + R\ddot{\theta}\hat{\theta}$
+
+$K = \frac{1}{2}mv^2 = \frac{1}{2}mr^2\omega^2 = \frac{1}{2}I\omega^2$, 对盘或圆柱 $I = \frac{1}{2}mR^2$
+
+$\vec{L} = \vec{r} \times \vec{p} = m\vec{r} \times \vec{v} = I\vec{\omega}$
+
+$\vec{\tau} = \vec{r} \times \vec{F} = \tau = I\alpha \quad \frac{d\vec{L}}{dt} = \vec{\tau} \quad I_P = I_{cm} + md^2$ 平移轴定理
+
+进动 $\Omega = \frac{d\phi}{dt} = \frac{|dL/dt|}{L} = \frac{\tau}{I\omega} = \frac{mgr}{I\omega}$
+
+$Y = \frac{F_{\perp}/A}{\Delta l / l_0} \quad , \quad B = -\frac{\Delta P}{\Delta V / V_0} \quad , \quad S = \frac{F_{\parallel}/A}{x/h}$
+Proportional limit,Elastic behavior,plastic deformation,Fracture point
+
+$-\frac{GMm}{-R} - \frac{GMm}{-(R+y)} = \frac{GMmy}{R^2} = mgy$
+
+第一宇宙速度 $\frac{GMm}{R^2} = m\frac{v^2}{R}$, 第二宇宙速度(逃逸) $-\frac{GMm}{R} + \frac{1}{2}mv^2 = 0, v = \sqrt{\frac{2GM}{R}} = \sqrt{2gR}, R_c = \frac{2GM}{c^2}$
+
+圆周卫星 $\frac{GMm}{R^2} = m\frac{v^2}{R}, v = \sqrt{\frac{GM}{R}}, T = \sqrt{\frac{4\pi^2 R^3}{GM}} $开三
+$ E = K + U = -\frac{GMm}{R} + \frac{1}{2}m\frac{GM}{R} = -\frac{GMm}{2R}$
+
+开二: $\vec{L} = \vec{r} \times \vec{p} = m\vec{r} \times \vec{v}$, $\frac{d\vec{L}}{dt} = \frac{d\vec{r}}{dt} \times \vec{p} + \vec{r} \times \frac{d\vec{p}}{dt} = \vec{v} \times \vec{p} + \vec{r} \times \vec{F} = 0$, $\frac{dA}{dt} = \frac{1}{2}r^2\frac{d\theta}{dt} = \frac{L}{2m}$
+$\quad = mr^2 \cdot \dot{\theta}$
+
+轨道方程:
+LRL: $\vec{A} = \vec{v} \times \vec{L} - GMm\hat{r}$, $\vec{r} \times \vec{v} = \frac{\vec{L}}{m}$
+$\quad \vec{A} \cdot \vec{r} = (\vec{v} \times \vec{L}) \cdot \vec{r} - GMmr = (\vec{r} \times \vec{v}) \cdot \vec{L} - GMmr = \frac{L^2}{m} - GMmr$
+$\Leftrightarrow Ar\cos\theta = \frac{L^2}{m} - GMmr$
+$\Rightarrow r = \frac{L^2/m}{GMm + A\cos\theta} = \frac{L^2/GMm^2}{1 + \frac{A}{GMm}\cos\theta} = \frac{p}{1 + e\cos\theta}$
+
+薄球壳引力势 $V = \frac{U}{m} = \begin{cases} -\frac{GM}{r}, r > R \\ -\frac{GM}{R}, r \le R \end{cases}$
+
+$F = -kx$      $\frac{d^2x}{dt^2} = -\frac{k}{m}x$       $\omega = \sqrt{\frac{k}{m}}$       $T = 2\pi\sqrt{\frac{m}{k}}$
+
+$x(t) = A\cos(\omega t + \delta)$
+
+$v(t) = -A\omega\sin(\omega t + \delta)$
+
+$a(t) = -A\omega^2\cos(\omega t + \delta) = -\omega^2 x$
+
+$x_0 = A\cos\delta$       $v_0 = -\omega A\sin\delta$       $A^2 = x_0^2 + \frac{v_0^2}{\omega^2}$
+
+$E = \frac{1}{2}kA^2$       $\langle U \rangle = \frac{E}{2}$       $\langle K \rangle = \frac{E}{2}$
+
+竖直振子：$ky_0 = mg$ , $\frac{d^2y'}{dt^2} = -\frac{k}{m}y'$ , $y' = y + y_0$
+
+单摆：$F = -mg\sin\phi = -mg\phi = -mg\frac{s}{L}$ , $\omega = \sqrt{\frac{g}{L}}$
+
+物理摆：$\tau_z = -mgd\theta = I\alpha = I\frac{d^2\theta}{dt^2}$ , $\frac{d^2\theta}{dt^2} = -\frac{mgd}{I}\theta$ , $\omega = \sqrt{\frac{mgd}{I}}$
+
+扭摆：$\tau = -k\phi$ , $\omega = \sqrt{\frac{k}{I}}$
+
+平衡点附近：$\frac{dU}{dx}\big|_{x=x_0} = 0$ , $k = \frac{d^2U}{dx^2}\big|_{x=x_0} > 0$ , $F(x) \approx k(x - x_0)$
+
+阻尼振动：$f = -bv$ , $\frac{d^2x}{dt^2} = -\frac{b}{m}\frac{dx}{dt} - \frac{k}{m}x$ , $x(t) = A_0 e^{-\frac{b}{2m}t}\cos(\omega t + \delta)$ , $mr^2 + br + k = 0$
+
+$\omega = \sqrt{\omega_0^2 - \frac{b^2}{4m^2}}$       $\Delta = b^2 - 4mk = b^2 - 4m^2\omega_0^2$       $b_c = 2m\omega_0$
+
+欠阻尼：振动 $b < 2m\omega_0$
+
+临界阻尼：不振动，最快回到平衡 $b = 2m\omega_0$ , $\omega = 0$
+
+过阻尼：不振动，回平衡比临界慢 $b > 2m\omega_0$
+
+弱阻尼：$E = E_0 e^{-\frac{b}{m}t}$ , $\tau = \frac{m}{b}$ , $b \ll 2m\omega_0$ , $\omega \approx \omega_0$
+
+品质因子：$Q = \omega_0 \tau = \frac{2\pi}{|\Delta E / E|}$ 每个周期能量损失相对大小
+
+受迫振动与共振：$F(t) = F_d \cos(\omega_d t)$ , $m\frac{d^2x}{dt^2} = -b\frac{dx}{dt} - kx + F_d \cos(\omega_d t)$
+
+$x(t) = x_{\text{transient}} + x_{\text{steady}}$
+
+$x_{\text{transient}} = A_0 e^{-\frac{b}{2m}t}\cos(\omega t + \delta)$ , $x_{\text{steady}} = A_d \cos(\omega_d t - \delta_d)$
+
+$$
+\begin{cases} A_d = \frac{F_d}{\sqrt{m^2(\omega_0^2 - \omega_d^2)^2 + b^2\omega_d^2}} \\ \tan\delta_d = \frac{b\omega_d}{k - m\omega_d^2} = \frac{b\omega_d}{m(\omega_0^2 - \omega_d^2)} \end{cases}
+$$
+
+共振时 $\delta_d = \frac{\pi}{2}$       低频 $\delta_d = 0$ ，高频 $\delta_d = \pi$
+
+当 $\omega_d = \omega_0$ 共振，振幅最大
+
+共振宽度 $\Delta \omega = \frac{b}{m} = \frac{1}{\tau} = \frac{\omega_0}{Q}$ , $Q$大，损失少，$\Delta \omega$窄
+
+
+绳波是横波 transverse wave
+
+声波是纵波 longitudinal wave
+
+向右的波 $y = f(x-vt) = f(u)$
+
+$\frac{\partial^2 y}{\partial x^2} = f''(u) , \frac{\partial^2 y}{\partial t^2} = v^2 f''(u) , \frac{\partial^2 y}{\partial x^2} = \frac{1}{v^2} \frac{\partial^2 y}{\partial t^2}$
+
+绳波速 $v = \sqrt{\frac{F_T}{\mu}} , \Delta m = \mu \Delta x , F_y = F_T \left[ \frac{\partial y(x+\Delta x, t)}{\partial x} - \frac{\partial y(x, t)}{\partial x} \right] = F_T \frac{\partial^2 y}{\partial x^2} \Delta x = \Delta m \frac{\partial^2 y}{\partial t^2}$
+
+简谐波 $y(x,t) = A\sin(kx-\omega t) , v = \frac{\lambda}{T} = f\lambda = \frac{\omega}{k}$
+
+$v_y = -\omega A \cos(kx-\omega t)$
+
+$a_y = -\omega^2 y$
+
+平均功率 $F_y = -F_T \frac{\partial y}{\partial x}$
+
+$P = F_y v_y = F_T k \omega A^2 \sin^2(kx - \omega t)$
+
+$= \mu v \omega^2 A^2 \sin^2(kx - \omega t)$
+
+$\langle P \rangle = \frac{1}{2} \mu v \omega^2 A^2$
+
+声波 $v = \sqrt{\frac{B}{\rho}}$ , 越难压缩，声速越大
+
+声压变化
+
+$\Delta p = -B \frac{\partial y}{\partial x} = B A k \sin(kx - \omega t)$
+
+$\Delta V = S \Delta x = S [y(x+\Delta x, t) - y(x, t)]$
+
+$\frac{\Delta V}{V} = \frac{y(x+\Delta x, t) - y(x, t)}{\Delta x} = \frac{\partial y}{\partial x}$
+
+$\Delta p = -B \frac{\Delta V}{V} = -B \frac{\partial y}{\partial x}$
+
+$F = S(\Delta p_1 - \Delta p_2) = BS \frac{\partial^2 y}{\partial x^2} \Delta x = \Delta m a = \rho S \Delta x \frac{\partial^2 y}{\partial t^2}$
+
+干涉 $\Delta L = n\lambda$ 增强 ; $\Delta L = (n + \frac{1}{2})\lambda$ 相消 , 驻波 $\begin{cases} y_1 = A\cos(kx - \omega t) \\ y_2 = A\cos(kx + \omega t) \end{cases} \implies y(x,t) = 2A\cos(kx)\cos(\omega t)$
+
+长度L的弦两端固定, $L = n\frac{\lambda}{2}$ ，n为整数, 一端固定 $L = n\frac{\lambda}{4}$ ，n为奇数
+
+$I = \frac{P}{4\pi r^2} , \beta = 10 \text{ dB } \log_{10} \frac{I}{I_0} , I_0 = 10^{-12}$
+
+相近频率 $f_{beat} = |f_1 - f_2|$
+
+$f' = f \frac{v \pm v_D}{v \mp v_S}$ 靠近变高**1. 矩形薄板的转动惯量**
+
+背景：矩形薄板质量 $M$，边长为 $a$ 与 $b$，转轴过中心且垂直于板面，面密度为 $\sigma$。
+
+(a) **求：矩形薄板关于中心垂直轴的转动惯量**。解：取微元 $dm=\sigma dxdy$，到轴距离平方为 $x^2+y^2$，故 $I=\int_{-a/2}^{a/2}dx\int_{-b/2}^{b/2}dy,\sigma(x^2+y^2)=\frac{1}{12}\sigma ab(a^2+b^2)$。又 $M=\int dm=\sigma ab$，所以 $I=\frac{1}{12}M(a^2+b^2)$。
+
+**2. 均匀实心球的转动惯量**
+
+背景：均匀实心球质量 $M$，半径 $R$，密度 $\rho$，转轴过球心。
+
+(a) **求：均匀实心球关于过球心轴的转动惯量**。解：把球分成厚度为 $dx$ 的薄圆盘，圆盘半径 $r=\sqrt{R^2-x^2}$，质量 $dm=\rho\pi r^2dx$，薄盘转动惯量为 $dI=\frac{1}{2}dm,r^2$。因此 $I=\frac{1}{2}\int_{-R}^{R}\rho\pi(R^2-x^2)^2dx=\frac{8}{15}\pi\rho R^5$。又 $M=\int_{-R}^{R}\rho\pi(R^2-x^2)dx=\frac{4}{3}\pi\rho R^3$，所以 $I=\frac{2}{5}MR^2$。
+
+**3. 地球自转与公转动能**
+
+背景：地球绕南北极轴的转动惯量为 $I=0.3308MR^2$，自转周期为 $T_{\rm rot}$，绕太阳公转可近似看作质点运动，轨道半径为 $R_{\rm orb}$，公转周期为 $T_{\rm orb}$。
+
+(a) **求：地球自转动能**。解：角速度为 $\omega_{\rm rot}=\frac{2\pi}{T_{\rm rot}}$，转动动能为 $K_1=\frac{1}{2}I\omega_{\rm rot}^2=\frac{1}{2}(0.3308MR^2)\left(\frac{2\pi}{T_{\rm rot}}\right)^2$
+
+(b) **求：地球绕太阳公转的动能**。解：把地球视为质量为 $M$ 的质点，公转速率为 $v=\frac{2\pi R_{\rm orb}}{T_{\rm orb}}$，故 $K_2=\frac{1}{2}Mv^2=\frac{1}{2}M\left(\frac{2\pi R_{\rm orb}}{T_{\rm orb}}\right)^2$
+
+(c) **求：由地球转动惯量判断质量分布特征**。解：均匀实心球有 $I=0.400MR^2$，而地球为 $I=0.3308MR^2$，系数更小，说明更多质量集中在靠近地心的位置。
+
+**4. 分层地球模型的质量与转动惯量**
+
+背景：地球分为五层球壳：内核、外核、下地幔、上地幔、外壳与海洋；每层密度近似常数。均匀球关于直径的转动惯量为 $I=\frac{2}{5}MR^2=\frac{8\pi}{15}\rho R^5$。
+
+(a) **求：内半径 $R_1$、外半径 $R_2$、密度 $\rho$ 的均匀球壳关于直径的转动惯量**。解：用外半径 $R_2$ 的实心球减去内半径 $R_1$ 的实心球，得 $I_{\rm shell}=\frac{8\pi}{15}\rho R_2^5-\frac{8\pi}{15}\rho R_1^5=\rho\frac{8\pi}{15}(R_2^5-R_1^5)$。
+
+(b) **求：用分层密度数据计算地球质量**。解：每层球壳质量为 $M_i=\frac{4\pi}{3}\rho_i(R_{i,2}^3-R_{i,1}^3)$，所以总质量为 $M=\sum_i\frac{4\pi}{3}\rho_i(R_{i,2}^3-R_{i,1}^3)$。把五层半径与密度代入该符号求和式，文件给出的结果为 $M=5.97\times10^{24},\mathrm{kg}$。
+
+(c) **求：用分层密度数据计算地球转动惯量，并写成 $MR^2$ 的倍数**。解：每层球壳转动惯量为 $I_i=\frac{8\pi}{15}\rho_i(R_{i,2}^5-R_{i,1}^5)$，所以总转动惯量为 $I=\sum_i\frac{8\pi}{15}\rho_i(R_{i,2}^5-R_{i,1}^5)$。代入五层数据后，文件给出 $I=8.12\times10^{37},\mathrm{kg,m^2}$；用 $M=5.97\times10^{24},\mathrm{kg}$ 与 $R=6370,\mathrm{km}$，得 $I=0.335MR^2$。
+
+**5. 力对原点的力矩**
+
+背景：力为 $\vec F=(-5.00,\mathrm{N})\hat i+(4.00,\mathrm{N})\hat j$，作用点位置矢量为 $\vec r=(-0.450,\mathrm{m})\hat i+(0.150,\mathrm{m})\hat j$。
+
+(a) **求：画出 $\vec r$、$\vec F$ 与原点的位置关系**。解：$\vec r$ 指向第二象限附近的作用点，$\vec F$ 从该点指向左上方，即 $x$ 分量为负、$y$ 分量为正；原点位于坐标轴交点处。
+
+(b) **求：用右手定则判断力矩方向**。解：力矩方向由 $\vec\tau=\vec r\times\vec F$ 给出，右手从 $\vec r$ 转向 $\vec F$ 时拇指指向纸内，因此力矩沿 $-z$ 方向。
+
+(c) **求：计算关于原点的矢量力矩，并验证方向**。解：$\vec\tau=\vec r\times\vec F=[(-0.450)(4.00)-(0.150)(-5.00)]\hat k,\mathrm{N,m}=(-1.05,\mathrm{N,m})\hat k$，结果为负 $\hat k$ 方向，与第 b 问的 $-z$ 方向一致。
+
+**6. 绕线圆柱与下落物块**
+
+背景：轻质不可伸长绳绕在质量 $M$、半径 $R$ 的实心圆柱上，圆柱绕固定水平轴无摩擦转动，绳端系质量 $m$ 的物块，物块从距地面高度 $h$ 处由静止释放，绳不打滑。
+
+(a) **求：物块下落加速度与绳张力**。解：取物块向下为正，对物块有 $mg-T=ma_y$；对圆柱有 $\tau=TR=I\alpha=\frac{1}{2}MR^2\alpha$；绳不打滑给出 $a_y=\alpha R$。联立得 $a_y=\frac{g}{1+M/(2m)}$，再由 $T=mg-ma_y$ 得 $T=\frac{mg}{1+2m/M}$。
+
+(b) **求：用能量法求物块落下高度 $h$ 后的速度，并检验加速度**。解：绳不打滑且不损失机械能，故 $mgh=\frac{1}{2}mv^2+\frac{1}{2}I\omega^2$，其中 $I=\frac{1}{2}MR^2$，且 $v=R\omega$。因此 $v=\sqrt{\frac{2gh}{1+I/(mR^2)}}=\sqrt{\frac{2gh}{1+M/(2m)}}$，并有 $\omega=\frac{v}{R}$；由 $a_y=\frac{v^2}{2h}$ 得 $a_y=\frac{g}{1+M/(2m)}$，与动力学结果一致。
+
+**6补充. 三个力对轴的合力矩**
+
+背景：图中三力 $F_1,F_2,F_3$ 作用于刚体，取逆时针为正方向，关于图示轴计算力矩。
+
+(a) **求：各力矩与合力矩方向**。解：用 $\vec\tau=\vec r\times\vec F$ 或 $\tau=rF\sin\phi$。由图中力臂可得 $\tau_1=-F_1r_1/\sqrt{2}$，$\tau_2=+F_2r_2/\sqrt{2}$，$\tau_3=+F_3r_3$；文件代入图中数据得到 $\tau_1=-1.62,\mathrm{N,m}$，$\tau_2=+2.34,\mathrm{N,m}$，$\tau_3=+1.78,\mathrm{N,m}$。因此 $\tau=\tau_1+\tau_2+\tau_3=2.50,\mathrm{N,m}$，合力矩为正，趋向产生逆时针转动，矢量方向指向纸外。
+
+**7. 瞬时转轴**
+
+背景：刚体平面运动中，瞬时转轴是该瞬间速度为零的点；薄轮在水平面上运动，质心速度为 $v_{\rm cm}$，角速度为 $\omega$，薄轮关于质心的转动惯量为 $I_{\rm cm}=MR^2$。
+
+(a) **求：把无滑动滚动看作质心平动加绕质心转动时的动能**。解：无滑动时 $v_{\rm cm}=\omega R$，总动能为 $K=\frac{1}{2}Mv_{\rm cm}^2+\frac{1}{2}I_{\rm cm}\omega^2=\frac{1}{2}M\omega^2R^2+\frac{1}{2}MR^2\omega^2=MR^2\omega^2$。
+
+(b) **求：把无滑动滚动看作绕接地点瞬时转轴纯转动时的动能**。解：接地点为瞬时静止点，关于该点的转动惯量由平行轴定理得 $I=I_{\rm cm}+MR^2=2MR^2$，所以 $K=\frac{1}{2}I\omega^2=MR^2\omega^2$，与第 a 问一致。
+
+(c) **求：若令 $\omega=2v_{\rm cm}/R$ 且轮子打滑，瞬时转轴位置与动能**。解：瞬时转轴在过质心且垂直于 $v_{\rm cm}$ 的直线上，由速度合成关系可知它位于地面上方 $R/2$ 处。用质心法，$K=\frac{1}{2}Mv_{\rm cm}^2+\frac{1}{2}MR^2\omega^2=\frac{5}{2}Mv_{\rm cm}^2$；又因 $\omega=2v_{\rm cm}/R$，可写为 $K=\frac{5}{8}MR^2\omega^2$。用瞬时转轴法，$I=I_{\rm cm}+M(R/2)^2=\frac{5}{4}MR^2$，故 $K=\frac{1}{2}I\omega^2=\frac{5}{8}MR^2\omega^2=\frac{5}{2}Mv_{\rm cm}^2$。
+
+(d) **求：用平行轴定理说明两种动能算法总是一致**。解：若瞬时转轴到质心距离为 $d$，则 $I=I_{\rm cm}+Md^2$；质心绕瞬时转轴运动给出 $v_{\rm cm}=\omega d$。因此 $K=\frac{1}{2}I\omega^2=\frac{1}{2}I_{\rm cm}\omega^2+\frac{1}{2}Md^2\omega^2=\frac{1}{2}I_{\rm cm}\omega^2+\frac{1}{2}Mv_{\rm cm}^2$，与质心平动加绕质心转动的表达式一致。
+
+**8. 三个悠悠球的转动方向**
+
+背景：三个相同悠悠球在水平面上由静止开始，绳子按图示方向受拉，静摩擦足够大，使悠悠球无滑动滚动。
+
+(a) **求：分别画自由体图，并判断三个悠悠球的转动方向**。解：每个悠悠球受重力 $Mg$、支持力 $N$、静摩擦力 $f$ 与绳张力 $F$。取接地点为瞬时转轴，重力、支持力与摩擦力对该点力矩为零，只有绳张力 $F$ 对该点产生力矩；图中三种拉法下，$F$ 关于接地点的力矩均为顺时针方向，因此三个悠悠球都从静止开始顺时针转动。
+
+(b) **求：用质心轴观点解释摩擦力的作用**。解：以质心为转轴时分析更复杂：第一种情形下 $F$ 与 $f$ 方向相反，摩擦力力矩较大并使悠悠球顺时针转动；第二种情形下 $F$ 与 $f$ 的力矩均为顺时针；第三种情形下摩擦力推动悠悠球向右，而 $F$ 的力矩大于摩擦力力矩，合力矩仍为顺时针。因此三者结论仍是顺时针转动。
+
+**9. 悠悠球摩擦为零的位置与摩擦方向**
+
+背景：悠悠球近似为质量 $M$ 的圆盘，半径 $R$，绳以力 $F$ 向右拉，绳的作用线距中心的垂直距离为 $d$，且 $0\le d\le R$；静摩擦足够大使其无滑动滚动，圆盘关于质心的转动惯量为 $I_{\rm cm}=\frac{1}{2}MR^2$。
+
+(a) **求：在 $0\le d\le R$ 中，使摩擦力为零的 $d$**。解：令摩擦力为零，则平动方程为 $F=Ma$，转动方程可写为 $Fd=I_{\rm cm}\alpha$，无滑动条件为 $a=\alpha R$。联立得 $d=\frac{I_{\rm cm}}{MR}=\frac{R}{2}$。
+
+(b) **求：在 $0\le d\le R$ 中摩擦力方向**。解：先假设摩擦力 $f$ 向左，则平动方程为 $F-f=Ma$，转动方程为 $Fd+fR=I_{\rm cm}\alpha$，无滑动条件为 $a=\alpha R$。联立得 $f=\frac{F}{3R}(R-2d)$。当 $d<R/2$ 时，$f>0$，假设成立，摩擦力向左；当 $d=R/2$ 时，$f=0$；当 $d>R/2$ 时，$f<0$，说明实际摩擦力向右。
+**1. 细杆的角加速度**
+
+背景：长为 $\ell$、质量为 $M$ 的均匀细杆在无摩擦水平面上绕一端的竖直轴转动，另一端受大小为 $F$ 的力，力始终垂直于杆和转轴。
+
+(a) **求：细杆角加速度的大小**。解：绕端点转动时力矩为 $\tau=F\ell$，均匀细杆绕端点的转动惯量为 $I=\frac{1}{3}M\ell^2$。由转动形式牛顿第二定律 $\tau=I\alpha$，得 $\alpha=\frac{\tau}{I}=\frac{F\ell}{\frac{1}{3}M\ell^2}=\frac{3F}{M\ell}$。
+
+**2. 中子星的自转角速度**
+
+背景：恒星坍缩前后都看作均匀实心刚性球，初半径为 $R_i$，末半径为 $R_f$，初角速度为 $\omega_i$，坍缩过程中角动量近似守恒。
+
+(a) **求：坍缩后中子星的角速度**。解：均匀实心球转动惯量为 $I=\frac{2}{5}MR^2$，角动量守恒给出 $I_i\omega_i=I_f\omega_f$，所以 $\frac{2}{5}MR_i^2\omega_i=\frac{2}{5}MR_f^2\omega_f$，得 $\omega_f=\omega_i\left(\frac{R_i}{R_f}\right)^2$。若初始周期为 $T_i$，则 $\omega_i=\frac{2\pi}{T_i}$，因此 $\omega_f=\frac{2\pi}{T_i}\left(\frac{R_i}{R_f}\right)^2$。角速度大幅增大，因为半径显著减小而角动量近似保持不变。
+
+**3. 小球沿斜面向上滚动**
+
+背景：均匀实心球半径为 $R$、质量为 $m$，在倾角为 $\beta$ 的斜面上无滑动向上滚动，转动惯量为 $I=\frac{2}{5}mR^2$。
+
+(a) **求：小球受力图，并说明摩擦力为何沿斜面向上**。解：小球受重力 $mg$、支持力 $n$ 和静摩擦力 $f_s$。重力沿斜面向下分量为 $mg\sin\beta$，垂直斜面分量为 $mg\cos\beta$。小球向上滚动时，平动速度和角速度都要减小，且保持无滑动条件 $v=\omega R$。绕质心看，重力和支持力对质心无力矩，唯一改变角速度的力矩来自摩擦力。要使角速度减小并维持 $v=\omega R$，摩擦力必须沿斜面向上。
+
+(b) **求：小球质心加速度的大小**。解：取沿斜面向下为正，则平动方程为 $ma_{cm}=mg\sin\beta-f_s$，转动方程为 $I\alpha=f_sR$，即 $\frac{2}{5}mR^2\alpha=f_sR$。无滑动条件给出 $a_{cm}=R\alpha$。联立得 $f_s=\frac{2}{5}ma_{cm}$，代回平动方程得 $ma_{cm}=mg\sin\beta-\frac{2}{5}ma_{cm}$，因此 $a_{cm}=\frac{5}{7}g\sin\beta$，方向沿斜面向下，表示上滚时减速。
+
+(c) **求：防止打滑所需的最小静摩擦因数**。解：由上一问 $f_s=\frac{2}{5}ma_{cm}=\frac{2}{7}mg\sin\beta$。垂直斜面方向无加速度，故 $n=mg\cos\beta$。无滑动要求 $f_s\leq \mu_s n$，因此 $\mu_s\geq \frac{f_s}{n}=\frac{2}{7}\tan\beta$，最小值为 $\mu_s=\frac{2}{7}\tan\beta$。
+
+**4. 滚动物体竞速**
+
+背景：不同刚体从同一高度 $h$ 的斜面顶端由静止开始无滑动滚下，设其转动惯量为 $I=cMR^2$，其中 $c$ 由形状决定。
+
+(a) **求：什么形状的物体最先到达斜面底端**。解：用机械能守恒，初态能量为 $Mgh$，末态为平动动能加转动动能，即 $Mgh=\frac{1}{2}Mv_{cm}^2+\frac{1}{2}I\omega^2$。无滑动条件为 $\omega=\frac{v_{cm}}{R}$，代入 $I=cMR^2$ 得 $Mgh=\frac{1}{2}Mv_{cm}^2+\frac{1}{2}cMR^2\frac{v_{cm}^2}{R^2}$，所以 $v_{cm}=\sqrt{\frac{2gh}{1+c}}$。因此 $c$ 越小，底端速度越大，越先到达；常见物体中均匀实心球 $c=\frac{2}{5}$ 小于实心圆柱 $c=\frac{1}{2}$，所以实心球最快。
+
+**5. 溜溜球被水平拉动**
+
+背景：溜溜球总质量为 $m$，外半径为 $R$，轴半径为 $b$，绕质心转动惯量近似为 $I_{cm}=\frac{1}{2}mR^2$。细线以水平力 $F$ 向右拉，溜溜球在桌面上无滑动滚动。
+
+(a) **求：无滑动时溜溜球的加速度**。解：以接触点为瞬时转轴，则转动惯量为 $I=I_{cm}+mR^2=\frac{3}{2}mR^2$。取逆时针为正，拉力对瞬时轴的力矩为 $\tau=-F(R-b)$，所以 $\frac{3}{2}mR^2\alpha=-F(R-b)$。平动方程为 $F-f=ma$，无滑动条件为 $a+R\alpha=0$。联立可得 $a=\frac{2F}{3m}\left(1-\frac{b}{R}\right)$，摩擦力为 $f=\frac{2b+R}{3R}F$。当 $b<R$ 时，加速度向右。
+
+(b) **求：给定静摩擦因数 $\mu_s$ 时，保持无滑动的最大拉力大小**。解：由上一问静摩擦力大小为 $f=\frac{2b+R}{3R}F$。无滑动要求 $f\leq \mu_s mg$，所以 $\frac{2b+R}{3R}F\leq \mu_s mg$，得 $F\leq \frac{3R}{2b+R}\mu_s mg$。因此最大拉力为 $F_{\max}=\frac{3R}{2b+R}\mu_s mg$。
+
+**6. 初始只自转的小球在粗糙水平面上运动**
+
+背景：均匀实心球质量为 $M$、半径为 $R$，转动惯量 $I_{cm}=\frac{2}{5}MR^2$。放到水平面前有顺时针角速度 $\omega_0$，质心初速度为 $0$，动摩擦因数为 $\mu_k$。
+
+(a) **求：小球将向哪个方向运动**。解：初始顺时针转动时，球底部接触点相对地面向左滑动，因此动摩擦力反向，指向右。摩擦力是唯一水平外力，所以小球质心向右加速，最终向右运动。
+
+(b) **求：小球经过多久开始无滑动滚动**。解：取逆时针为角速度正方向，则初始角速度为 $-\omega_0$。摩擦力大小为 $f=\mu_kMg$，平动方程给出 $a_{cm}=\mu_kg$。绕质心转动有 $fR=I_{cm}\alpha$，即 $\mu_kMgR=\frac{2}{5}MR^2\alpha$，得 $\alpha=\frac{5\mu_kg}{2R}$。因此 $v_{cm}=\mu_kgt$，$\omega=-\omega_0+\frac{5\mu_kg}{2R}t$。接触点速度为 $v_B=v_{cm}+\omega R=\mu_kgt-\omega_0R+\frac{5\mu_kg}{2}t$。开始无滑动时 $v_B=0$，所以 $t=\frac{2\omega_0R}{7\mu_kg}$。
+
+(c) **求：此过程中损失的机械能**。解：在 $t=\frac{2\omega_0R}{7\mu_kg}$ 时，$v_f=\frac{2}{7}\omega_0R$，$\omega_f=-\frac{2}{7}\omega_0$。初始动能为 $K_0=\frac{1}{2}I_{cm}\omega_0^2=\frac{1}{5}MR^2\omega_0^2$，末动能为 $K_f=\frac{1}{2}Mv_f^2+\frac{1}{2}I_{cm}\omega_f^2=\frac{2}{35}MR^2\omega_0^2$。因此 $\Delta K=K_f-K_0=-\frac{1}{7}MR^2\omega_0^2$，负号表示能量因摩擦而损失。
+
+**7. 瓢虫在转盘上向中心移动**
+
+背景：质量为 $m$ 的瓢虫在质量为 $4m$、半径为 $R$ 的均匀圆盘边缘，圆盘可绕中心自由转动。初始瓢虫和圆盘共同以角速度 $\omega_0$ 转动，之后瓢虫走到距中心 $R/2$ 处。圆盘转动惯量为 $I=\frac{1}{2}(4m)R^2=2mR^2$。
+
+(a) **求：瓢虫—圆盘系统新的角速度**。解：系统绕中心轴无外力矩，角动量守恒。初始角动量为 $L_i=mR^2\omega_0+2mR^2\omega_0=3mR^2\omega_0$。末态瓢虫距中心 $R/2$，角动量为 $L_f=m\left(\frac{R}{2}\right)^2\omega_f+2mR^2\omega_f=\left(\frac{1}{4}+2\right)mR^2\omega_f=\frac{9}{4}mR^2\omega_f$。令 $L_i=L_f$，得 $\omega_f=\frac{4}{3}\omega_0$。
+
+(b) **求：末动能与初动能之比 $K_f/K_0$**。解：系统动能为 $K=\frac{1}{2}m(\omega r)^2+\frac{1}{2}I\omega^2$。也可利用 $K=\frac{1}{2}L\omega$，且角动量守恒，所以 $\frac{K_f}{K_0}=\frac{L_f\omega_f}{L_i\omega_0}=\frac{\omega_f}{\omega_0}=\frac{4}{3}$。因此末动能增为初动能的 $\frac{4}{3}$。
+
+(c) **求：动能变化的原因**。解：瓢虫向中心走时，受到指向中心的向心作用力，位移也有向内分量，因此该力对瓢虫做正功；等价地，瓢虫通过与圆盘的相互作用对系统做功，使系统总动能增加。角动量守恒不要求机械能守恒，因为瓢虫自身消耗化学能并做功。
+
+**8. 转动细杆与粒子碰撞**
+
+背景：长为 $L$、质量为 $M$ 的均匀细杆绕中心竖直轴以角速度 $\omega$ 逆时针转动；质量为 $m=\frac{M}{3}$ 的粒子以速度 $v$ 垂直于杆运动，在距杆中心 $d$ 处撞上并粘住。
+
+(a) **求：碰后杆和粒子静止时的 $d$**。解：以杆中心为转轴，碰撞过程中角动量守恒。若逆时针为正，则杆初角动量为 $\frac{1}{12}ML^2\omega$，粒子角动量为 $-mvd$。碰后静止要求总角动量为零，所以 $-mvd+\frac{1}{12}ML^2\omega=0$。解得 $d=\frac{ML^2\omega}{12mv}$。若代入题给关系 $m=\frac{M}{3}$，则 $d=\frac{L^2\omega}{4v}$。
+
+(b) **求：若 $d$ 大于该值，碰后杆和粒子向哪个方向转动**。解：当 $d$ 增大时，粒子的负角动量项 $-mvd$ 的大小增大，使碰前总角动量变为负。碰撞中角动量守恒，所以碰后总角动量仍为负，即系统按顺时针方向转动。
+
+**9. 台球物理**
+
+背景：台球为均匀实心球，质量为 $m$、半径为 $R$，转动惯量为 $I_{cm}=\frac{2}{5}mR^2$。球初始静止，球杆给球一个短暂水平冲量 $J=F\Delta t$，击打点在球心上方高度 $h$ 处，击打过程摩擦可忽略。
+
+(a) **求：使球击打后立即无滑动滚动的 $h$**。解：以质心为转轴，冲量角动量关系为 $-Jh=I_{cm}\omega=\frac{2}{5}mR^2\omega$，负号表示顺时针。线动量关系为 $J=mv_{cm}$。立即无滑动要求 $v_{cm}+\omega R=0$。由 $\omega=-\frac{5Jh}{2mR^2}$ 和 $v_{cm}=\frac{J}{m}$ 代入无滑动条件，得 $\frac{J}{m}-\frac{5Jh}{2mR}=0$，所以 $h=\frac{2}{5}R$。
+
+(b) **求：若击打球心 $h=0$ 并使球初速为 $v_0$，最终无滑动滚动时质心速度**。解：击打球心时初始无角速度，故球先滑动。动摩擦力大小为 $f$，方向与运动相反。平动方程给出 $v_{cm}=v_0-\frac{f}{m}t$，转动方程为 $-fR=I_{cm}\alpha$，所以 $\omega=-\frac{5ft}{2mR}$。开始无滑动时 $v_{cm}+\omega R=0$，即 $v_0-\frac{f}{m}t-\frac{5f}{2m}t=0$，得 $t=\frac{2mv_0}{7f}$。此时 $v_{cm}=v_0-\frac{f}{m}\frac{2mv_0}{7f}=\frac{5}{7}v_0$。
+
+**10. 陀螺进动**
+
+背景：陀螺绕支点附近旋转，重力对支点产生力矩 $\vec{\tau}$，角动量为 $\vec{L}$，短时间内角动量变化为 $d\vec{L}=\vec{\tau}dt$。进动角速度满足 $\Omega=\frac{\tau}{I\omega}$。
+
+(a) **求：画出俯视图中 $\vec{\omega}$、$\vec{L}$、$\vec{\tau}$、$d\vec{L}$ 和 $\vec{L}+d\vec{L}$，并判断进动方向**。解：对高速旋转的转子，$\vec{L}$ 与 $\vec{\omega}$ 同向，沿转轴方向。重力对支点的力矩 $\vec{\tau}=\vec{r}\times M\vec{g}$，其方向垂直于 $\vec{L}$，短时间内产生 $d\vec{L}=\vec{\tau}dt$。新的角动量为 $\vec{L}+d\vec{L}$，其方向相对原来的 $\vec{L}$ 偏向 $d\vec{L}$ 的方向，因此陀螺轴沿 $\vec{L}$ 转向 $\vec{L}+d\vec{L}$ 的方向进动。
+
+(b) **求：若反转转子的自旋角速度 $\vec{\omega}$，重复判断进动方向**。解：反转自旋后，$\vec{L}$ 方向反向，而重力力矩 $\vec{\tau}$ 的方向不随自旋方向改变，因此 $d\vec{L}=\vec{\tau}dt$ 仍沿原力矩方向。新的角动量仍为 $\vec{L}+d\vec{L}$，但由于 $\vec{L}$ 已反向，陀螺轴的进动方向也与上一问相反。
+
+(c) **求：若在远离支点的飞轮轴端轻轻加重，会发生什么**。解：加重会增大重力力矩 $\tau$，而进动角速度为 $\Omega=\frac{\tau}{I\omega}$。在 $I$ 和自旋角速度 $\omega$ 不变时，$\Omega$ 随 $\tau$ 线性增大，因此陀螺进动变快。**1. 非均匀杆的质心位置**
+
+背景：杆长为 $L$，左绳与竖直方向夹角为 $\theta$，右绳与竖直方向夹角为 $\phi$，左、右绳张力分别为 $T_l,T_r$，杆质量为 $m$，质心距左端为 $x$。
+
+(a) **求：杆的质心到左端的距离 $x$**。解：杆静止平衡，竖直方向有 $T_l\cos\theta+T_r\cos\phi-mg=0$，水平方向有 $-T_l\sin\theta+T_r\sin\phi=0$，以左端取力矩有 $-mgx+T_rL\cos\phi=0$。由水平平衡得 $T_l=\frac{T_r\sin\phi}{\sin\theta}$，代入竖直平衡并结合力矩方程，消去 $T_l,T_r$，得 $x=\frac{\sin\theta\cos\phi}{\sin(\theta+\phi)}L$，题给数据对应 $x=2.38,\mathrm{m}$。
+
+**2. 轮子越过台阶**
+
+背景：轮半径为 $r$，台阶高度为 $h$，轮质量为 $m$，水平力 $F$ 作用在轮轴处。临界越过台阶时，轮即将离开地面，以下方台阶角点为转轴。
+
+(a) **求：使轮子刚好越过台阶所需的最小水平力 $F$**。解：临界时地面对轮的支持力为零，以台阶角点取力矩可消去接触力。重力力臂为 $\sqrt{r^2-(r-h)^2}=\sqrt{2rh-h^2}$，水平力力臂为 $r-h$，力矩平衡给出 $mg\sqrt{2rh-h^2}-F(r-h)=0$，因此 $F=\frac{\sqrt{2rh-h^2}}{r-h}mg$，题给数据对应 $F=7.34,\mathrm{N}$。
+
+**3. 推倒柱子**
+
+背景：柱重为 $W$，高度为 $h$，地面静摩擦系数为 $\mu_s$，绳与柱夹角为 $\theta$，水平力 $F$ 作用在柱中点，临界不滑动时摩擦力 $f=\mu_s n$。
+
+(a) **求：柱子不发生滑动时水平力 $F$ 的最大值**。解：以绳连接柱子的上端为转轴，水平力力臂为 $h/2$，重力和支持力的水平力臂为 $h\tan\theta$，力矩平衡给出 $F\frac{h}{2}=(n-W)h\tan\theta$。再以上端为转轴可得地面摩擦力满足 $fh=F\frac{h}{2}$，即 $f=\frac{F}{2}$。临界时 $f=\mu_s n$，联立得 $F=2W\left(\frac{1}{\mu_s}-\frac{1}{\tan\theta}\right)^{-1}$，题给数据对应 $F=400,\mathrm{N}$。
+
+**4. 斜面上由细线支撑的实心圆柱**
+
+背景：圆柱质量为 $M$，斜面倾角为 $\theta$，细线沿斜面方向切向拉圆柱，张力为 $T$，静摩擦力为 $f$，圆柱半径为 $R$。
+
+(a) **求：证明圆柱平衡必须有摩擦力**。解：若无摩擦力，以圆柱质心为转轴，重力和支持力均过质心，对质心无力矩，而细线张力 $T$ 作用在圆柱边缘并产生非零力矩 $TR$，圆柱无法满足转动平衡。因此接触面必须提供摩擦力，其力矩抵消张力力矩。
+
+(b) **求：证明张力等于摩擦力，并求张力 $T$**。解：摩擦力方向沿斜面向上，使其对质心产生与张力相反的力矩。以质心取力矩，平衡条件为 $fR-TR=0$，故 $f=T$。沿斜面方向受力平衡为 $T+f-Mg\sin\theta=0$，代入 $f=T$ 得 $2T=Mg\sin\theta$，所以 $T=f=\frac{1}{2}Mg\sin\theta$。
+
+**5. 登山绳的杨氏模量**
+
+背景：绳长为 $l_0$，伸长量为 $\Delta l$，截面积为 $A=\pi(d/2)^2$，承受 climber 重力 $F=mg$。
+
+(a) **求：尼龙绳的杨氏模量 $Y$**。解：杨氏模量定义为 $Y=\frac{F/A}{\Delta l/l_0}$。代入符号量 $F=mg$ 与 $A=\pi(d/2)^2$，得 $Y=\frac{mg,l_0}{\pi(d/2)^2\Delta l}$，题给数据对应 $Y=6.77\times10^8,\mathrm{Pa}$。
+
+**6. 理想气体的体积模量**
+
+背景：理想气体满足 $pV=nRT$，体积模量定义为 $B=-\frac{\Delta p}{\Delta V/V}=-V\frac{dp}{dV}$。
+
+(a) **求：等温压缩时证明 $B=p$**。解：等温时 $T$ 为常数，故 $pV=nRT$ 的微分为 $d(pV)=Vdp+pdV=0$，因此 $\frac{dp}{dV}=-\frac{p}{V}$。代入体积模量定义得 $B=-V\frac{dp}{dV}=p$。
+
+(b) **求：绝热压缩满足 $pV^\gamma=\mathrm{constant}$ 时证明 $B=\gamma p$**。解：由 $pV^\gamma=\mathrm{constant}$ 得 $d(pV^\gamma)=V^\gamma dp+\gamma pV^{\gamma-1}dV=0$，所以 $\frac{dp}{dV}=-\frac{\gamma p}{V}$。代入 $B=-V\frac{dp}{dV}$，得 $B=\gamma p$。
+
+**7. 下坡徒步时膝软骨的剪切形变**
+
+背景：最大冲击力为 $F$，软骨面积为 $A$，剪切模量为 $S$，冲击力与软骨法线方向夹角使平行软骨的剪切分量为 $F_\parallel=F\sin\theta$，剪切应变为 $\phi=x/h$。
+
+(a) **求：膝软骨的形变角 $\phi$**。解：剪切应变等于剪切应力除以剪切模量，即 $\phi=\frac{x}{h}=\frac{F_\parallel/A}{S}$。若最大冲击力为体重的 $k$ 倍，则 $F=kmg$，所以 $\phi=\frac{kmg\sin\theta}{AS}$，题给数据对应 $\phi=0.15,\mathrm{rad}=8.6^\circ$。
+
+**8. 三维引力**
+
+背景：质量 $m_1$ 固定在原点，质量 $m_2$ 位于 $\vec r=x\hat{\mathbf i}+y\hat{\mathbf j}+z\hat{\mathbf k}$，$r=\sqrt{x^2+y^2+z^2}$，势能为 $U(r)=-\frac{Gm_1m_2}{r}$。
+
+(a) **求：由 $\vec F=-\nabla U$ 推出引力的三个分量与矢量形式**。解：由 $\vec F=-\nabla U$，有 $F_x=-\frac{\partial U}{\partial x}$，$F_y=-\frac{\partial U}{\partial y}$，$F_z=-\frac{\partial U}{\partial z}$。因为 $\frac{\partial r}{\partial x}=\frac{x}{r}$、$\frac{\partial r}{\partial y}=\frac{y}{r}$、$\frac{\partial r}{\partial z}=\frac{z}{r}$，且 $U=-Gm_1m_2r^{-1}$，故 $F_x=-\frac{Gm_1m_2x}{r^3}$，$F_y=-\frac{Gm_1m_2y}{r^3}$，$F_z=-\frac{Gm_1m_2z}{r^3}$。合并为矢量式 $\vec F=-\frac{Gm_1m_2}{r^3}\vec r$。
+
+**9. 逃逸速度**
+
+背景：逃逸速度由总机械能刚好为零确定，即物体到达无穷远时动能为零、引力势能也趋于零。
+
+(a) **求：从地球表面发射飞船的地球逃逸速度 $v_e$**。解：能量守恒的临界条件为 $\frac{1}{2}mv_e^2-\frac{GM_E m}{R_E}=0$，解得 $v_e=\sqrt{\frac{2GM_E}{R_E}}$。利用地表关系 $g=\frac{GM_E}{R_E^2}$，也可写为 $v_e=\sqrt{2gR_E}$，题给估计为 $v_e=1.1\times10^4,\mathrm{m/s}$。
+
+(b) **求：从地球轨道附近逃离太阳系所需的逃逸速度 $v_s$**。解：相对太阳取势能，临界条件为 $\frac{1}{2}mv_s^2-\frac{GM_Sm}{R_S}=0$，其中 $M_S$ 为太阳质量，$R_S$ 为地球轨道半径。解得 $v_s=\sqrt{\frac{2GM_S}{R_S}}$，题给估计为 $v_s=4.2\times10^4,\mathrm{m/s}$。
+
+**10. 从小行星表面跳起逃逸**
+
+背景：人在地球上跳起高度约为 $h$，可认为肌肉提供能量约为 $mgh$。小行星近似为球体，半径为 $R$，密度与地球相同，地球半径为 $R_E$，地球质量为 $M_E$。
+
+(a) **求：人能靠跳跃逃逸的小行星最大半径的数量级**。解：从小行星表面逃逸的临界条件为 $mgh-\frac{GMm}{R}\ge 0$，即 $gh\ge\frac{GM}{R}$。若小行星密度与地球相同，则 $\frac{M}{M_E}=\frac{R^3}{R_E^3}$，所以 $M=\frac{R^3}{R_E^3}M_E$。代入逃逸条件并用 $g=\frac{GM_E}{R_E^2}$，得 $gh\ge\frac{GM_E}{R_E^3}R^2=\frac{gR^2}{R_E}$，因此 $R\le\sqrt{hR_E}$。题给估计对应 $R$ 的数量级为 $1,\mathrm{km}$ 到 $10,\mathrm{km}$。**1. 近地重力势能与万有引力势能**
+
+背景：地球质量为 $M_E$，半径为 $R_E$，物体质量为 $m$，距地心距离 $r=R_E+y$，且近地面满足 $y\ll R_E$。
+
+(a) **求：如何协调 $U=mgy$ 与 $U=-\frac{GM_Em}{r}$ 两种重力势能表达式**。解：势能零点可任意选取。若取地表为零势能，则 $U(r)=-\frac{GM_Em}{r}+\frac{GM_Em}{R_E}$。令 $r=R_E+y$，并在 $y\ll R_E$ 时展开，得 $U=-\frac{GM_Em}{R_E+y}+\frac{GM_Em}{R_E}\approx -\frac{GM_Em}{R_E}\left(1-\frac{y}{R_E}\right)+\frac{GM_Em}{R_E}=\frac{GM_Em}{R_E^2}y$。又由地表重力加速度定义 $g=\frac{GM_E}{R_E^2}$，故 $U\approx mgy$。因此 $mgy$ 是在地表取零势能且近地面近似下的万有引力势能。
+
+**2. 深圳与珠峰顶端体重差**
+
+背景：地球半径为 $R_E$，珠峰高度为 $h$，物体质量为 $m$，地球质量为 $M_E$。
+
+(a) **求：海平面附近与高度 $h$ 处体重的百分差**。解：海平面体重为 $F_1=\frac{GM_Em}{R_E^2}$，高度 $h$ 处体重为 $F_2=\frac{GM_Em}{(R_E+h)^2}$。百分差为 $\frac{F_1-F_2}{F_1}=1-\frac{R_E^2}{(R_E+h)^2}$。当 $h\ll R_E$ 时，$\frac{F_1-F_2}{F_1}\approx \frac{2h}{R_E}$。这说明近地面范围内重力变化很小，可近似视为常量。
+
+**3. 神秘行星 Mongo**
+
+背景：石块从地面以初速度 $v_0$ 竖直上抛，经过时间 $t$ 回到地面；Mongo 赤道周长为 $C$，半径为 $R_M=\frac{C}{2\pi}$；飞船在离地高度 $H$ 的圆轨道上运行，轨道半径为 $r=R_M+H$。
+
+(a) **求：Mongo 的质量**。解：石块回到地面时速度为 $-v_0$，由 $v_y=v_0-g_Mt$ 得 $-v_0=v_0-g_Mt$，所以 $g_M=\frac{2v_0}{t}$。又 $g_M=\frac{GM_M}{R_M^2}$，因此 $M_M=\frac{g_MR_M^2}{G}=\frac{2v_0}{tG}\left(\frac{C}{2\pi}\right)^2$。
+
+(b) **求：飞船完成一圈圆轨道所需时间**。解：圆轨道满足 $\frac{GM_Mm}{r^2}=\frac{mv^2}{r}$，故 $v=\sqrt{\frac{GM_M}{r}}$。周期为 $T=\frac{2\pi r}{v}=2\pi\sqrt{\frac{r^3}{GM_M}}$。代入 $r=R_M+H$ 与 $GM_M=g_MR_M^2$，得 $T=2\pi\sqrt{\frac{(R_M+H)^3}{g_MR_M^2}}=2\pi\sqrt{\frac{\left(\frac{C}{2\pi}+H\right)^3}{\left(\frac{2v_0}{t}\right)\left(\frac{C}{2\pi}\right)^2}}$。
+
+**4. 等质量双星系统**
+
+背景：两颗相同恒星质量均为 $M$，绕质心做半径为 $R$ 的圆周运动，两星间距为 $2R$。
+
+(a) **求：一颗恒星对另一颗恒星的万有引力大小**。解：两星距离为 $2R$，故引力大小为 $F=\frac{GM^2}{(2R)^2}=\frac{GM^2}{4R^2}$，方向指向另一颗恒星。
+
+(b) **求：每颗恒星的轨道速率与周期**。解：引力提供向心力，故 $\frac{GM^2}{4R^2}=\frac{Mv^2}{R}$，解得 $v=\sqrt{\frac{GM}{4R}}$。周期为 $T=\frac{2\pi R}{v}=4\pi R\sqrt{\frac{R}{GM}}$。
+
+(c) **求：把两颗恒星分离到无穷远所需的最小能量**。解：初态总动能为 $K=2\cdot \frac12 Mv^2=Mv^2=\frac{GM^2}{4R}$，初态引力势能为 $U=-\frac{GM^2}{2R}$，所以初态总能量为 $E_i=K+U=-\frac{GM^2}{4R}$。无穷远处最小能量取 $E_f=0$，故外界至少需做功 $W=E_f-E_i=\frac{GM^2}{4R}$。
+
+**5. 质子大小的微型黑洞**
+
+背景：质子直径为 $d$，黑洞史瓦西半径为 $R_s$，光速为 $c$。
+
+(a) **求：直径为质子尺度的微型黑洞质量**。解：史瓦西半径满足 $R_s=\frac{2GM}{c^2}$。若黑洞直径取为 $d$，则 $R_s=\frac d2$，所以 $M=\frac{R_sc^2}{2G}=\frac{dc^2}{4G}$。
+
+**6. 开普勒第三定律的应用**
+
+背景：两个质量为 $m_1,m_2$ 的物体相距 $R$ 并绕质心做圆周运动时，满足 $\omega^2R^3=G(m_1+m_2)$。
+
+(a) **求：地球同步卫星的轨道半径**。解：同步卫星周期为地球自转周期 $T$，角频率 $\omega=\frac{2\pi}{T}$。忽略卫星质量，由 $\omega^2R^3=GM_E$ 得 $R=\left(\frac{GM_ET^2}{4\pi^2}\right)^{1/3}$。若用 $GM_E=gR_E^2$，则 $R=\left(\frac{gR_E^2T^2}{4\pi^2}\right)^{1/3}$。
+
+(b) **求：S2 绕银河系中心天体运动时中心天体质量，并判断其性质**。解：设 S2 轨道半径为 $R$、周期为 $T$、中心天体质量为 $M$、S2 质量为 $m_{S2}$。由开普勒第三定律得 $M+m_{S2}=\frac{4\pi^2R^3}{GT^2}$，故 $M=\frac{4\pi^2R^3}{GT^2}-m_{S2}$。由于普通恒星质量远小于所得中心质量，通常可忽略 $m_{S2}$，于是 $M\approx \frac{4\pi^2R^3}{GT^2}$，该中心天体应为超大质量黑洞。
+
+**7. 均匀细杆与小球的引力势能和引力**
+
+背景：细杆长度为 $L$、质量为 $M$，小球质量为 $m$，小球位于细杆轴线上，距细杆一端距离为 $x$；势能零点取在无穷远。
+
+(a) **求：杆-球系统的引力势能，并验证 $x\gg L$ 极限**。解：取细杆线密度 $\lambda=\frac ML$，距小球距离为 $x+\ell$ 的微元质量为 $dm=\lambda d\ell$。微元势能为 $dU=-\frac{Gm,dm}{x+\ell}$，积分得 $U=-Gm\int_0^L\frac{(M/L)d\ell}{x+\ell}=-\frac{GMm}{L}\ln\left(1+\frac{L}{x}\right)$。当 $x\gg L$ 时，$\ln\left(1+\frac{L}{x}\right)\approx \frac{L}{x}$，故 $U\approx -\frac{GMm}{x}$，等价于把细杆看作位于远处的点质量。
+
+(b) **求：细杆对小球的引力大小和方向，并验证 $x\gg L$ 极限**。解：由 $F_x=-\frac{dU}{dx}$，得 $F_x=-\frac{GMm}{x^2+Lx}$。负号表示力指向细杆，即沿 $x$ 减小方向。若 $x\gg L$，则 $x^2+Lx\approx x^2$，所以 $F_x\approx -\frac{GMm}{x^2}$，与点质量近似一致。
+
+**8. 三颗相同恒星组成等边三角形**
+
+背景：三颗恒星质量均为 $M$，组成边长为 $L$ 的等边三角形，并绕三角形中心做共同圆周运动。
+
+(a) **求：每颗恒星的速率**。解：每颗恒星受另外两颗恒星的引力，每个引力大小为 $\frac{GM^2}{L^2}$，合力指向三角形中心，大小为 $2\frac{GM^2}{L^2}\cos30^\circ=\frac{\sqrt3GM^2}{L^2}$。设轨道半径为 $R$，几何关系给出 $R=\frac{L}{\sqrt3}$。由向心力方程 $\frac{\sqrt3GM^2}{L^2}=\frac{Mv^2}{R}$，得 $v=\sqrt{\frac{GM}{L}}$。
+
+**9. 地球到火星的霍曼转移轨道**
+
+背景：地球和火星绕太阳做圆轨道，半径分别为 $R_E$ 与 $R_M$；转移轨道近日点在地球轨道、远日点在火星轨道，半长轴为 $a=\frac{R_E+R_M}{2}$。地球公转周期为 $T_E$，火星公转周期为 $T_M$。
+
+(a) **求：从地球到火星所需飞行时间**。解：由开普勒第三定律 $\frac{T^2}{a^3}=\frac{T_E^2}{R_E^3}$，转移椭圆完整周期为 $T=\left(\frac{a}{R_E}\right)^{3/2}T_E=\left(\frac{R_E+R_M}{2R_E}\right)^{3/2}T_E$。飞船只走半个椭圆，因此飞行时间为 $t_{\rm fly}=\frac{T}{2}=\frac12\left(\frac{R_E+R_M}{2R_E}\right)^{3/2}T_E$。
+
+(b) **求：发射时太阳-火星线与太阳-地球线之间的夹角 $\alpha$**。解：飞船飞行时间为 $t_{\rm fly}=\frac{T}{2}$，火星在这段时间内转过角度 $\pi-\alpha$，故 $\frac{T}{2}=\frac{\pi-\alpha}{\omega_M}$。又 $\omega_M=\frac{2\pi}{T_M}$，且 $T_M=\left(\frac{R_M}{R_E}\right)^{3/2}T_E$。因此 $\pi-\alpha=\omega_M\frac{T}{2}=\pi\frac{T}{T_M}$，所以 $\alpha=\pi-\pi\frac{T}{T_M}$，其中 $T=\left(\frac{R_E+R_M}{2R_E}\right)^{3/2}T_E$。
+
+**10. 彗星椭圆轨道近日点与远日点速度**
+
+背景：太阳质量为 $m_S$，彗星质量为 $m$，椭圆轨道半长轴为 $a$，偏心率为 $e$；近日点距离 $r_p=(1-e)a$，远日点距离 $r_a=(1+e)a$。
+
+(a) **求：彗星在近日点和远日点的速度表达式**。解：设近日点速度为 $v_p$，远日点速度为 $v_a$。机械能守恒给出 $\frac12mv_p^2-\frac{Gm_Sm}{r_p}=\frac12mv_a^2-\frac{Gm_Sm}{r_a}$，角动量守恒给出 $mv_pr_p=mv_ar_a$。结合 $r_p=(1-e)a$ 与 $r_a=(1+e)a$，解得 $v_p=\sqrt{\frac{Gm_S}{a}\frac{1+e}{1-e}}$，$v_a=\sqrt{\frac{Gm_S}{a}\frac{1-e}{1+e}}$。
+
+**11. 地球轨道角动量**
+
+背景：太阳质量为 $M_S$，地球质量为 $M_E$，且 $M_S\gg M_E$；地球绕太阳做半径为 $R$ 的圆周运动。点 $O$ 为太阳位置，点 $O'$ 位于 $O$ 正上方距离 $R$ 处。
+
+(a) **求：地球绕太阳一周的周期 $T_0$**。解：由万有引力提供向心力，$\frac{GM_SM_E}{R^2}=M_E\omega^2R$，所以 $\omega=\sqrt{\frac{GM_S}{R^3}}$。周期为 $T_0=\frac{2\pi}{\omega}=2\pi\sqrt{\frac{R^3}{GM_S}}$。
+
+(b) **求：以 $O$ 为参考点时地球的轨道角动量 $\vec L_0$**。解：圆轨道中 $v=R\omega=\sqrt{\frac{GM_S}{R}}$，故角动量大小为 $L_0=M_E Rv=M_E\sqrt{GM_SR}$，方向沿 $z$ 方向，即 $\vec L_0=M_E\sqrt{GM_SR},\hat z$。
+
+(c) **求：以 $O'$ 为参考点时地球的轨道角动量 $\vec L$**。解：相对 $O'$ 的位置矢量可看作由水平径向分量和竖直分量组成，计算 $\vec L=M_E\vec r,'\times \vec v$ 可得其大小为 $L=M_E\sqrt{2GM_SR}$。其方向同时含有水平径向分量与 $z$ 分量，二者大小相等，因此方向为高出 $x-y$ 平面 $\pi/4$。
+
+(d) **求：太阳引力关于参考点 $O'$ 的力矩 $\vec\tau=\vec r,'\times \vec F$**。解：太阳对地球的引力大小为 $F=\frac{GM_SM_E}{R^2}$，方向沿径向指向太阳。由于 $O'$ 相对 $O$ 有竖直偏移，关于 $O'$ 的力臂产生非零力矩，大小为 $\tau=RF=\frac{GM_SM_E}{R}$，方向沿地球速度 $\vec v$ 的方向。
+
+(e) **求：用 $\vec\tau=\frac{d\vec L}{dt}$ 解释 $\vec L$ 的变化，并求该“转动”的角频率 $\Omega$**。解：以 $O'$ 为参考点时，$\vec L$ 不守恒；其 $z$ 分量守恒，而水平径向分量随地球运动转动。设水平径向角动量分量为 $L_{\rm rad}$，则 $\tau\Delta t=\Delta L=L_{\rm rad}\Delta\theta=L_{\rm rad}\Omega\Delta t$。由几何关系可知该转动与地球公转同步，因此 $\Omega=\omega=\sqrt{\frac{GM_S}{R^3}}$。**1. Laplace-Runge-Lenz 向量与水星近日点进动**
+
+背景：太阳质量为 $M$，水星质量为 $m$，轨道半长轴为 $a$，偏心率为 $e$，轨道在 $xy$ 平面内逆时针运动。LRL 向量定义为 $\vec A=\vec v\times\vec L-GMm\hat r$，牛顿轨道中守恒；相对论修正力为 $\vec F_{\rm GR}=-\frac{GMm}{r^2}\left(1+\frac{3L^2}{m^2c^2r^2}\right)\hat r$。
+
+(a) **求：水星角动量 $\vec L=\vec r\times\vec p$ 的方向**。解：轨道在 $xy$ 平面内逆时针运动，由右手定则，$\vec L$ 指向 $+\hat z$，即垂直纸面向外，因此 $\vec L=L\hat z$。
+
+(b) **求：LRL 向量 $\vec A$，并验证其沿 $-\hat x$ 方向**。解：因 $\vec A$ 守恒，可在近日点 $P_1$ 计算，此时 $\hat r=-\hat x$，$\vec v=v_p\hat y$，$r_p=a(1-e)$，$v_p=\sqrt{\frac{GM}{a}\frac{1+e}{1-e}}$，角动量大小为 $L=mr_pv_p=m\sqrt{GMa(1-e^2)}$。于是 $\vec v\times\vec L=-GMm(1+e)\hat x$，代入 $\vec A=\vec v\times\vec L-GMm\hat r$ 得 $\vec A=-GMm(1+e)\hat x+GMm\hat x=-GMme\hat x$，故 $\vec A$ 沿 $-\hat x$ 方向。
+
+(c) **求：相对论修正力下 $\frac{d\vec A}{dt}$**。解：仍为中心力，所以 $\frac{d\vec L}{dt}=0$。由 $\frac{d\vec A}{dt}=\frac{d\vec v}{dt}\times\vec L-GMm\frac{d\hat r}{dt}$，且 $\frac{d\vec v}{dt}=\frac{\vec F_{\rm GR}}{m}$，$\frac{d\hat r}{dt}=\dot\theta\hat\theta$，$\vec L=mr^2\dot\theta\hat z$，牛顿项与 $-GMm\dot\theta\hat\theta$ 抵消，只剩修正项，得 $\frac{d\vec A}{dt}=\frac{3GML^2\dot\theta}{mc^2r^2}\hat\theta$。
+
+(d) **求：一周内 $\delta A_x$ 与 $\delta A_y$**。解：由 $\hat\theta=-\sin\theta\hat x+\cos\theta\hat y$，有 $\frac{dA_x}{dt}=-\frac{3GML^2\dot\theta}{mc^2r^2}\sin\theta$，$\frac{dA_y}{dt}=\frac{3GML^2\dot\theta}{mc^2r^2}\cos\theta$。用 $d\theta=\dot\theta dt$ 与近似牛顿轨道 $r(\theta)=\frac{a(1-e^2)}{1-e\cos\theta}$，得 $\delta A_x=-\frac{3GML^2}{mc^2}\int_0^{2\pi}\frac{\sin\theta}{r^2}d\theta=0$，$\delta A_y=\frac{3GML^2}{mc^2}\int_0^{2\pi}\frac{\cos\theta}{r^2}d\theta=-\frac{6\pi eGML^2}{mc^2a^2(1-e^2)^2}$。
+
+(e) **求：每圈近日点进动角 $\delta\phi$**。解：因 $|\vec A|=GMme$，且 $\vec A$ 原本沿 $-\hat x$，小转角近似为 $\delta\phi=\frac{|\delta A_y|}{|\vec A|}$。代入 $L^2=m^2GMa(1-e^2)$，得 $\delta\phi=\frac{6\pi GM}{c^2a(1-e^2)}$。
+
+(f) **求：水星近日点进动的角秒每世纪结果**。解：每圈进动为 $\delta\phi=\frac{6\pi GM}{c^2a(1-e^2)}$，换算为角秒每世纪时乘以 $206265$ 和每世纪轨道圈数 $\frac{100}{T_m}$，即 $\delta\phi_{\rm century}=\frac{6\pi GM}{c^2a(1-e^2)}\cdot206265\cdot\frac{100}{T_m}$，代入题给参数得到约 $43\ {\rm arcsec/century}$。
+
+**2. 水坝水平管塞受力与出水体积**
+
+背景：水深为 $D$，管口在水面下深度为 $d$，管半径为 $r$，水密度为 $\rho$，管口面积为 $A=\pi r^2$。
+
+(a) **求：塞子与管壁间摩擦力大小**。解：塞子静止时摩擦力平衡水的表压作用力，深度 $d$ 处表压为 $\Delta p=\rho gd$，故 $f=\Delta pA=\rho gd\pi r^2$，代入题给参数得 $f=74\ {\rm N}$。
+
+(b) **求：拔去塞子后 $t$ 时间内流出的水体积**。解：由托里拆利定理，出水速度为 $v=\sqrt{2gd}$，体积流率为 $Q=Av$，故 $V=Avt=\pi r^2\sqrt{2gd},t$，代入题给参数得 $V=1.5\times10^2\ {\rm m^3}$。
+
+**3. 水坝所受水平压力、力矩与等效力臂**
+
+背景：水深为 $D$，坝宽为 $W$，取深度坐标 $y$ 自水面向下，表压为 $p=\rho gy$，面积元为 $dA=Wdy$。
+
+(a) **求：水对坝的净水平力**。解：面积元受力为 $dF=pdA=\rho gyWdy$，积分得 $F=\int_0^D\rho gyWdy=\frac12\rho gWD^2$，代入题给参数得 $F=1.10\times10^9\ {\rm N}$。
+
+(b) **求：该合力对过 $O$ 且平行坝宽的水平轴的力矩**。解：深度 $y$ 处力臂为 $D-y$，故 $d\tau=dF(D-y)=\rho gyW(D-y)dy$，积分得 $\tau=\int_0^D\rho gyW(D-y)dy=\frac16\rho gWD^3$，代入题给参数得 $\tau=1.10\times10^{10}\ {\rm N\cdot m}$。
+
+(c) **求：等效力臂 $r_{\rm eff}=\tau/F$**。解：由 $r_{\rm eff}=\frac{\tau}{F}=\frac{\frac16\rho gWD^3}{\frac12\rho gWD^2}$，得 $r_{\rm eff}=\frac{D}{3}$，代入题给参数得 $r_{\rm eff}=10\ {\rm m}$。
+
+**4. 喷泉流体流速**
+
+背景：体积流率为 $Q$，出水孔直径为 $D$，面积为 $A=\frac{\pi D^2}{4}$，满足连续性方程 $Q=Av$。
+
+(a) **求：孔径为 $D$ 时的出水速度**。解：由 $Q=Av$ 得 $v_1=\frac{Q}{A}=\frac{4Q}{\pi D^2}$，代入题给参数得 $v_1=472\ {\rm m/s}$。
+
+(b) **求：孔径变为三倍时的出水速度**。解：孔径变为 $3D$ 时面积变为 $9A$，体积流率不变，所以 $v_2=\frac{Q}{9A}=\frac{v_1}{9}$，代入题给参数得 $v_2=52.4\ {\rm m/s}$。
+
+**5. 水平管收缩段中的流量、速度与压强**
+
+背景：右端细管直径为 $d_1$，出水速度为 $v_1$，左端粗管直径为 $d_2$，速度为 $v_2$，两截面同高，出口压强为大气压 $p_0$。
+
+(a) **求：时间 $t$ 内流入大气的水体积**。解：出口面积为 $A_1=\frac{\pi d_1^2}{4}$，体积流率为 $Q=A_1v_1$，故 $V=Qt=\frac{\pi d_1^2}{4}v_1t$，代入题给参数得 $V=19.5\ {\rm m^3}$。
+
+(b) **求：左端粗管中的速度 $v_2$**。解：由连续性方程 $A_1v_1=A_2v_2$，得 $v_2=v_1\frac{A_1}{A_2}=v_1\left(\frac{d_1}{d_2}\right)^2$，代入题给参数得 $v_2=8.28\ {\rm m/s}$。
+
+(c) **求：左端粗管中的表压**。解：两端同高，伯努利方程为 $p_0+\frac12\rho v_1^2=p_2+\frac12\rho v_2^2$，故左端绝对压强为 $p_2=p_0+\frac12\rho(v_1^2-v_2^2)$，表压为 $p_2-p_0=\frac12\rho(v_1^2-v_2^2)$，代入题给参数得 $p_2-p_0=2.30\times10^5\ {\rm Pa}$。
+
+**6. 皮托管测飞机空速**
+
+背景：孔 $A$ 处空气停滞，速度 $v_A=0$；孔 $B$ 处空气速度为飞机相对空气速度 $v$。U 形管液体密度为 $\rho$，空气密度为 $\rho_{\rm air}$，液面高度差为 $h$。
+
+(a) **求：用伯努利方程证明空速公式**。解：在 $A$、$B$ 两处应用伯努利方程，因 $A$ 处停滞，得 $p_A=p_B+\frac12\rho_{\rm air}v^2$。U 形管液面差给出压强差 $p_A-p_B=\rho gh$，联立得 $\rho gh=\frac12\rho_{\rm air}v^2$，所以 $v=\sqrt{\frac{2\rho gh}{\rho_{\rm air}}}$。
+
+(b) **求：给定液面差时飞机相对空气的速度**。解：直接由 $v=\sqrt{\frac{2\rho gh}{\rho_{\rm air}}}$ 计算，代入题给参数得 $v=55.5\ {\rm m/s}$。
+
+**7. 文丘里流量计**
+
+背景：宽管截面积为 $A_1$，速度为 $v_1$，窄管喉部截面积为 $A_2$，速度为 $v_2$，两竖直管液面高度差为 $h$，两测点等高，流体不可压、稳恒且内摩擦可忽略。
+
+(a) **求：用 $A_1$、$A_2$、$h$ 表示宽管处流速 $v_1$**。解：两点等高，伯努利方程为 $p_1+\frac12\rho v_1^2=p_2+\frac12\rho v_2^2$。连续性方程给出 $A_1v_1=A_2v_2$，即 $v_2=\frac{A_1}{A_2}v_1$。代入伯努利方程得 $p_1-p_2=\frac12\rho v_1^2\left[\left(\frac{A_1}{A_2}\right)^2-1\right]$。竖直管中液体静止，压强差为 $p_1-p_2=\rho gh$，故 $v_1=\sqrt{\frac{2gh}{(A_1/A_2)^2-1}}$。
+
+**8. 大水桶底部小孔排水**
+
+背景：水桶截面积为 $A_1$，底部小孔面积为 $A_2$，且 $A_2\ll A_1$；水面高度为 $h$，初始高度为 $H$，桶口与出口均通大气。
+
+(a) **求：水面高度为 $h$ 时出水速度近似为 $\sqrt{2gh}$**。解：在自由液面与底部小孔之间用伯努利方程，因两处压强均为大气压，且 $A_2\ll A_1$ 使自由液面速度近似为零，有 $p_0+\rho gh=p_0+\frac12\rho v^2$，故 $v=\sqrt{2gh}$。
+
+(b) **求：水面高度变化率 $\frac{dh}{dt}$**。解：短时间 $dt$ 内流出体积为 $A_2vdt$，水桶内体积减少为 $-A_1dh$，由体积守恒得 $A_2vdt=-A_1dh$，所以 $\frac{dh}{dt}=-\frac{A_2}{A_1}v=-\frac{A_2}{A_1}\sqrt{2gh}$。
+
+(c) **求：初始条件 $h=H$ 于 $t=0$ 时的 $h(t)$**。解：分离变量得 $\frac{dh}{\sqrt h}=-\frac{A_2}{A_1}\sqrt{2g},dt$，积分后 $2\sqrt h=-\frac{A_2}{A_1}\sqrt{2g},t+C$。由 $h(0)=H$ 得 $C=2\sqrt H$，故 $\sqrt h=\sqrt H-\frac{A_2}{A_1}\sqrt{\frac g2},t$，因此 $h(t)=\left(\sqrt H-\frac{A_2}{A_1}\sqrt{\frac g2},t\right)^2$。
+
+(d) **求：排空水桶所需总时间**。解：排空时 $h=0$，由上一问得 $0=\sqrt H-\frac{A_2}{A_1}\sqrt{\frac g2},t$，所以 $t=\frac{A_1}{A_2}\sqrt{\frac{2H}{g}}$，代入题给参数得 $t=6.39\times10^3\ {\rm s}$。
+
+**9. 简谐振动的两种表示**
+
+背景：位移写作 $x(t)=A_0\cos(\omega t+\delta)$，也可写作 $x(t)=A_s\sin\omega t+A_c\cos\omega t$。
+
+(a) **求：证明 $A_0\cos(\omega t+\delta)$ 可写成 $A_s\sin\omega t+A_c\cos\omega t$，并求 $A_s$ 与 $A_c$**。解：用三角恒等式展开，$x(t)=A_0\cos(\omega t+\delta)=A_0\cos\omega t\cos\delta-A_0\sin\omega t\sin\delta$。与 $x(t)=A_s\sin\omega t+A_c\cos\omega t$ 比较系数，得 $A_s=-A_0\sin\delta$，$A_c=A_0\cos\delta$。
+
+(b) **求：将 $A_c$ 与 $A_s$ 同初始位置和初始速度联系起来**。解：令 $t=0$，有 $x(0)=A_0\cos\delta$，而 $v(t)=\frac{dx}{dt}=-A_0\omega\sin(\omega t+\delta)$，故 $v(0)=-A_0\omega\sin\delta$。因此 $A_c=x(0)$，$A_s=\frac{v(0)}{\omega}$，于是 $x(t)=x(0)\cos\omega t+\frac{v(0)}{\omega}\sin\omega t$。**1. 双弹簧并联振子**
+
+背景：质量为 $m$ 的物块在光滑水平面上，与左右两弹簧相连。单独左弹簧振动频率为 $f_1$，单独右弹簧振动频率为 $f_2$。
+
+(a) **求：两弹簧同时连接时的振动频率**。解：设两弹簧劲度系数为 $k_1,k_2$，位移为 $x$ 时回复力为 $F=-(k_1+k_2)x$，故运动方程为 $m\frac{d^2x}{dt^2}=-(k_1+k_2)x$，角频率满足 $\omega^2=\frac{k_1+k_2}{m}$。单独两弹簧时 $f_1=\frac{1}{2\pi}\sqrt{\frac{k_1}{m}}$，$f_2=\frac{1}{2\pi}\sqrt{\frac{k_2}{m}}$，因此两弹簧同时作用时 $f=\frac{1}{2\pi}\sqrt{\frac{k_1+k_2}{m}}=\sqrt{f_1^2+f_2^2}$。
+
+**2. 两相同弹簧串联振子**
+
+背景：质量为 $m$ 的物块与两个相同弹簧串联连接，每个弹簧劲度系数为 $k$，水平面光滑。
+
+(a) **求：系统振动频率**。解：串联弹簧受力大小相同，总伸长为 $\Delta x$，两相同弹簧各伸长 $\Delta x/2$，故 $F=k\frac{\Delta x}{2}$，等效劲度系数为 $k_{\mathrm{eff}}=\frac{F}{\Delta x}=\frac{k}{2}$。物块满足简谐运动，频率为 $f=\frac{1}{2\pi}\sqrt{\frac{k_{\mathrm{eff}}}{m}}=\frac{1}{2\pi}\sqrt{\frac{k}{2m}}$。
+
+**3. 弹簧耦合单摆**
+
+背景：摆长为 $L$，摆球质量为 $M$，摆球还连接劲度系数为 $k$ 的水平弹簧；当摆球位于最低点时弹簧无形变。考虑小振幅振动。
+
+(a) **求：小振幅振动周期**。解：摆角为 $\theta$ 时，切向重力分量为 $-Mg\sin\theta$，弹簧伸长近似为 $L\theta$，其切向回复力近似为 $-kL\theta$。由切向牛顿第二定律得 $ML\frac{d^2\theta}{dt^2}=-Mg\sin\theta-kL\theta\cos\theta$。小角近似下 $\sin\theta\approx\theta$，$\cos\theta\approx1$，所以 $\frac{d^2\theta}{dt^2}=-\left(\frac{g}{L}+\frac{k}{M}\right)\theta$，角频率为 $\omega=\sqrt{\frac{g}{L}+\frac{k}{M}}$，周期为 $T=\frac{2\pi}{\sqrt{\frac{g}{L}+\frac{k}{M}}}$。
+
+**4. 圆盘—细杆复合摆**
+
+背景：均匀圆盘质量为 $M$、半径为 $r$，均匀细杆质量为 $m$、长度为 $L$，细杆一端为转轴，另一端连接圆盘，圆盘中心距转轴为 $L+r$。系统作小角振动。
+
+(a) **求：绕转轴的转动惯量**。解：圆盘绕自身中心的转动惯量为 $\frac{1}{2}Mr^2$，其中心距转轴为 $L+r$，由平行轴定理得圆盘对转轴的转动惯量为 $\frac{1}{2}Mr^2+M(L+r)^2$。细杆绕端点的转动惯量为 $\frac{1}{3}mL^2$，故总转动惯量为 $I=\frac{1}{2}Mr^2+M(L+r)^2+\frac{1}{3}mL^2$。
+
+(b) **求：转轴到系统质心的距离**。解：取转轴为原点，圆盘质心位置为 $L+r$，细杆质心位置为 $\frac{L}{2}$，系统质心到转轴距离为 $d=\frac{M(L+r)+m\frac{L}{2}}{M+m}$。
+
+(c) **求：小振动周期**。解：复合摆小振动周期为 $T=2\pi\sqrt{\frac{I}{(M+m)gd}}$，其中 $I=\frac{1}{2}Mr^2+M(L+r)^2+\frac{1}{3}mL^2$，$d=\frac{M(L+r)+m\frac{L}{2}}{M+m}$。
+
+**5. 方形细杆复合摆**
+
+背景：四根相同均匀细杆组成边长为 $L$ 的正方形，总质量为 $M$，系统悬挂在一个上角处，绕该角小角摆动。
+
+(a) **求：摆动角频率与频率**。解：系统作为复合摆，角频率满足 $\omega=\sqrt{\frac{Mgd}{I}}$。正方形质心在几何中心，距悬点为 $d=L\cos45^\circ=\frac{L}{\sqrt{2}}$。每根杆质量为 $M/4$，先求绕正方形中心且垂直于平面的转动惯量；每根杆对其自身中心为 $\frac{1}{12}\frac{M}{4}L^2$，其中心距正方形中心为 $\frac{L}{2}$，故四根杆总和为 $I_{\mathrm{cm}}=\frac{M}{3}L^2$。再对整个物体用平行轴定理，得 $I=I_{\mathrm{cm}}+Md^2=\frac{M}{3}L^2+\frac{M}{2}L^2=\frac{5}{6}ML^2$。因此 $\omega=\sqrt{\frac{Mg(L/\sqrt{2})}{(5/6)ML^2}}=\sqrt{\frac{6g}{5\sqrt{2}L}}$，频率为 $f=\frac{\omega}{2\pi}=\frac{1}{2\pi}\sqrt{\frac{6g}{5\sqrt{2}L}}$。
+
+**6. 扭摆中的薄圆盘**
+
+背景：薄圆盘质量为 $m$，半径为 $R$，固定在细长纤维中心，扭转释放后作角简谐运动，周期为 $T$。纤维扭转常量为 $\kappa$。
+
+(a) **求：纤维扭转常量 $\kappa$**。解：薄圆盘绕中心轴转动惯量为 $I=\frac{1}{2}mR^2$。扭摆周期满足 $T=2\pi\sqrt{\frac{I}{\kappa}}$，故 $\kappa=\frac{4\pi^2I}{T^2}=\frac{2\pi^2mR^2}{T^2}$。
+
+**7. 大振幅单摆**
+
+背景：摆长为 $L$，重力加速度为 $g$，角振幅为 $\phi_0$。大振幅时周期为 $T=2\pi\sqrt{\frac{L}{g}}\left[1+\frac{1}{4}\sin^2\frac{\phi_0}{2}+\frac{1}{4}\left(\frac{3}{4}\right)^2\sin^4\frac{\phi_0}{2}+\cdots\right]$，小振幅周期为 $T_0=2\pi\sqrt{\frac{L}{g}}$。
+
+(a) **求：当 $\phi_0=\frac{\pi}{4}$ 时，周期相对 $T_0$ 的增大量约为多少**。解：相对增量为 $\frac{T-T_0}{T_0}\approx\frac{1}{4}\sin^2\frac{\phi_0}{2}+\frac{1}{4}\left(\frac{3}{4}\right)^2\sin^4\frac{\phi_0}{2}$。令 $\phi_0=\frac{\pi}{4}$，保留前两项可得该比例约为 $4%$，说明中等振幅下级数前几项已能给出较好近似。
+
+**8. 约化质量**
+
+背景：两物块质量为 $m_1,m_2$，分别连接在同一弹簧两端，弹簧劲度系数为 $k$，外力为零。定义相对位移 $x=x_1-x_2$。
+
+(a) **求：证明系统相对振动角频率为 $\omega=\sqrt{\frac{k}{\mu}}$，其中 $\mu=\frac{m_1m_2}{m_1+m_2}$**。解：对两物块分别用牛顿第二定律，得 $m_1\frac{d^2x_1}{dt^2}=-k(x_1-x_2)$，$m_2\frac{d^2x_2}{dt^2}=-k(x_2-x_1)$。两式相加说明质心无加速度；将两式分别除以质量后相减，得 $\frac{d^2}{dt^2}(x_1-x_2)=-k\left(\frac{1}{m_1}+\frac{1}{m_2}\right)(x_1-x_2)$。令 $x=x_1-x_2$，并定义 $\mu=\frac{m_1m_2}{m_1+m_2}$，则 $\mu\frac{d^2x}{dt^2}=-kx$，所以相对运动为简谐运动，角频率为 $\omega=\sqrt{\frac{k}{\mu}}$。
+
+(b) **求：由分子振动频率 $f$ 求 HCl 分子的等效弹簧劲度系数**。解：由 $f=\frac{\omega}{2\pi}$ 得 $\omega=2\pi f$。氢原子和氯原子的约化质量为 $\mu=\frac{m_{\mathrm H}m_{\mathrm{Cl}}}{m_{\mathrm H}+m_{\mathrm{Cl}}}$，由上一问 $k=\mu\omega^2$，故等效劲度系数为 $k=\frac{m_{\mathrm H}m_{\mathrm{Cl}}}{m_{\mathrm H}+m_{\mathrm{Cl}}}(2\pi f)^2$。
+
+**9. 阻尼振动**
+
+背景：阻尼振子的运动方程为 $m\frac{d^2x}{dt^2}=-b\frac{dx}{dt}-kx$。考虑欠阻尼情形。
+
+(a) **求：证明解可写为 $x=Ae^{-\frac{b}{2m}t}\cos(\omega t+\delta)$，并求 $\omega$**。解：设 $x=Ae^{-\frac{b}{2m}t}\cos(\omega t+\delta)$，则速度与加速度代回方程后，$\sin(\omega t+\delta)$ 项自动相消；比较 $\cos(\omega t+\delta)$ 项，得到 $m\left[\left(\frac{b}{2m}\right)^2-\omega^2\right]=\frac{b^2}{2m}-k$，整理得 $\omega^2=\frac{k}{m}-\frac{b^2}{4m^2}$，因此 $\omega=\sqrt{\frac{k}{m}-\frac{b^2}{4m^2}}$。指数因子 $e^{-\frac{b}{2m}t}$ 表示振幅随时间衰减。
+
+**10. 受迫阻尼振动与共振**
+
+背景：受迫阻尼振子的运动方程为 $m\frac{d^2x}{dt^2}=-b\frac{dx}{dt}-kx+F_d\cos(\omega_dt)$，自然角频率定义为 $\omega_0=\sqrt{\frac{k}{m}}$。
+
+(a) **求：证明通解由暂态解和稳态解组成，并求稳态振幅与相位**。解：线性方程的解可写成齐次方程通解与非齐次方程特解之和，即 $x(t)=x_{\mathrm{transient}}+x_{\mathrm{steady}}$。齐次部分为阻尼振动，$x_{\mathrm{transient}}=A_0e^{-\frac{b}{2m}t}\cos(\omega t+\delta)$，其随时间衰减。设稳态特解为 $x_{\mathrm{steady}}=A_d\cos(\omega_dt-\delta_d)$，代入方程，使用 $F_d\cos(\omega_dt)=F_d\cos\delta_d\cos(\omega_dt-\delta_d)-F_d\sin\delta_d\sin(\omega_dt-\delta_d)$，比较 $\cos(\omega_dt-\delta_d)$ 与 $\sin(\omega_dt-\delta_d)$ 系数，得 $F_d\cos\delta_d=A_d(k-m\omega_d^2)$，$F_d\sin\delta_d=bA_d\omega_d$。两式相除得 $\tan\delta_d=\frac{b\omega_d}{k-m\omega_d^2}=\frac{b\omega_d}{m(\omega_0^2-\omega_d^2)}$；两式平方相加得 $A_d=\frac{F_d}{\sqrt{m^2(\omega_0^2-\omega_d^2)^2+b^2\omega_d^2}}$。因此 $x(t)=A_0e^{-\frac{b}{2m}t}\cos(\omega t+\delta)+A_d\cos(\omega_dt-\delta_d)$，当暂态项衰减后系统主要表现为稳态受迫振动；共振在驱动角频率接近系统自然角频率时出现。
+
+**11. 不同势阱中的振动**
+
+背景：一维保守力满足 $F_x=-\frac{dU}{dx}$，并取 $U(0)=0$。振幅为 $A$。
+
+(a) **求：简谐振子 $F_x=-kx$ 的势能函数**。解：势能由 $U(x)=-\int_0^xF_x,dx$ 得到，因此 $U(x)=-\int_0^x(-kx),dx=\frac{1}{2}kx^2$。
+
+(b) **求：用能量守恒证明速度 $v_x$ 与位置 $x$ 的关系**。解：振幅处速度为零，总能量为 $E=\frac{1}{2}kA^2$。任意位置处 $\frac{1}{2}kA^2=\frac{1}{2}mv_x^2+\frac{1}{2}kx^2$，故 $v_x=\frac{dx}{dt}=\sqrt{\frac{k}{m}(A^2-x^2)}$。
+
+(c) **求：分离变量并求简谐振子的周期 $T$**。解：由 $v_x=\frac{dx}{dt}=\sqrt{\frac{k}{m}(A^2-x^2)}$ 得 $\int_0^A\frac{dx}{\sqrt{A^2-x^2}}=\int_0^{T/4}\sqrt{\frac{k}{m}},dt$。令 $u=x/A$，左边为 $\int_0^1\frac{du}{\sqrt{1-u^2}}=\frac{\pi}{2}$，所以 $\frac{\pi}{2}=\sqrt{\frac{k}{m}}\frac{T}{4}$，得到 $T=2\pi\sqrt{\frac{m}{k}}$。
+
+(d) **求：若 $F_x=-cx^3$，势能函数是什么**。解：同理由 $U(x)=-\int_0^xF_x,dx$ 得 $U(x)=-\int_0^x(-cx^3),dx=\frac{1}{4}cx^4$。
+
+(e) **求：势能 $U(x)=\frac{1}{4}cx^4$ 对应振子的周期 $T_2$**。解：能量守恒为 $\frac{1}{4}cA^4=\frac{1}{2}mv_x^2+\frac{1}{4}cx^4$，故 $v_x=\frac{dx}{dt}=\sqrt{\frac{c}{2m}(A^4-x^4)}$。四分之一周期满足 $\frac{T_2}{4}=\int_0^A\frac{dx}{\sqrt{\frac{c}{2m}(A^4-x^4)}}=\sqrt{\frac{2m}{c}}\int_0^A\frac{dx}{\sqrt{A^4-x^4}}$。令 $u=x/A$，则 $\int_0^A\frac{dx}{\sqrt{A^4-x^4}}=\frac{1}{A}\int_0^1\frac{du}{\sqrt{1-u^4}}$，利用 $\int_0^1\frac{du}{\sqrt{1-u^4}}\approx1.31$，得 $T_2=\frac{4}{A}\sqrt{\frac{2m}{c}}\int_0^1\frac{du}{\sqrt{1-u^4}}\approx\frac{7.41}{A}\sqrt{\frac{m}{c}}$。
+
+(f) **求：$T_2$ 是否依赖振幅 $A$，以及该振动是否为简谐运动**。解：由 $T_2\approx\frac{7.41}{A}\sqrt{\frac{m}{c}}$ 可见周期依赖振幅 $A$；由于回复力不是与位移成正比的 $-kx$ 形式，该振动不是简谐运动。**1. 简谐波函数**
+
+背景：波函数为 $y(x,t)=(1.00\text{ mm})\sin(62.8\text{ m}^{-1}x+314\text{ s}^{-1}t)$，与标准形式 $y=A\sin(kx-\omega t)$ 比较判断传播方向。
+
+(a) **求：波的传播方向与波速**。解：相位为 $kx+\omega t$，等相位条件给出 $x=-(\omega/k)t+\text{常数}$，故波沿 $-x$ 方向传播；波速大小为 $v=\omega/k=314/62.8=5.00\text{ m/s}$。
+
+(b) **求：波长、频率和周期**。解：由 $k=2\pi/\lambda$、$\omega=2\pi f$、$T=1/f$，得 $\lambda=2\pi/k=0.100\text{ m}$，$f=\omega/(2\pi)=50.0\text{ Hz}$，$T=2\pi/\omega=0.0200\text{ s}$。
+
+(c) **求：弦上任一点的最大横向速度**。解：横向速度为 $v_y=\partial y/\partial t=A\omega\cos(kx+\omega t)$，故最大值为 $v_{y,\max}=A\omega=0.314\text{ m/s}$。
+
+**2. 波函数与波动方程**
+
+背景：一维波动方程为 $\frac{\partial^2 y}{\partial t^2}=v^2\frac{\partial^2 y}{\partial x^2}$，若二阶时间导数与二阶空间导数满足比例关系且 $v=\omega/k$，则满足波动方程。
+
+(a) **求：$y(x,t)=A\cos(kx+\omega t)$ 是否满足波动方程**。解：有 $\frac{\partial^2 y}{\partial t^2}=-A\omega^2\cos(kx+\omega t)$，$\frac{\partial^2 y}{\partial x^2}=-Ak^2\cos(kx+\omega t)$，当 $v=\omega/k$ 时满足 $\frac{\partial^2 y}{\partial t^2}=v^2\frac{\partial^2 y}{\partial x^2}$，所以满足波动方程。
+
+(b) **求：$y(x,t)=A\sin(kx-\omega t)$ 是否满足波动方程**。解：有 $\frac{\partial^2 y}{\partial t^2}=-A\omega^2\sin(kx-\omega t)$，$\frac{\partial^2 y}{\partial x^2}=-Ak^2\sin(kx-\omega t)$，当 $v=\omega/k$ 时满足波动方程。
+
+(c) **求：$y(x,t)=A[\cos(kx)+\cos(\omega t)]$ 是否满足波动方程**。解：有 $\frac{\partial^2 y}{\partial t^2}=-A\omega^2\cos(\omega t)$，$\frac{\partial^2 y}{\partial x^2}=-Ak^2\cos(kx)$，两者依赖的变量不同，不能由常数 $v^2$ 相互对应，因此不满足波动方程。
+
+(d) **求：第 (b) 问波中位于 $x$ 处质点的横向速度和横向加速度**。解：对 $t$ 求导得 $v_y=\frac{\partial y}{\partial t}=-\omega A\cos(kx-\omega t)$，再求一次导得 $a_y=\frac{\partial^2 y}{\partial t^2}=-\omega^2 A\sin(kx-\omega t)$。
+
+**3. 同向波的叠加**
+
+背景：两列波为 $y_1=(4.00\text{ mm})\sin(2\pi x-650\pi t)$ 与 $y_2=(6.20\text{ mm})\sin(2\pi x-650\pi t+0.60\pi)$，可用相量叠加。
+
+(a) **求：合成波的振幅和相对于波 1 的相位角**。解：令波 1 相位为零，则合成相量分量为 $Y_x=4.00+6.20\cos(0.60\pi)$，$Y_y=6.20\sin(0.60\pi)$，故振幅 $A=\sqrt{Y_x^2+Y_y^2}=6.25\text{ mm}$，相位角 $\phi=\tan^{-1}(Y_y/Y_x)=1.23\text{ rad}$。
+
+(b) **求：若再加入振幅 $5.00\text{ mm}$ 的第三列同向波，为使新合成振幅最大，其相位角应为多少**。解：要使合成振幅最大，第三列波的相量应与前两列波的合成相量同向，因此其相位角应为 $\phi=1.23\text{ rad}$。
+
+**4. 传播速度与质点速度**
+
+背景：波函数为 $y(x,t)=A\cos(kx-\omega t)$，其中 $k=2\pi/\lambda$，$v=\omega/k$。
+
+(a) **求：证明 $y(x,t)=A\cos(kx-\omega t)$ 可写为 $y(x,t)=A\cos[\frac{2\pi}{\lambda}(x-vt)]$**。解：由 $k=2\pi/\lambda$ 且 $\omega=kv$，有 $kx-\omega t=k(x-vt)=\frac{2\pi}{\lambda}(x-vt)$，因此 $y(x,t)=A\cos[\frac{2\pi}{\lambda}(x-vt)]$。
+
+(b) **求：弦上质点的横向速度 $v_y$**。解：对 $t$ 求偏导，得 $v_y=\frac{\partial y}{\partial t}=\frac{2\pi A}{\lambda}v\sin[\frac{2\pi}{\lambda}(x-vt)]$。
+
+(c) **求：弦上质点最大速度，以及它何时等于传播速度 $v$**。解：由第 b 问可知最大横向速度为 $v_{y,\max}=\frac{2\pi A}{\lambda}v$，若 $v_{y,\max}=v$，则 $\frac{2\pi A}{\lambda}=1$，即 $A=\lambda/(2\pi)$。
+
+**5. 三段不同线密度弦的传播时间**
+
+背景：三段弦各长 $L$，线密度分别为 $\mu_1$、$\mu_2=4\mu_1$、$\mu_3=\mu_1/4$，张力均为 $F$，波速为 $v=\sqrt{F/\mu}$。
+
+(a) **求：横波通过总长 $3L$ 的时间**。解：每段传播时间为 $t_i=L/v_i=L\sqrt{\mu_i/F}$，因此 $t_{\text{total}}=L\sqrt{\mu_1/F}+L\sqrt{4\mu_1/F}+L\sqrt{(\mu_1/4)/F}=\frac{7}{2}L\sqrt{\mu_1/F}$。
+
+(b) **求：该时间是否依赖三段弦的连接顺序**。解：不依赖。总时间是三段各自传播时间之和，而每段波速只由该段的 $F$ 与 $\mu$ 决定，与排列顺序无关。
+
+**6. 钢琴弦中波的平均功率**
+
+背景：弦质量 $m$、长度 $l$、张力 $F$，线密度 $\mu=m/l$，频率 $f$，角频率 $\omega=2\pi f$，振幅 $A$，平均功率为 $P_{\text{av}}=\frac{1}{2}\sqrt{\mu F}\omega^2A^2$。
+
+(a) **求：波携带的平均功率**。解：由 $\mu=m/l$ 与 $\omega=2\pi f$，平均功率为 $P_{\text{av}}=\frac{1}{2}\sqrt{\mu F}\omega^2A^2$，代入题给量可得 $P_{\text{av}}=0.22\text{ W}$。
+
+(b) **求：若振幅减半，平均功率如何变化**。解：因为 $P_{\text{av}}\propto A^2$，振幅减半时功率变为原来的 $1/4$，故 $P_{\text{av}}=0.056\text{ W}$。
+
+**7. 弦上的驻波共振**
+
+背景：弦长 $L$ 固定，驱动频率 $f$ 固定，张力 $F_T$ 由悬挂重物决定，波速 $v=\sqrt{F_T/\mu}$，两端近似为节点。
+
+(a) **求：解释为什么只有某些离散张力能产生驻波**。解：驻波要求弦长满足 $L=n\lambda_n/2$，即 $\lambda_n=2L/n$；频率 $f$ 固定时 $v_n=f\lambda_n$ 只能取离散值，而 $F_{Tn}=\mu v_n^2$，所以只有离散张力能产生驻波。
+
+(b) **求：若要产生多一个波腹，应增大还是减小张力**。解：多一个波腹表示模数 $n$ 增大，故 $\lambda_n=2L/n$ 减小；由于 $v_n=f\lambda_n$，波速减小；又 $F_T=\mu v^2$，所以张力应减小。
+
+(c) **求：证明第 $n$ 个驻波模的张力为 $F_{Tn}=4L^2f^2\mu/n^2$，并说明其与 $n^2$ 的关系**。解：由 $\lambda_n=2L/n$ 和 $v_n=f\lambda_n$，得 $F_{Tn}=\mu v_n^2=\mu f^2(2L/n)^2=4L^2f^2\mu/n^2$，因此 $F_{Tn}\propto 1/n^2$。
+
+(d) **求：当 $L=1.00\text{ m}$、$f=80.0\text{ Hz}$、$\mu=0.750\text{ g/m}$ 时，前三个模所需张力**。解：先有 $4L^2f^2\mu=19.2\text{ N}$，故 $F_{T1}=19.2\text{ N}$，$F_{T2}=19.2/2^2=4.80\text{ N}$，$F_{T3}=19.2/3^2=2.13\text{ N}$。
+
+**8. 振幅衰减波的功率**
+
+背景：实弦上线密度为 $\mu$，振幅随位置衰减，$y=A(x)\sin(kx-\omega t)$，其中 $A(x)=A_0e^{-bx}$，且 $x>0$。
+
+(a) **求：波传输功率随 $x$ 的函数**。解：瞬时功率可写为 $P(x,t)=-F_T\frac{\partial y}{\partial x}\frac{\partial y}{\partial t}$；对时间平均后交叉项平均为零，且 $\langle\cos^2(kx-\omega t)\rangle=1/2$，所以 $\bar P=\frac{1}{2}\mu v\omega^2A^2(x)$；代入 $A(x)=A_0e^{-bx}$，得 $\bar P(x)=\frac{1}{2}\mu v\omega^2A_0^2e^{-2bx}$。
+
+**9. 驻波分解**
+
+背景：弦的振动为 $y_s=(0.80\text{ cm})\sin[(\pi/3\text{ cm}^{-1})x]\cos[(40\pi\text{ s}^{-1})t]$，这是两列等振幅、反向传播波的叠加。
+
+(a) **求：组成该驻波的两列行波的振幅**。解：驻波形式为 $y_s=2A\sin(kx)\cos(\omega t)$，题中最大系数为 $0.80\text{ cm}$，故 $2A=0.80\text{ cm}$，所以每列行波振幅为 $A=0.40\text{ cm}$。
+
+(b) **求：这两列行波的波速**。解：由 $\omega=40\pi\text{ rad/s}$，$k=\pi/3\text{ cm}^{-1}$，得 $v=\omega/k=120\text{ cm/s}=1.2\text{ m/s}$。
+
+(c) **求：相邻节点之间的距离**。解：相邻节点距离为半波长 $d=\lambda/2=\pi/k$，代入 $k=\pi/3\text{ cm}^{-1}$ 得 $d=3.0\text{ cm}$。
+
+(d) **求：$x=2.1\text{ cm}$、$t=0.50\text{ s}$ 时弦上质点的横向速度**。解：横向速度为 $v_y=\frac{\partial y_s}{\partial t}=-(0.80\text{ cm})\omega\sin(kx)\sin(\omega t)$；当 $t=0.50\text{ s}$ 时 $\sin(\omega t)=\sin(20\pi)=0$，故 $v_y=0$。
+
+**10. 任意形状的波**
+
+背景：考虑任意函数形式的波 $y(x,t)=f(x-vt)$，令 $u=x-vt$。
+
+(a) **求：解释为什么 $y(x,t)=f(x-vt)$ 以速度 $v$ 沿 $+x$ 方向传播**。解：波形上同一位置满足 $u=x-vt=\text{常数}$，因此 $x=vt+\text{常数}$，随时间沿 $+x$ 方向移动，速度为 $v$。
+
+(b) **求：证明 $y(x,t)=f(x-vt)$ 对任意函数 $f$ 都满足波动方程**。解：令 $u=x-vt$，由链式法则有 $\frac{\partial y}{\partial x}=\frac{df}{du}$，$\frac{\partial^2 y}{\partial x^2}=\frac{d^2f}{du^2}$，且 $\frac{\partial y}{\partial t}=-v\frac{df}{du}$，$\frac{\partial^2 y}{\partial t^2}=v^2\frac{d^2f}{du^2}$，故 $\frac{\partial^2 y}{\partial t^2}=v^2\frac{\partial^2 y}{\partial x^2}$，满足波动方程。
+
+(c) **求：波脉冲 $y(x,t)=De^{-(Bx-Ct)^2}$ 的速度**。解：将指数写成 $Bx-Ct=B(x-\frac{C}{B}t)$，故该波为 $f(x-vt)$ 的形式，速度为 $v=C/B$，并沿 $+x$ 方向传播。
+**1. 声波速度**
+
+背景：液体中纵波速度满足 $v=f\lambda=\sqrt{B/\rho}$，金属棒中纵波速度满足 $v=\Delta L/\Delta t=\sqrt{Y/\rho}$。
+
+(a) **求：密度为 $\rho$ 的液体中，已知频率 $f$ 和波长 $\lambda$ 时的体积模量 $B$**。解：由 $v=f\lambda$ 与 $v=\sqrt{B/\rho}$ 得 $B=\rho v^2=\rho(f\lambda)^2$。代入题中符号对应条件 $\rho=1300,\mathrm{kg/m^3}$，$f=400,\mathrm{Hz}$，$\lambda=8.00,\mathrm{m}$，结果为 $B=1.33\times10^{10},\mathrm{Pa}$。
+
+(b) **求：长度为 $\Delta L$、密度为 $\rho$ 的金属棒中，纵波传播时间为 $\Delta t$ 时的杨氏模量 $Y$**。解：波速为 $v=\Delta L/\Delta t$，又 $v=\sqrt{Y/\rho}$，故 $Y=\rho v^2=\rho(\Delta L/\Delta t)^2$。代入题中条件 $\Delta L=1.50,\mathrm{m}$，$\rho=6400,\mathrm{kg/m^3}$，$\Delta t=3.90\times10^{-4},\mathrm{s}$，结果为 $Y=9.47\times10^{10},\mathrm{Pa}$。
+
+**2. 驻声波与简正模式**
+
+背景：开口端是位移波腹、压强波节；闭口端是位移波节、压强波腹。位移波节到相邻位移波节的距离为 $\lambda/2$，位移波节到相邻位移波腹的距离为 $\lambda/4$。管长记为 $L=1.20,\mathrm{m}$。
+
+(a) **求：两端开管中，基频和前两个泛音的位移波节与压强波节位置**。解：两端开管两端均为位移波腹，因此第 $n$ 次谐波满足 $\lambda_n=2L/n$。位移波节为相邻位移波腹之间的中点。基频 $n=1$ 时位移波节在 $x=L/2=0.60,\mathrm{m}$，压强波节在 $x=0,L$，即 $0,1.20,\mathrm{m}$；第一泛音 $n=2$ 时位移波节在 $x=L/4,3L/4$，即 $0.30,0.90,\mathrm{m}$，压强波节在 $x=0,L/2,L$，即 $0,0.60,1.20,\mathrm{m}$；第二泛音 $n=3$ 时位移波节在 $x=L/6,L/2,5L/6$，即 $0.20,0.60,1.00,\mathrm{m}$，压强波节在 $x=0,L/3,2L/3,L$，即 $0,0.40,0.80,1.20,\mathrm{m}$。
+
+(b) **求：左端闭、右端开的管中，基频和前两个泛音的位移波节与压强波节位置**。解：闭端为位移波节，开端为位移波腹，只允许奇数次四分之一波长模式，满足 $L=(2k-1)\lambda/4$。基频时只有闭端位移波节，位移波节在 $x=0$，压强波节在开端 $x=1.20,\mathrm{m}$；第一泛音对应 $3\lambda/4=L$，位移波节在 $x=0,2L/3$，即 $0,0.80,\mathrm{m}$，压强波节在 $x=L/3,L$，即 $0.40,1.20,\mathrm{m}$；第二泛音对应 $5\lambda/4=L$，位移波节在 $x=0,2L/5,4L/5$，即 $0,0.48,0.96,\mathrm{m}$，压强波节在 $x=L/5,3L/5,L$，即 $0.24,0.72,1.20,\mathrm{m}$。
+
+(c) **求：两端闭管的允许波长和频率，并求高为 $L$ 的淋浴间基频和前两个泛音频率是否可闻**。解：两端闭管两端均为位移波节，允许模式满足 $L=n\lambda_n/2$，所以 $\lambda_n=2L/n$，频率为 $f_n=v/\lambda_n=nv/(2L)$，其中 $n=1,2,3,\cdots$。令淋浴间高度 $L=2.50,\mathrm{m}$，声速 $v=344,\mathrm{m/s}$，得 $f_1=v/(2L)=68.8,\mathrm{Hz}$，$f_2=2f_1=138,\mathrm{Hz}$，$f_3=3f_1=206,\mathrm{Hz}$。这些频率均在约 $20,\mathrm{Hz}$ 到 $2.0\times10^4,\mathrm{Hz}$ 的可闻范围内。
+
+**3. 两个同相扬声器的干涉**
+
+背景：两扬声器同相，扬声器 $B$ 在 $A$ 右侧 $2.00,\mathrm{m}$，点 $Q$ 在 $B$ 右侧 $1.00,\mathrm{m}$。到 $Q$ 的路程差为 $\Delta r=3.00,\mathrm{m}-1.00,\mathrm{m}=2.00,\mathrm{m}$，声速取 $v=344,\mathrm{m/s}$。
+
+(a) **求：点 $Q$ 发生相长干涉的最低频率**。解：同相声源相长干涉条件为 $\Delta r=n\lambda$，其中 $n=1,2,3,\cdots$。最低频率对应最大波长，即 $n=1$，所以 $\lambda=\Delta r=2.00,\mathrm{m}$，$f=v/\lambda=v/\Delta r=172,\mathrm{Hz}$。
+
+(b) **求：点 $Q$ 发生相消干涉的最低频率**。解：同相声源相消干涉条件为 $\Delta r=(n/2)\lambda$，其中 $n=1,3,5,\cdots$。最低频率对应 $n=1$，所以 $\lambda=2\Delta r=4.00,\mathrm{m}$，$f=v/\lambda=86,\mathrm{Hz}$。
+
+**4. 很弱声波的强度、声强级与位移振幅**
+
+背景：声压振幅为 $p_m$，空气体积模量为 $B$，声速为 $v$，频率为 $f$，参考声强为 $I_0=1.0\times10^{-12},\mathrm{W/m^2}$。声压振幅与位移振幅满足 $p_m=BkA_m=B(2\pi f/v)A_m$。
+
+(a) **求：声波强度 $I$**。解：声波平均强度可写为 $I=\frac{vp_m^2}{2B}$。代入题中条件 $p_m=6.0\times10^{-5},\mathrm{Pa}$，$v=344,\mathrm{m/s}$，$B=1.42\times10^5,\mathrm{Pa}$，得 $I=4.4\times10^{-12},\mathrm{W/m^2}$。
+
+(b) **求：声强级 $\beta$**。解：声强级定义为 $\beta=(10,\mathrm{dB})\log_{10}(I/I_0)$。由 $I/I_0=4.4$，得 $\beta=(10,\mathrm{dB})\log_{10}4.4=6.4,\mathrm{dB}$。
+
+(c) **求：位移振幅 $A_m$**。解：由 $p_m=B(2\pi f/v)A_m$ 得 $A_m=vp_m/(2\pi fB)$。代入题中条件，得 $A_m=5.8\times10^{-11},\mathrm{m}$。
+
+**5. 警车声源的波长**
+
+背景：声源静止时无多普勒效应，波长满足 $\lambda=v/f_s$；声源以速度 $v_s$ 运动时，前方波长缩短为 $\lambda_{\rm front}=(v-v_s)/f_s$，后方波长增大为 $\lambda_{\rm behind}=(v+v_s)/f_s$。
+
+(a) **求：警笛静止时声波波长**。解：由 $\lambda=v/f_s$ 得 $\lambda=340/300,\mathrm{m}=1.13,\mathrm{m}$。
+
+(b) **求：警笛以速度 $v_s$ 运动时，前方和后方波长**。解：前方波峰间距减小，$\lambda_{\rm front}=(v-v_s)/f_s$；后方波峰间距增大，$\lambda_{\rm behind}=(v+v_s)/f_s$。代入 $v=340,\mathrm{m/s}$、$v_s=30,\mathrm{m/s}$、$f_s=300,\mathrm{Hz}$，得 $\lambda_{\rm front}=1.03,\mathrm{m}$，$\lambda_{\rm behind}=1.23,\mathrm{m}$。
+
+**6. Dune 星球大气中的声速**
+
+背景：观察者静止，声源向观察者运动。取从观察者指向声源为正方向，则 $v_L=0$，声源速度 $v_s=-25.0,\mathrm{m/s}$，多普勒公式为 $f_L=\frac{v+v_L}{v+v_s}f_s$。
+
+(a) **求：Arrakis 大气中的声速 $v$**。解：由 $f_L=\frac{v}{v+v_s}f_s$ 得 $f_L(v+v_s)=vf_s$，整理得 $v=\frac{v_s f_L}{f_s-f_L}$。代入 $f_s=1200,\mathrm{Hz}$、$f_L=1240,\mathrm{Hz}$、$v_s=-25.0,\mathrm{m/s}$，得 $v=780,\mathrm{m/s}$。
+
+**7. 运动声源与运动听者**
+
+背景：多普勒频移公式为 $f_L=\frac{v+v_L}{v+v_s}f_s$，正方向取从听者指向声源。题中声源频率 $f_s=1.00,\mathrm{kHz}$，速度大小为声速的一半。
+
+(a) **求：声源以 $v/2$ 向静止听者运动时听到的频率**。解：听者静止，$v_L=0$；声源向听者运动，所以 $v_s=-v/2$。由 $f_L=\frac{v}{v-v/2}f_s=2f_s$，得 $f_L=2000,\mathrm{Hz}$。
+
+(b) **求：声源静止、听者以 $v/2$ 向声源运动时听到的频率，并解释与 (a) 的差别**。解：声源静止，$v_s=0$；听者向声源运动，所以 $v_L=+v/2$。由 $f_L=\frac{v+v/2}{v}f_s=\frac{3}{2}f_s$，得 $f_L=1500,\mathrm{Hz}$。该结果小于 (a)，因为多普勒效应由声源和听者相对空气的速度决定，而不只由两者彼此的相对速度决定；运动声源会改变空气中的波长，运动听者主要改变单位时间接收的波峰数。
+
+**8. 两列火车汽笛与拍频**
+
+背景：两汽笛频率均为 $f_s=392,\mathrm{Hz}$，空气静止，声速取 $v=344,\mathrm{m/s}$。听者在两车之间向右运动，速度 $v_L=15.0,\mathrm{m/s}$；$A$ 静止，$B$ 向右运动，速度 $v_B=35.0,\mathrm{m/s}$。仍取从听者指向声源为正方向并用 $f_L=\frac{v+v_L}{v+v_s}f_s$。
+
+(a) **求：听者听到来自静止汽笛 $A$ 的频率**。解：对声源 $A$，听者远离 $A$，故 $v_L=-15.0,\mathrm{m/s}$，且 $v_s=0$。因此 $f_A=\frac{v-15.0}{v}f_s$，结果为 $f_A=375,\mathrm{Hz}$。
+
+(b) **求：听者听到来自运动汽笛 $B$ 的频率**。解：对声源 $B$，听者朝向 $B$，故 $v_L=+15.0,\mathrm{m/s}$；$B$ 向右远离听者，按所取正方向有 $v_s=+35.0,\mathrm{m/s}$。因此 $f_B=\frac{v+15.0}{v+35.0}f_s$，结果为 $f_B=371,\mathrm{Hz}$。
+
+(c) **求：听者探测到的拍频**。解：拍频等于两接收频率差的绝对值，故 $f_{\rm beat}=|f_A-f_B|=4,\mathrm{Hz}$。
+
+**9. 两艘潜艇的声呐多普勒效应**
+
+背景：法国潜艇速度为 $v_F$，美国潜艇速度为 $v_{US}$，两者相向运动；声呐在水中速度为 $v$，发射频率为 $f_1$。题中 $v_F=48.00,\mathrm{km/h}$，$v_{US}=72.00,\mathrm{km/h}$，$v=5470,\mathrm{km/h}$，$f_1=1.560\times10^3,\mathrm{Hz}$。
+
+(a) **求：美国潜艇探测到的声呐频率**。解：美国潜艇作为运动听者向声源运动，法国潜艇作为运动声源也向听者运动，因此接收频率为 $f'*1=f_1\frac{v+v*{US}}{v-v_F}$。代入题中符号条件，得 $f'_1=1.595\times10^3,\mathrm{Hz}$。
+
+(b) **求：美国潜艇反射后，法国潜艇探测到的回波频率**。解：反射可看作美国潜艇以频率 $f'*1$ 作为运动声源再向法国潜艇发声。若法国潜艇静止，反射波频率因美国潜艇运动为 $f_r=f'\*1\frac{v+v\*{US}}{v-v*{US}}$；法国潜艇又向回波运动，接收频率再乘以 $\frac{v+v_F}{v-v_F}$。合并得 $f'*r=f_1\frac{(v+v_F)(v+v*{US})}{(v-v_F)(v-v_{US})}$，结果为 $f'_r=1.630\times10^3,\mathrm{Hz}$。
+`;
+
+  setEditorStatus('已插入示例内容');
+  updateEditorEmptyState();
+  renderMarkdown();
+}
+
+fileInput.addEventListener('change', event => {
+  readFiles(event.target.files);
+});
+
+chooseButton.addEventListener('click', () => {
+  fileInput.click();
+});
+
+uploadEditor.addEventListener('dragenter', handleDragEnter);
+uploadEditor.addEventListener('dragover', handleDragOver);
+uploadEditor.addEventListener('dragleave', handleDragLeave);
+uploadEditor.addEventListener('drop', handleDrop);
+
+markdownInput.addEventListener('input', () => {
+  setEditorStatus('正在编辑 Markdown');
+  updateEditorEmptyState();
+  scheduleRender();
+});
+
+Object.values(controls).forEach(control => {
+  control.addEventListener('input', scheduleRender);
+  control.addEventListener('change', scheduleRender);
+});
+
+controls.fontPreset.addEventListener('change', () => {
+  if (controls.fontPreset.value !== 'custom') {
+    controls.fontFamily.value = controls.fontPreset.value;
+  }
+  customFontField.classList.toggle('is-visible', controls.fontPreset.value === 'custom');
+  scheduleRender();
+});
+
+controls.fontFamily.addEventListener('input', () => {
+  controls.fontPreset.value = 'custom';
+  scheduleRender();
+});
+
+applyFontButton.addEventListener('click', () => {
+  controls.fontPreset.value = 'custom';
+  renderMarkdown();
+});
+
+printButton.addEventListener('click', openPrintPage);
+collapseButton.addEventListener('click', () => setToolbarCollapsed(true));
+sampleButton.addEventListener('click', insertSample);
+
+clearButton.addEventListener('click', () => {
+  markdownInput.value = '';
+  setEditorStatus('已清空，可以继续编辑或上传');
+  updateEditorEmptyState();
+  renderMarkdown();
+});
+
+function makeDraggable() {
+  let movedByPointer = false;
+
+  function bindHandle(handle, options = {}) {
+    let startX = 0;
+    let startY = 0;
+    let originX = 0;
+    let originY = 0;
+    let dragging = false;
+    let moved = false;
+
+    handle.addEventListener('pointerdown', event => {
+      if (options.ignoreButtons && event.target.closest('button')) {
+        return;
+      }
+
+      dragging = true;
+      moved = false;
+      movedByPointer = false;
+      startX = event.clientX;
+      startY = event.clientY;
+
+      const rect = toolbar.getBoundingClientRect();
+      originX = rect.left;
+      originY = rect.top;
+
+      handle.setPointerCapture(event.pointerId);
+    });
+
+    handle.addEventListener('pointermove', event => {
+      if (!dragging) {
+        return;
+      }
+
+      const deltaX = event.clientX - startX;
+      const deltaY = event.clientY - startY;
+      moved = moved || Math.hypot(deltaX, deltaY) > 4;
+      movedByPointer = movedByPointer || moved;
+
+      const rect = toolbar.getBoundingClientRect();
+      const viewport = window.visualViewport;
+      const viewportWidth = viewport?.width || window.innerWidth;
+      const viewportHeight = viewport?.height || window.innerHeight;
+      const margin = 8;
+      const maxX = Math.max(margin, viewportWidth - rect.width - margin);
+      const maxY = Math.max(margin, viewportHeight - rect.height - margin);
+      const nextX = Math.min(Math.max(margin, originX + deltaX), maxX);
+      const nextY = Math.min(Math.max(margin, originY + deltaY), maxY);
+
+      toolbar.style.left = `${nextX}px`;
+      toolbar.style.top = `${nextY}px`;
+    });
+
+    handle.addEventListener('pointerup', event => {
+      dragging = false;
+      handle.releasePointerCapture(event.pointerId);
+
+      if (options.onClick && !moved) {
+        options.onClick();
+      }
+    });
+
+    handle.addEventListener('pointercancel', () => {
+      dragging = false;
+    });
+  }
+
+  bindHandle(toolbarHandle, { ignoreButtons: true });
+  bindHandle(expandButton, {
+    onClick: () => setToolbarCollapsed(false)
+  });
+
+  expandButton.addEventListener('click', event => {
+    if (movedByPointer) {
+      event.preventDefault();
+      event.stopPropagation();
+      movedByPointer = false;
+      return;
+    }
+
+    setToolbarCollapsed(false);
+  });
+}
+
+makeDraggable();
+updateUiScale();
+updateSettings();
+updateEditorEmptyState();
+
+window.visualViewport?.addEventListener('resize', updateUiScale);
+window.visualViewport?.addEventListener('scroll', updateUiScale);
+window.addEventListener('resize', updateUiScale);
+window.addEventListener('load', renderMarkdown);
+</script>
+</body>
+</html>
