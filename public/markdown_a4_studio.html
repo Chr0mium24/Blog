@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Markdown A4 Studio</title>
+<style>
+@page {
+  size: A4 landscape;
+  margin: 3mm;
+}
+
+:root {
+  --page-width: 291mm;
+  --page-height: 204mm;
+  --columns: 5;
+  --font-family: "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  --font-size: 5.5px;
+  --math-size: 0.8em;
+  --column-gap: 1.5mm;
+  --ui-scale: 1;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: #d8d8d8;
+  color: #000;
+  font-family: "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.toolbar {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 10;
+  width: 320px;
+  max-height: calc((100vh - 28px) / var(--ui-scale));
+  overflow: visible;
+  transform: scale(var(--ui-scale));
+  transform-origin: top left;
+  background: #fafafa;
+  border: 1px solid #c6c6c6;
+  border-radius: 6px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  transition: width 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.toolbar.collapsed {
+  width: 0;
+  border-width: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.toolbar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 8px 6px 10px;
+  border-bottom: 1px solid #d8d8d8;
+  cursor: move;
+  user-select: none;
+}
+
+.toolbar-title {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border-color: #b8b8b8;
+  background: #fff;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.collapse-tab {
+  position: absolute;
+  top: 42px;
+  left: 0;
+  display: none;
+  width: 28px;
+  height: 88px;
+  padding: 0;
+  border: 1px solid #c6c6c6;
+  border-radius: 6px;
+  background: #fafafa;
+  color: #111;
+  writing-mode: vertical-rl;
+  letter-spacing: 0;
+  box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.14);
+}
+
+.toolbar.collapsed .collapse-tab {
+  display: inline-grid;
+  place-items: center;
+}
+
+.toolbar.collapsed .toolbar-panel {
+  display: none;
+  pointer-events: none;
+}
+
+.toolbar-body {
+  display: grid;
+  gap: 8px;
+  max-height: calc((100vh - 82px) / var(--ui-scale));
+  overflow: auto;
+  padding: 10px;
+}
+
+.drop-zone {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 7px;
+  border: 1px dashed #9a9a9a;
+  border-radius: 5px;
+  background: #f4f4f4;
+  color: #333;
+  font-size: 12px;
+  text-align: center;
+}
+
+.drop-zone.dragging {
+  border-color: #0057b8;
+  background: #eaf2ff;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.field {
+  display: grid;
+  gap: 3px;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+label {
+  font-size: 11px;
+  font-weight: 650;
+}
+
+input,
+select,
+textarea,
+button {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #aaa;
+  border-radius: 5px;
+  background: #fff;
+  color: #111;
+}
+
+input,
+select,
+button {
+  height: 26px;
+  padding: 0 7px;
+  font-size: 12px;
+}
+
+textarea {
+  min-height: 148px;
+  padding: 7px;
+  resize: vertical;
+  font-family: "Menlo", "SFMono-Regular", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+button {
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.primary {
+  border-color: #0057b8;
+  background: #0057b8;
+  color: #fff;
+}
+
+.page-wrap {
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 100%;
+  padding: 16px;
+}
+
+.page {
+  box-sizing: border-box;
+  width: var(--page-width);
+  height: var(--page-height);
+  margin: 0 auto;
+  padding: 0;
+  overflow: visible;
+  background: #fff;
+  box-shadow: 0 0 0 1px #bbb, 0 8px 28px rgba(0, 0, 0, 0.18);
+}
+
+.preview {
+  height: 100%;
+  color: #000;
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  line-height: 1.18;
+  text-align: left;
+  column-count: var(--columns);
+  column-gap: var(--column-gap);
+  column-fill: auto;
+}
+
+.preview p,
+.preview ol,
+.preview ul,
+.preview blockquote,
+.preview pre {
+  margin: 0 0 0.22em;
+}
+
+.preview h1,
+.preview h2,
+.preview h3,
+.preview h4,
+.preview h5,
+.preview h6 {
+  margin: 0 0 0.18em;
+  font-size: 1em;
+  line-height: 1.08;
+}
+
+.preview table {
+  border-collapse: collapse;
+}
+
+.preview td,
+.preview th {
+  padding: 0 0.2em;
+}
+
+.preview img {
+  max-width: 100%;
+}
+
+.preview code {
+  font-family: "Menlo", "SFMono-Regular", monospace;
+  font-size: 0.92em;
+}
+
+.preview .math {
+  break-inside: avoid;
+}
+
+.preview mjx-container {
+  font-size: var(--math-size) !important;
+  line-height: 0 !important;
+}
+
+.preview mjx-container[display="true"] {
+  margin: 0.08em 0 !important;
+  overflow-x: hidden;
+  overflow-y: visible;
+  max-width: 100%;
+}
+
+@media print {
+  html,
+  body {
+    width: auto;
+    height: auto;
+    background: #fff;
+  }
+
+  .toolbar {
+    display: none !important;
+  }
+
+  .page-wrap {
+    padding: 0;
+  }
+
+  .page {
+    width: var(--page-width);
+    height: var(--page-height);
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .preview {
+    width: 100%;
+    height: 100%;
+  }
+}
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+    displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
+    processEscapes: true
+  },
+  svg: {
+    fontCache: 'global',
+    mtextInheritFont: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg-full.js"></script>
+</head>
+<body>
+<aside class="toolbar" id="toolbar">
+  <button type="button" class="collapse-tab" id="expandButton">工具</button>
+  <div class="toolbar-panel">
+    <div class="toolbar-header" id="toolbarHandle">
+      <div class="toolbar-title">A4 Markdown</div>
+      <div class="header-actions">
+        <button type="button" class="icon-button" id="collapseButton" title="收起">‹</button>
+        <button type="button" class="icon-button" id="printButton" title="打印">⎙</button>
+      </div>
+    </div>
+    <div class="toolbar-body">
+      <div class="drop-zone" id="dropZone">
+        拖拽 Markdown 文件到这里
+      </div>
+      <input id="fileInput" type="file" accept=".md,.markdown,text/markdown,text/plain" multiple hidden>
+
+      <div class="controls">
+        <div class="field">
+          <label for="columnsInput">分栏</label>
+          <input id="columnsInput" type="number" min="1" max="12" step="1" value="5">
+        </div>
+        <div class="field">
+          <label for="columnGapInput">栏宽</label>
+          <input id="columnGapInput" type="text" value="1.5mm">
+        </div>
+        <div class="field">
+          <label for="fontSizeInput">字号</label>
+          <input id="fontSizeInput" type="text" value="5.5px">
+        </div>
+        <div class="field">
+          <label for="mathSizeInput">公式字号</label>
+          <input id="mathSizeInput" type="text" value="0.8em">
+        </div>
+        <div class="field field-wide">
+          <label for="fontFamilyInput">字体</label>
+          <select id="fontFamilyInput">
+            <option value='"PingFang SC", "Helvetica Neue", Arial, sans-serif'>苹方 / 黑体</option>
+            <option value='"Songti SC", "STSong", "Times New Roman", serif'>宋体 / 教材</option>
+            <option value='"Times New Roman", "Songti SC", serif'>Times / 宋体</option>
+            <option value='Arial, "PingFang SC", sans-serif'>Arial / 苹方</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field field-wide">
+        <label for="markdownInput">Markdown</label>
+        <textarea id="markdownInput" spellcheck="false" placeholder="粘贴 Markdown，或拖拽/选择 .md 文件"></textarea>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="chooseButton">选择文件</button>
+        <button type="button" id="clearButton">清空</button>
+        <button type="button" class="primary" id="renderButton">渲染</button>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<main class="page-wrap">
+  <section class="page">
+    <article class="preview" id="preview"></article>
+  </section>
+</main>
+
+<script>
+const markdownInput = document.getElementById('markdownInput');
+const preview = document.getElementById('preview');
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const chooseButton = document.getElementById('chooseButton');
+const printButton = document.getElementById('printButton');
+const renderButton = document.getElementById('renderButton');
+const clearButton = document.getElementById('clearButton');
+const collapseButton = document.getElementById('collapseButton');
+const expandButton = document.getElementById('expandButton');
+const toolbar = document.getElementById('toolbar');
+const toolbarHandle = document.getElementById('toolbarHandle');
+const controls = {
+  columns: document.getElementById('columnsInput'),
+  columnGap: document.getElementById('columnGapInput'),
+  fontSize: document.getElementById('fontSizeInput'),
+  mathSize: document.getElementById('mathSizeInput'),
+  fontFamily: document.getElementById('fontFamilyInput')
+};
+
+let renderTimer = 0;
+
+function setRootVar(name, value) {
+  document.documentElement.style.setProperty(name, value);
+}
+
+function updateSettings() {
+  setRootVar('--columns', controls.columns.value || '5');
+  setRootVar('--column-gap', controls.columnGap.value || '1.5mm');
+  setRootVar('--font-size', controls.fontSize.value || '5.5px');
+  setRootVar('--math-size', controls.mathSize.value || '0.8em');
+  setRootVar('--font-family', controls.fontFamily.value);
+}
+
+function updateUiScale() {
+  const scale = window.visualViewport?.scale || 1;
+  document.documentElement.style.setProperty('--ui-scale', String(1 / scale));
+}
+
+function setToolbarCollapsed(collapsed) {
+  toolbar.classList.toggle('collapsed', collapsed);
+}
+
+function escapeScriptText(text) {
+  return text.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${').replace(/<\/script/gi, '<\\/script');
+}
+
+function getPrintSettings() {
+  updateSettings();
+  return {
+    columns: controls.columns.value || '5',
+    columnGap: controls.columnGap.value || '1.5mm',
+    fontSize: controls.fontSize.value || '5.5px',
+    mathSize: controls.mathSize.value || '0.8em',
+    fontFamily: controls.fontFamily.value
+  };
+}
+
+function buildPrintDocument(markdown, settings) {
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A4 Markdown Print</title>
+<style>
+@page {
+  size: A4 landscape;
+  margin: 3mm;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  color: #000;
+  background: #fff;
+  font-family: ${settings.fontFamily};
+  font-size: ${settings.fontSize};
+  line-height: 1.18;
+  text-align: left;
+  column-count: ${settings.columns};
+  column-gap: ${settings.columnGap};
+  column-fill: auto;
+}
+
+p,
+ol,
+ul,
+blockquote,
+pre {
+  margin: 0 0 0.22em;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0 0 0.18em;
+  font-size: 1em;
+  line-height: 1.08;
+}
+
+strong,
+b {
+  font-weight: 700;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+td,
+th {
+  padding: 0 0.2em;
+}
+
+img {
+  max-width: 100%;
+}
+
+code {
+  font-family: "Menlo", "SFMono-Regular", monospace;
+  font-size: 0.92em;
+}
+
+.math {
+  break-inside: avoid;
+}
+
+mjx-container {
+  font-size: ${settings.mathSize} !important;
+  line-height: 0 !important;
+}
+
+mjx-container[display="true"] {
+  margin: 0.08em 0 !important;
+  overflow-x: hidden;
+  overflow-y: visible;
+  max-width: 100%;
+}
+
+@media screen {
+  html {
+    background: #d8d8d8;
+  }
+
+  body {
+    width: 291mm;
+    min-height: 204mm;
+    margin: 0 auto;
+    padding: 3mm;
+    box-shadow: 0 0 0 1px #bbb, 0 8px 28px rgba(0, 0, 0, 0.18);
+  }
+}
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\\\\\\\(', '\\\\\\\\)']],
+    displayMath: [['$$', '$$'], ['\\\\\\\\[', '\\\\\\\\]']],
+    processEscapes: true
+  },
+  svg: {
+    fontCache: 'global',
+    mtextInheritFont: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  }
+};
+<\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg-full.js"><\/script>
+</head>
+<body>
+<script>
+const markdownSource = \`${escapeScriptText(markdown)}\`;
+function renderForPrint() {
+  if (!window.marked) {
+    window.setTimeout(renderForPrint, 50);
+    return;
+  }
+  marked.setOptions({
+    breaks: false,
+    gfm: true,
+    mangle: false,
+    headerIds: false
+  });
+  document.body.innerHTML = marked.parse(markdownSource || '');
+  if (window.MathJax?.typesetPromise) {
+    MathJax.typesetPromise([document.body]);
+  } else {
+    window.setTimeout(renderForPrint, 50);
+  }
+}
+renderForPrint();
+<\/script>
+</body>
+</html>`;
+}
+
+function openPrintPage() {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    alert('浏览器拦截了新窗口，请允许弹出窗口后再打印。');
+    return;
+  }
+  printWindow.document.open();
+  printWindow.document.write(buildPrintDocument(markdownInput.value || '', getPrintSettings()));
+  printWindow.document.close();
+}
+
+function renderMarkdown() {
+  updateSettings();
+  if (!window.marked) {
+    scheduleRender();
+    return;
+  }
+  marked.setOptions({
+    breaks: false,
+    gfm: true,
+    mangle: false,
+    headerIds: false
+  });
+  preview.innerHTML = marked.parse(markdownInput.value || '');
+  if (window.MathJax?.typesetPromise) {
+    MathJax.typesetClear([preview]);
+    MathJax.typesetPromise([preview]);
+  }
+}
+
+function scheduleRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(renderMarkdown, 120);
+}
+
+async function readFiles(files) {
+  const markdownFiles = [...files].filter(file => /\.(md|markdown|txt)$/i.test(file.name));
+  const texts = await Promise.all(markdownFiles.map(file => file.text()));
+  if (texts.length > 0) {
+    markdownInput.value = texts.join('\\n\\n');
+    renderMarkdown();
+  }
+}
+
+fileInput.addEventListener('change', event => {
+  readFiles(event.target.files);
+});
+
+chooseButton.addEventListener('click', () => {
+  fileInput.click();
+});
+
+dropZone.addEventListener('dragover', event => {
+  event.preventDefault();
+  dropZone.classList.add('dragging');
+});
+
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('dragging');
+});
+
+dropZone.addEventListener('drop', event => {
+  event.preventDefault();
+  dropZone.classList.remove('dragging');
+  readFiles(event.dataTransfer.files);
+});
+
+markdownInput.addEventListener('input', scheduleRender);
+Object.values(controls).forEach(control => control.addEventListener('input', scheduleRender));
+renderButton.addEventListener('click', renderMarkdown);
+printButton.addEventListener('click', openPrintPage);
+collapseButton.addEventListener('click', () => setToolbarCollapsed(true));
+expandButton.addEventListener('click', () => setToolbarCollapsed(false));
+clearButton.addEventListener('click', () => {
+  markdownInput.value = '';
+  renderMarkdown();
+});
+
+function makeDraggable() {
+  let startX = 0;
+  let startY = 0;
+  let originX = 0;
+  let originY = 0;
+  let dragging = false;
+
+  toolbarHandle.addEventListener('pointerdown', event => {
+    if (event.target.closest('button')) {
+      return;
+    }
+    dragging = true;
+    startX = event.clientX;
+    startY = event.clientY;
+    const rect = toolbar.getBoundingClientRect();
+    originX = rect.left;
+    originY = rect.top;
+    toolbarHandle.setPointerCapture(event.pointerId);
+  });
+
+  toolbarHandle.addEventListener('pointermove', event => {
+    if (!dragging) {
+      return;
+    }
+    const nextX = Math.max(0, originX + event.clientX - startX);
+    const nextY = Math.max(0, originY + event.clientY - startY);
+    toolbar.style.left = `${nextX}px`;
+    toolbar.style.top = `${nextY}px`;
+  });
+
+  toolbarHandle.addEventListener('pointerup', event => {
+    dragging = false;
+    toolbarHandle.releasePointerCapture(event.pointerId);
+  });
+}
+
+makeDraggable();
+updateUiScale();
+updateSettings();
+window.visualViewport?.addEventListener('resize', updateUiScale);
+window.visualViewport?.addEventListener('scroll', updateUiScale);
+window.addEventListener('resize', updateUiScale);
+window.addEventListener('load', renderMarkdown);
+</script>
+</body>
+</html>
