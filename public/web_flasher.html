@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ESP8266 Web Serial Flasher</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    body {
+      margin: 0;
+      background: #f6f7f9;
+      color: #15171a;
+    }
+
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 18px 48px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 8px 0;
+    }
+
+    .panel {
+      margin-top: 20px;
+      padding: 18px;
+      border: 1px solid #d8dde5;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 12px;
+      align-items: center;
+      margin: 12px 0;
+    }
+
+    label {
+      font-weight: 600;
+    }
+
+    input,
+    select,
+    button {
+      font: inherit;
+    }
+
+    input[type="file"],
+    input[type="text"],
+    select {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    input[type="text"],
+    select {
+      padding: 8px 10px;
+      border: 1px solid #c8ced8;
+      border-radius: 6px;
+      background: #fff;
+      color: inherit;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button {
+      padding: 9px 14px;
+      border: 1px solid #1f5fbf;
+      border-radius: 6px;
+      background: #256bd8;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      border-color: #b9c0cc;
+      background: #fff;
+      color: #15171a;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    progress {
+      width: 100%;
+      height: 14px;
+      margin-top: 14px;
+    }
+
+    pre {
+      min-height: 260px;
+      max-height: 460px;
+      overflow: auto;
+      margin: 16px 0 0;
+      padding: 14px;
+      border-radius: 8px;
+      background: #111827;
+      color: #d1d5db;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+
+    .hint {
+      color: #596273;
+      font-size: 14px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #111418;
+        color: #e8ecf1;
+      }
+
+      .panel {
+        border-color: #2d3542;
+        background: #181d24;
+      }
+
+      input[type="text"],
+      select {
+        border-color: #3a4352;
+        background: #111820;
+      }
+
+      button.secondary {
+        border-color: #3a4352;
+        background: #1f2630;
+        color: #e8ecf1;
+      }
+
+      .hint {
+        color: #a5adba;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>ESP8266 Web Serial Flasher</h1>
+    <p class="hint">选择 PlatformIO 生成的 <code>.pio\build\nodemcuv2\firmware.bin</code>，通过 Chrome/Edge 的 Web Serial 烧录 ESP8266。</p>
+
+    <section class="panel">
+      <div class="row">
+        <label for="firmware">固件文件</label>
+        <input id="firmware" type="file" accept=".bin,application/octet-stream">
+      </div>
+
+      <div class="row">
+        <label for="address">烧录地址</label>
+        <input id="address" type="text" value="0x00000" spellcheck="false">
+      </div>
+
+      <div class="row">
+        <label for="baud">烧录波特率</label>
+        <select id="baud">
+          <option value="921600" selected>921600</option>
+          <option value="460800">460800</option>
+          <option value="230400">230400</option>
+          <option value="115200">115200</option>
+        </select>
+      </div>
+
+      <div class="actions">
+        <button id="connect">选择串口</button>
+        <button id="flash" disabled>烧录固件</button>
+        <button id="disconnect" class="secondary" disabled>断开</button>
+        <button id="clear" class="secondary">清空日志</button>
+      </div>
+
+      <progress id="progress" value="0" max="100"></progress>
+      <pre id="log"></pre>
+    </section>
+
+    <section class="panel">
+      <p><strong>使用步骤</strong></p>
+      <p>1. 先在 PlatformIO 里编译 ESP8266 工程，得到 <code>.pio\build\nodemcuv2\firmware.bin</code>。</p>
+      <p>2. 用 USB 连接 ESP8266。如果自动下载失败，按住 BOOT/FLASH，让 GPIO0 接地后复位进入下载模式。</p>
+      <p>3. 点击“选择串口”，再选择 <code>firmware.bin</code>，点击“烧录固件”。</p>
+    </section>
+  </main>
+
+  <script type="module">
+    import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.5/bundle.js";
+
+    const firmwareInput = document.getElementById("firmware");
+    const addressInput = document.getElementById("address");
+    const baudSelect = document.getElementById("baud");
+    const connectButton = document.getElementById("connect");
+    const flashButton = document.getElementById("flash");
+    const disconnectButton = document.getElementById("disconnect");
+    const clearButton = document.getElementById("clear");
+    const progress = document.getElementById("progress");
+    const logEl = document.getElementById("log");
+
+    let port = null;
+    let transport = null;
+    let loader = null;
+
+    function log(message = "") {
+      logEl.textContent += `${message}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function setBusy(isBusy) {
+      connectButton.disabled = isBusy || Boolean(port);
+      flashButton.disabled = isBusy || !port;
+      disconnectButton.disabled = isBusy || !port;
+      firmwareInput.disabled = isBusy;
+      addressInput.disabled = isBusy;
+      baudSelect.disabled = isBusy;
+    }
+
+    function parseAddress(value) {
+      const trimmed = value.trim();
+      const radix = trimmed.toLowerCase().startsWith("0x") ? 16 : 10;
+      const address = Number.parseInt(trimmed, radix);
+      if (!Number.isFinite(address) || address < 0) {
+        throw new Error(`无效烧录地址: ${value}`);
+      }
+      return address;
+    }
+
+    function assertWebSerial() {
+      if (!("serial" in navigator)) {
+        throw new Error("当前浏览器不支持 Web Serial。请使用 Chrome 或 Edge，并用 http://localhost 或 https 页面打开。");
+      }
+    }
+
+    async function connect() {
+      assertWebSerial();
+      port = await navigator.serial.requestPort({});
+      transport = new Transport(port, true);
+      loader = new ESPLoader({
+        transport,
+        baudrate: Number.parseInt(baudSelect.value, 10),
+        terminal: {
+          clean() {
+            logEl.textContent = "";
+          },
+          writeLine(data) {
+            log(String(data));
+          },
+          write(data) {
+            logEl.textContent += String(data);
+            logEl.scrollTop = logEl.scrollHeight;
+          },
+        },
+      });
+
+      setBusy(false);
+      log("串口已选择。烧录时会尝试同步 ESP8266 bootloader。");
+    }
+
+    async function flash() {
+      if (!loader || !transport) {
+        throw new Error("请先选择串口。");
+      }
+
+      const file = firmwareInput.files && firmwareInput.files[0];
+      if (!file) {
+        throw new Error("请选择 firmware.bin。");
+      }
+
+      const address = parseAddress(addressInput.value);
+      const data = new Uint8Array(await file.arrayBuffer());
+
+      progress.value = 0;
+      setBusy(true);
+
+      try {
+        log(`固件: ${file.name}, ${data.length} bytes`);
+        log(`地址: 0x${address.toString(16)}`);
+        log("同步 bootloader...");
+        const chip = await loader.main();
+        log(`芯片: ${chip}`);
+        log("开始烧录...");
+
+        await loader.writeFlash({
+          fileArray: [{ data, address }],
+          flashSize: "keep",
+          eraseAll: false,
+          compress: true,
+          reportProgress(fileIndex, written, total) {
+            const percent = total > 0 ? Math.round((written / total) * 100) : 0;
+            progress.value = percent;
+          },
+        });
+
+        progress.value = 100;
+        log("烧录完成。请复位 ESP8266。");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function disconnect() {
+      if (transport) {
+        await transport.disconnect();
+      }
+
+      port = null;
+      transport = null;
+      loader = null;
+      progress.value = 0;
+      setBusy(false);
+      log("已断开。");
+    }
+
+    connectButton.addEventListener("click", async () => {
+      try {
+        await connect();
+      } catch (error) {
+        log(`错误: ${error.message || error}`);
+        port = null;
+        transport = null;
+        loader = null;
+        setBusy(false);
+      }
+    });
+
+    flashButton.addEventListener("click", async () => {
+      try {
+        await flash();
+      } catch (error) {
+        log(`错误: ${error.message || error}`);
+        setBusy(false);
+      }
+    });
+
+    disconnectButton.addEventListener("click", async () => {
+      try {
+        await disconnect();
+      } catch (error) {
+        log(`错误: ${error.message || error}`);
+      }
+    });
+
+    clearButton.addEventListener("click", () => {
+      logEl.textContent = "";
+      progress.value = 0;
+    });
+
+    try {
+      assertWebSerial();
+      log("Web Serial 可用。");
+    } catch (error) {
+      log(`错误: ${error.message || error}`);
+      connectButton.disabled = true;
+    }
+  </script>
+</body>
+</html>
