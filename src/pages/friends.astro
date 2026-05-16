@@ -15,12 +15,8 @@ import I18nKey from "@i18n/i18nKey";
     <div
       id="friend-graph"
       class="w-full h-[720px] relative overflow-hidden rounded-xl bg-[var(--card-bg)]"
+      style="-webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 4rem, black calc(100% - 4rem), transparent 100%), linear-gradient(to right, transparent 0%, black 4rem, black calc(100% - 4rem), transparent 100%); -webkit-mask-composite: source-in; mask-image: linear-gradient(to bottom, transparent 0%, black 4rem, black calc(100% - 4rem), transparent 100%), linear-gradient(to right, transparent 0%, black 4rem, black calc(100% - 4rem), transparent 100%); mask-composite: intersect;"
     >
-      <!-- Edge fade overlays -->
-      <div class="pointer-events-none absolute inset-x-0 top-0 h-16" style="background:linear-gradient(to bottom, var(--card-bg), transparent); z-index:3;"></div>
-      <div class="pointer-events-none absolute inset-x-0 bottom-0 h-16" style="background:linear-gradient(to top, var(--card-bg), transparent); z-index:3;"></div>
-      <div class="pointer-events-none absolute inset-y-0 left-0 w-16" style="background:linear-gradient(to right, var(--card-bg), transparent); z-index:3;"></div>
-      <div class="pointer-events-none absolute inset-y-0 right-0 w-16" style="background:linear-gradient(to left, var(--card-bg), transparent); z-index:3;"></div>
     </div>
   </div>
 
