@@ -129,7 +129,8 @@ export const friendsConfig: FriendsConfig = {
 		["Cr", "0x535a"],
 		["Cr", "realtvop"],
 		["skyzhou", "0x535a"],
-		["cgluWxh","0x535a"]
+		["cgluWxh","0x535a"],
+		["skyzhou","小翁同学"]
 	],
 };
 

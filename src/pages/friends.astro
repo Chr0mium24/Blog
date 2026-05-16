@@ -1,10 +1,7 @@
 ---
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { friendsConfig } from "@/config";
 import { i18n } from "@i18n/translation";
 import I18nKey from "@i18n/i18nKey";
-
-const { nodes, connections } = friendsConfig;
 ---
 
 <MainGridLayout title={i18n(I18nKey.friends)}>
@@ -27,8 +24,11 @@ const { nodes, connections } = friendsConfig;
     </div>
   </div>
 
-  <script is:inline src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-  <script is:inline define:vars={{ nodes, connections }}>
+  <script>
+    import * as d3 from "d3";
+    import { friendsConfig } from "@/config";
+
+    const { nodes, connections } = friendsConfig;
     (function () {
       const container = document.getElementById("friend-graph");
       if (!container || typeof d3 === "undefined") return;
