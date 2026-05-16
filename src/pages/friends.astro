@@ -30,7 +30,11 @@ const { nodes, connections } = friendsConfig;
 
       const width = container.clientWidth;
       const height = container.clientHeight;
-      const nodeRadius = 32;
+
+      // Assign per-node radius
+      for (const d of nodes) {
+        d.r = d.id === "Cr" ? 48 : 32;
+      }
 
       // Build link objects
       const linkData = connections.map(([source, target]) => ({
@@ -58,17 +62,17 @@ const { nodes, connections } = friendsConfig;
         .join("div")
         .attr("class", "friend-node")
         .style("position", "absolute")
-        .style("width", nodeRadius * 2 + "px")
+        .style("width", (d) => d.r * 2 + "px")
         .style("transform", "translate(-50%, -50%)")
         .style("cursor", (d) => (d.id === "Cr" ? "default" : "pointer"))
-        .style("z-index", "1")
+        .style("z-index", (d) => (d.id === "Cr" ? "2" : "1"))
         .style("text-align", "center")
         .style("user-select", "none")
         .html(
           (d) => `
           <div class="friend-avatar-wrapper" style="
-            width:${nodeRadius * 2}px;
-            height:${nodeRadius * 2}px;
+            width:${d.r * 2}px;
+            height:${d.r * 2}px;
             border-radius:50%;
             overflow:hidden;
             border:2px solid var(--primary);
@@ -76,14 +80,14 @@ const { nodes, connections } = friendsConfig;
             align-items:center;
             justify-content:center;
             background:var(--card-bg);
-            ${d.id === "Cr" ? "box-shadow:0 0 12px var(--primary);" : ""}
+            ${d.id === "Cr" ? "box-shadow:0 0 16px var(--primary);" : ""}
           ">
             <img
               src="${d.avatar}"
               alt="${d.name}"
-              style="width:100%;height:100%;object-fit:cover;display:block;"
-              crossorigin="anonymous"
-              onerror="this.style.display='none';const p=this.parentElement;p.textContent='${d.name.charAt(0)}';p.style.color='white';p.style.background='var(--primary)';p.style.fontSize='${nodeRadius}px';p.style.fontWeight='bold';"
+              draggable="false"
+              style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;"
+              onerror="this.style.display='none';const p=this.parentElement;p.textContent='${d.name.charAt(0)}';p.style.color='white';p.style.background='var(--primary)';p.style.fontSize='${d.r}px';p.style.fontWeight='bold';"
             />
           </div>
           <div style="margin-top:6px;font-size:12px;color:var(--text-75);white-space:nowrap;">${d.name}</div>
@@ -118,14 +122,14 @@ const { nodes, connections } = friendsConfig;
         const sy = d.source.y;
         const tx = d.target.x;
         const ty = d.target.y;
+        const tr = d.target.r || 32;
         const dx = tx - sx;
         const dy = ty - sy;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist === 0) return { d: `M${sx},${sy}L${sx},${sy}`, points: "" };
         const angle = Math.atan2(dy, dx);
-        // Shorten line to stop at target circle edge
-        const endX = tx - Math.cos(angle) * nodeRadius;
-        const endY = ty - Math.sin(angle) * nodeRadius;
+        const endX = tx - Math.cos(angle) * tr;
+        const endY = ty - Math.sin(angle) * tr;
         const arrowSize = 6;
         const half = Math.PI / 6;
         const ax = endX;
@@ -145,13 +149,13 @@ const { nodes, connections } = friendsConfig;
         .forceSimulation(nodes)
         .force(
           "link",
-          d3.forceLink(linkData).id((d) => d.id).distance(140),
+          d3.forceLink(linkData).id((d) => d.id).distance(160),
         )
         .force("charge", d3.forceManyBody().strength(-500))
         .force("center", d3.forceCenter(width / 2, height / 2))
         .force(
           "collide",
-          d3.forceCollide().radius(nodeRadius + 16).strength(0.7),
+          d3.forceCollide().radius((d) => d.r + 16).strength(0.7),
         );
 
       // Fix Cr at center
