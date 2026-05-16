@@ -95,7 +95,7 @@ const { nodes, connections } = friendsConfig;
               onerror="this.style.display='none';const p=this.parentElement;p.textContent='${d.name.charAt(0)}';p.style.color='white';p.style.background='var(--primary)';p.style.fontSize='${d.r}px';p.style.fontWeight='bold';"
             />
           </div>
-          <div style="margin-top:8px;font-size:14px;color:var(--text-75);white-space:nowrap;">${d.name}</div>
+          <div class="text-90" style="margin-top:8px;font-size:14px;white-space:nowrap;">${d.name}</div>
         `,
         )
         .on("click", (_event, d) => {
