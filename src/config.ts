@@ -116,13 +116,19 @@ export const friendsConfig: FriendsConfig = {
 	],
 	connections: [
 		["realtvop", "skyzhou"],
+		["skyzhou", "realtvop"],
 		["Cr", "skyzhou"],
+		["skyzhou", "Cr"],
 		["小翁同学", "realtvop"],
 		["小翁同学", "cgluWxh"],
+		["cgluWxh", "小翁同学"],
 		["cgluWxh", "skyzhou"],
+		["skyzhou", "cgluWxh"],
 		["Cr", "cgluWxh"],
+		["cgluWxh", "Cr"],
 		["Cr", "0x535a"],
 		["Cr", "realtvop"],
+		["skyzhou", "0x535a"],
 	],
 };
 

@@ -60,7 +60,7 @@ const { nodes, connections } = friendsConfig;
         .style("position", "absolute")
         .style("width", nodeRadius * 2 + "px")
         .style("transform", "translate(-50%, -50%)")
-        .style("cursor", "pointer")
+        .style("cursor", (d) => (d.id === "Cr" ? "default" : "pointer"))
         .style("z-index", "1")
         .style("text-align", "center")
         .style("user-select", "none")
@@ -76,6 +76,7 @@ const { nodes, connections } = friendsConfig;
             align-items:center;
             justify-content:center;
             background:var(--card-bg);
+            ${d.id === "Cr" ? "box-shadow:0 0 12px var(--primary);" : ""}
           ">
             <img
               src="${d.avatar}"
@@ -92,14 +93,52 @@ const { nodes, connections } = friendsConfig;
           window.open(d.url, "_blank", "noopener,noreferrer");
         });
 
-      // Draw links
+      // Draw links as paths (shortened to node edge)
       const links = linkGroup
-        .selectAll("line")
+        .selectAll("path.link-line")
         .data(linkData)
-        .join("line")
+        .join("path")
+        .attr("class", "link-line")
+        .attr("fill", "none")
         .attr("stroke", "var(--primary)")
         .attr("stroke-opacity", 0.4)
         .attr("stroke-width", 1.5);
+
+      // Arrowheads as polygons
+      const arrows = linkGroup
+        .selectAll("polygon.link-arrow")
+        .data(linkData)
+        .join("polygon")
+        .attr("class", "link-arrow")
+        .attr("fill", "var(--primary)")
+        .attr("fill-opacity", 0.6);
+
+      function updateLinkGeometry(d) {
+        const sx = d.source.x;
+        const sy = d.source.y;
+        const tx = d.target.x;
+        const ty = d.target.y;
+        const dx = tx - sx;
+        const dy = ty - sy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist === 0) return { d: `M${sx},${sy}L${sx},${sy}`, points: "" };
+        const angle = Math.atan2(dy, dx);
+        // Shorten line to stop at target circle edge
+        const endX = tx - Math.cos(angle) * nodeRadius;
+        const endY = ty - Math.sin(angle) * nodeRadius;
+        const arrowSize = 6;
+        const half = Math.PI / 6;
+        const ax = endX;
+        const ay = endY;
+        const p1x = ax - arrowSize * Math.cos(angle - half);
+        const p1y = ay - arrowSize * Math.sin(angle - half);
+        const p2x = ax - arrowSize * Math.cos(angle + half);
+        const p2y = ay - arrowSize * Math.sin(angle + half);
+        return {
+          d: `M${sx},${sy}L${endX},${endY}`,
+          points: `${ax},${ay} ${p1x},${p1y} ${p2x},${p2y}`,
+        };
+      }
 
       // Force simulation
       const simulation = d3
@@ -115,17 +154,21 @@ const { nodes, connections } = friendsConfig;
           d3.forceCollide().radius(nodeRadius + 16).strength(0.7),
         );
 
+      // Fix Cr at center
+      const crNode = nodes.find((d) => d.id === "Cr");
+      if (crNode) {
+        crNode.fx = width / 2;
+        crNode.fy = height / 2;
+      }
+
       simulation.on("tick", () => {
-        links
-          .attr("x1", (d) => d.source.x)
-          .attr("y1", (d) => d.source.y)
-          .attr("x2", (d) => d.target.x)
-          .attr("y2", (d) => d.target.y);
+        links.attr("d", (d) => updateLinkGeometry(d).d);
+        arrows.attr("points", (d) => updateLinkGeometry(d).points);
 
         nodeSel.style("left", (d) => d.x + "px").style("top", (d) => d.y + "px");
       });
 
-      // Drag behavior
+      // Drag behavior (skip Cr)
       const drag = d3
         .drag()
         .on("start", (event, d) => {
@@ -143,7 +186,7 @@ const { nodes, connections } = friendsConfig;
           d.fy = null;
         });
 
-      nodeSel.call(drag);
+      nodeSel.filter((d) => d.id !== "Cr").call(drag);
 
       // Resize handler
       const ro = new ResizeObserver((entries) => {
@@ -152,6 +195,10 @@ const { nodes, connections } = friendsConfig;
           const h = entry.contentRect.height;
           svg.attr("width", w).attr("height", h);
           simulation.force("center", d3.forceCenter(w / 2, h / 2));
+          if (crNode) {
+            crNode.fx = w / 2;
+            crNode.fy = h / 2;
+          }
           simulation.alpha(0.3).restart();
         }
       });
