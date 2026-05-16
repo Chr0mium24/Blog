@@ -97,6 +97,15 @@ export type BlogPostData = {
 	nextSlug?: string;
 };
 
-export type ExpressiveCodeConfig = {
-	theme: string;
+export type FriendLink = {
+	id: string;
+	name: string;
+	url: string;
+	avatar: string;
 };
+
+export type FriendsConfig = {
+	nodes: FriendLink[];
+	connections: [string, string][];
+};
+

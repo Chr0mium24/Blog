@@ -29,6 +29,8 @@ enum I18nKey {
 
 	more = "more",
 
+	friends = "friends",
+
 	author = "author",
 	publishedAt = "publishedAt",
 	license = "license",

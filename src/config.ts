@@ -1,5 +1,6 @@
 import type {
 	ExpressiveCodeConfig,
+	FriendsConfig,
 	LicenseConfig,
 	NavBarConfig,
 	ProfileConfig,
@@ -48,11 +49,10 @@ export const navBarConfig: NavBarConfig = {
 			url: "/webpages/",
 			external: false,
 		},
-		//LinkPreset.About,
 		{
-			name: "Skyzhou🥰🥰🥰",
-			url: "https://skyzhou.top", // Internal links should not include the base path, as it is automatically added
-			external: true, // Show an external link icon and will open in a new tab
+			name: "友链",
+			url: "/friends/",
+			external: false,
 		},
 	],
 };
@@ -72,6 +72,57 @@ export const profileConfig: ProfileConfig = {
 			icon: "fa6-brands:github",
 			url: "https://github.com/Chr0mium24",
 		},
+	],
+};
+
+export const friendsConfig: FriendsConfig = {
+	nodes: [
+		{
+			id: "cgluWxh",
+			name: "cgluWxh",
+			url: "https://bilibiili.com/",
+			avatar: "https://bilibiili.com/images/avatar.jpg",
+		},
+		{
+			id: "Cr",
+			name: "Cr",
+			url: "https://chr0mium.link/",
+			avatar: "https://chr0mium.link/_astro/avatar.DkNk_au9_ZK3DBw.webp",
+		},
+		{
+			id: "0x535a",
+			name: "0x535a",
+			url: "https://0x535a.cn/",
+			avatar: "https://gh.0x535a.cn/stephen-zeng/img/master/avatar.webp",
+		},
+		{
+			id: "realtvop",
+			name: "realtvop",
+			url: "https://www.realtvop.top/",
+			avatar: "https://www.realtvop.top/79362411.jpeg",
+		},
+		{
+			id: "小翁同学",
+			name: "小翁同学",
+			url: "https://www.kev1nweng.space/",
+			avatar: "https://www.kev1nweng.space/avatar.jpg",
+		},
+		{
+			id: "skyzhou",
+			name: "skyzhou",
+			url: "https://skyzhou.top",
+			avatar: "https://avatars.githubusercontent.com/u/62292370",
+		},
+	],
+	connections: [
+		["realtvop", "skyzhou"],
+		["Cr", "skyzhou"],
+		["小翁同学", "realtvop"],
+		["小翁同学", "cgluWxh"],
+		["cgluWxh", "skyzhou"],
+		["Cr", "cgluWxh"],
+		["Cr", "0x535a"],
+		["Cr", "realtvop"],
 	],
 };
 
