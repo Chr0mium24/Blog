@@ -47,5 +47,7 @@ category: 经验
 
 * [svg代码编辑器](https://www.svgviewer.dev/)
 
+* [svg可视化编辑器](https://boxy-svg.com/app)
+
 * [在线illustrator，有钢笔工具](https://www.vectorpea.com/)
 
