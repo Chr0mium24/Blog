@@ -58,7 +58,7 @@
 
       .readout {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 8px;
       }
 
@@ -140,6 +140,10 @@
           width: calc(100vw - 20px);
         }
 
+        .readout {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .badge {
           right: 10px;
           bottom: 10px;
@@ -162,6 +166,8 @@
         <div><span>A 点</span><b id="pointA">--</b></div>
         <div><span>B 点</span><b id="pointB">--</b></div>
         <div><span>长度</span><b id="distance">-- cm</b></div>
+        <div><span>水平夹角</span><b id="horizontalAngle">--</b></div>
+        <div><span>竖直夹角</span><b id="verticalAngle">--</b></div>
       </div>
       <div class="actions">
         <button id="resetMeasure" type="button">重置</button>
@@ -216,6 +222,8 @@
       const pointAEl = document.querySelector("#pointA");
       const pointBEl = document.querySelector("#pointB");
       const distanceEl = document.querySelector("#distance");
+      const horizontalAngleEl = document.querySelector("#horizontalAngle");
+      const verticalAngleEl = document.querySelector("#verticalAngle");
       const resetButton = document.querySelector("#resetMeasure");
       const topViewButton = document.querySelector("#topView");
 
@@ -541,11 +549,19 @@
         measureLabel = null;
         if (picked.length < 2) {
           distanceEl.textContent = "-- cm";
+          horizontalAngleEl.textContent = "--";
+          verticalAngleEl.textContent = "--";
           return;
         }
 
         const distance = picked[0].distanceTo(picked[1]);
+        const dx = picked[1].x - picked[0].x;
+        const dz = picked[1].z - picked[0].z;
+        const horizontalAngle = THREE.MathUtils.radToDeg(Math.atan2(Math.abs(dz), Math.abs(dx)));
+        const verticalAngle = 90 - horizontalAngle;
         distanceEl.textContent = `${distance.toFixed(1)} cm`;
+        horizontalAngleEl.textContent = `${horizontalAngle.toFixed(1)}°`;
+        verticalAngleEl.textContent = `${verticalAngle.toFixed(1)}°`;
         measureLine = new THREE.Line(
           new THREE.BufferGeometry().setFromPoints([picked[0].clone().setY(1.1), picked[1].clone().setY(1.1)]),
           new THREE.LineBasicMaterial({ color: 0xdc2626 }),
