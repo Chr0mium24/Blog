@@ -1,0 +1,996 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>手机 PnP 路标定位</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB",
+          system-ui, sans-serif;
+        background: #101419;
+        color: #f6f8fb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #101419;
+      }
+
+      body {
+        min-width: 320px;
+      }
+
+      video,
+      canvas {
+        position: fixed;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      video {
+        background: #101419;
+      }
+
+      canvas {
+        pointer-events: none;
+      }
+
+      .panel {
+        position: fixed;
+        z-index: 10;
+        display: grid;
+        gap: 10px;
+        width: min(390px, calc(100vw - 24px));
+        padding: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 8px;
+        background: rgba(15, 20, 26, 0.78);
+        box-shadow: 0 14px 38px rgba(0, 0, 0, 0.36);
+        backdrop-filter: blur(14px);
+      }
+
+      .panel--pose {
+        top: 12px;
+        left: 12px;
+      }
+
+      .panel--controls {
+        right: 12px;
+        bottom: 12px;
+      }
+
+      .head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .head strong {
+        font-size: 14px;
+        line-height: 18px;
+      }
+
+      .pill {
+        min-width: 66px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(214, 69, 58, 0.2);
+        color: #ffb5ae;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 14px;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .pill[data-lock="1"] {
+        background: rgba(38, 163, 110, 0.22);
+        color: #9af0c8;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .metric {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+        padding: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .metric span,
+      label,
+      .status {
+        color: rgba(246, 248, 251, 0.68);
+        font-size: 11px;
+        font-weight: 750;
+        line-height: 15px;
+      }
+
+      .metric b {
+        overflow: hidden;
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 850;
+        line-height: 17px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+      }
+
+      button,
+      input {
+        min-width: 0;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        font: inherit;
+      }
+
+      button {
+        height: 34px;
+        padding: 0 10px;
+        background: #1f7aef;
+        font-size: 12px;
+        font-weight: 850;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.52;
+      }
+
+      .form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      label {
+        display: grid;
+        gap: 5px;
+      }
+
+      input[type="number"] {
+        height: 31px;
+        padding: 0 8px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: #1f7aef;
+      }
+
+      .range-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .status {
+        min-height: 30px;
+        color: rgba(246, 248, 251, 0.78);
+      }
+
+      @media (max-width: 720px) {
+        .panel {
+          width: calc(100vw - 20px);
+        }
+
+        .panel--pose {
+          top: 10px;
+          left: 10px;
+        }
+
+        .panel--controls {
+          right: 10px;
+          bottom: 10px;
+        }
+
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .panel--controls {
+          gap: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="overlay"></canvas>
+
+    <section class="panel panel--pose" aria-label="PnP 定位数据">
+      <div class="head">
+        <strong>手机 PnP 定位</strong>
+        <span id="lockPill" class="pill" data-lock="0">未锁定</span>
+      </div>
+      <div class="grid">
+        <div class="metric"><span>局部 X</span><b id="localX">--</b></div>
+        <div class="metric"><span>距离 Z</span><b id="localZ">--</b></div>
+        <div class="metric"><span>高度 Y</span><b id="localY">--</b></div>
+        <div class="metric"><span>场地 X</span><b id="fieldX">--</b></div>
+        <div class="metric"><span>场地 Y</span><b id="fieldY">--</b></div>
+        <div class="metric"><span>偏角</span><b id="bearing">--</b></div>
+      </div>
+      <div class="grid">
+        <div class="metric"><span>重投影</span><b id="reprojection">--</b></div>
+        <div class="metric"><span>置信</span><b id="confidence">--</b></div>
+        <div class="metric"><span>帧率</span><b id="fps">--</b></div>
+      </div>
+      <div id="status" class="status">等待启动相机。</div>
+    </section>
+
+    <section class="panel panel--controls" aria-label="PnP 参数">
+      <div class="actions">
+        <button id="startButton" type="button">启动</button>
+        <button id="switchButton" class="secondary" type="button" disabled>切换</button>
+        <button id="stopButton" class="secondary" type="button" disabled>停止</button>
+      </div>
+      <div class="form">
+        <label>
+          路标宽 cm
+          <input id="markerWidth" type="number" min="1" step="0.1" value="21" />
+        </label>
+        <label>
+          路标高 cm
+          <input id="markerHeight" type="number" min="1" step="0.1" value="29.7" />
+        </label>
+        <label>
+          路标 X cm
+          <input id="markerFieldX" type="number" step="1" value="105" />
+        </label>
+        <label>
+          路标 Y cm
+          <input id="markerFieldY" type="number" step="1" value="210" />
+        </label>
+        <label>
+          法线角 deg
+          <input id="markerHeading" type="number" step="1" value="-90" />
+        </label>
+        <label>
+          分析宽 px
+          <input id="analysisWidth" type="number" min="240" max="960" step="40" value="520" />
+        </label>
+      </div>
+      <label>
+        <span class="range-head"><span>水平 FOV</span><b id="fovValue">68 deg</b></span>
+        <input id="fov" type="range" min="45" max="90" step="1" value="68" />
+      </label>
+      <label>
+        <span class="range-head"><span>黑色阈值</span><b id="thresholdValue">88</b></span>
+        <input id="threshold" type="range" min="35" max="150" step="1" value="88" />
+      </label>
+    </section>
+
+    <script>
+      const video = document.querySelector("#video");
+      const overlay = document.querySelector("#overlay");
+      const overlayContext = overlay.getContext("2d");
+      const analysisCanvas = document.createElement("canvas");
+      const analysisContext = analysisCanvas.getContext("2d", { willReadFrequently: true });
+
+      const elements = {
+        startButton: document.querySelector("#startButton"),
+        switchButton: document.querySelector("#switchButton"),
+        stopButton: document.querySelector("#stopButton"),
+        lockPill: document.querySelector("#lockPill"),
+        localX: document.querySelector("#localX"),
+        localY: document.querySelector("#localY"),
+        localZ: document.querySelector("#localZ"),
+        fieldX: document.querySelector("#fieldX"),
+        fieldY: document.querySelector("#fieldY"),
+        bearing: document.querySelector("#bearing"),
+        reprojection: document.querySelector("#reprojection"),
+        confidence: document.querySelector("#confidence"),
+        fps: document.querySelector("#fps"),
+        status: document.querySelector("#status"),
+        markerWidth: document.querySelector("#markerWidth"),
+        markerHeight: document.querySelector("#markerHeight"),
+        markerFieldX: document.querySelector("#markerFieldX"),
+        markerFieldY: document.querySelector("#markerFieldY"),
+        markerHeading: document.querySelector("#markerHeading"),
+        analysisWidth: document.querySelector("#analysisWidth"),
+        fov: document.querySelector("#fov"),
+        threshold: document.querySelector("#threshold"),
+        fovValue: document.querySelector("#fovValue"),
+        thresholdValue: document.querySelector("#thresholdValue"),
+      };
+
+      const state = {
+        stream: null,
+        running: false,
+        facingMode: "environment",
+        lastProcessMs: 0,
+        lastFrameMs: 0,
+        fps: 0,
+        marker: null,
+        pose: null,
+      };
+
+      function setStatus(text) {
+        elements.status.textContent = text;
+      }
+
+      function setLock(locked) {
+        elements.lockPill.dataset.lock = locked ? "1" : "0";
+        elements.lockPill.textContent = locked ? "已锁定" : "未锁定";
+      }
+
+      function numberInput(input, fallback) {
+        const value = Number(input.value);
+        return Number.isFinite(value) ? value : fallback;
+      }
+
+      function formatCm(value) {
+        return Number.isFinite(value) ? `${value.toFixed(1)} cm` : "--";
+      }
+
+      function formatDeg(value) {
+        return Number.isFinite(value) ? `${value.toFixed(1)} deg` : "--";
+      }
+
+      function updateRangeLabels() {
+        elements.fovValue.textContent = `${elements.fov.value} deg`;
+        elements.thresholdValue.textContent = elements.threshold.value;
+      }
+
+      function clearPose() {
+        state.marker = null;
+        state.pose = null;
+        setLock(false);
+        for (const key of [
+          "localX",
+          "localY",
+          "localZ",
+          "fieldX",
+          "fieldY",
+          "bearing",
+          "reprojection",
+          "confidence",
+        ]) {
+          elements[key].textContent = "--";
+        }
+      }
+
+      async function startCamera() {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setStatus("当前浏览器没有开放 getUserMedia。");
+          return;
+        }
+        if (!window.isSecureContext) {
+          setStatus("手机浏览器通常需要 HTTPS；localhost 只适合在本机测试。");
+        }
+
+        await stopCamera();
+        const constraints = {
+          audio: false,
+          video: {
+            facingMode: { ideal: state.facingMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        };
+
+        try {
+          state.stream = await navigator.mediaDevices.getUserMedia(constraints);
+          video.srcObject = state.stream;
+          await video.play();
+          state.running = true;
+          state.lastProcessMs = 0;
+          elements.startButton.disabled = true;
+          elements.switchButton.disabled = false;
+          elements.stopButton.disabled = false;
+          setStatus("相机已启动，正在寻找 A4 黑框。");
+          requestAnimationFrame(loop);
+        } catch (error) {
+          setStatus(`相机启动失败：${error.name || error.message}`);
+          clearPose();
+        }
+      }
+
+      async function stopCamera() {
+        state.running = false;
+        if (state.stream) {
+          for (const track of state.stream.getTracks()) {
+            track.stop();
+          }
+        }
+        state.stream = null;
+        video.srcObject = null;
+        elements.startButton.disabled = false;
+        elements.switchButton.disabled = true;
+        elements.stopButton.disabled = true;
+        clearPose();
+        drawOverlay();
+      }
+
+      async function switchCamera() {
+        state.facingMode = state.facingMode === "environment" ? "user" : "environment";
+        await startCamera();
+      }
+
+      function resizeOverlay() {
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        const width = Math.max(1, Math.round(window.innerWidth * ratio));
+        const height = Math.max(1, Math.round(window.innerHeight * ratio));
+        if (overlay.width !== width || overlay.height !== height) {
+          overlay.width = width;
+          overlay.height = height;
+          overlayContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+        }
+      }
+
+      function loop(now) {
+        if (!state.running) {
+          return;
+        }
+
+        updateFps(now);
+        if (video.readyState >= 2 && now - state.lastProcessMs > 70) {
+          processFrame(now);
+          state.lastProcessMs = now;
+        }
+        drawOverlay();
+        requestAnimationFrame(loop);
+      }
+
+      function updateFps(now) {
+        if (state.lastFrameMs > 0) {
+          const instant = 1000 / Math.max(1, now - state.lastFrameMs);
+          state.fps = state.fps ? state.fps * 0.88 + instant * 0.12 : instant;
+          elements.fps.textContent = state.fps.toFixed(0);
+        }
+        state.lastFrameMs = now;
+      }
+
+      function processFrame(now) {
+        const sourceWidth = video.videoWidth;
+        const sourceHeight = video.videoHeight;
+        if (!sourceWidth || !sourceHeight) {
+          return;
+        }
+
+        const targetWidth = Math.min(
+          Math.max(240, numberInput(elements.analysisWidth, 520)),
+          sourceWidth,
+        );
+        const targetHeight = Math.round((sourceHeight / sourceWidth) * targetWidth);
+        if (analysisCanvas.width !== targetWidth || analysisCanvas.height !== targetHeight) {
+          analysisCanvas.width = targetWidth;
+          analysisCanvas.height = targetHeight;
+        }
+
+        analysisContext.drawImage(video, 0, 0, targetWidth, targetHeight);
+        const imageData = analysisContext.getImageData(0, 0, targetWidth, targetHeight);
+        const marker = detectMarker(
+          imageData,
+          targetWidth,
+          targetHeight,
+          numberInput(elements.threshold, 88),
+        );
+
+        if (!marker) {
+          state.marker = null;
+          state.pose = null;
+          setLock(false);
+          setStatus("未找到稳定黑框。");
+          return;
+        }
+
+        const pose = solveMarkerPose(marker.corners, targetWidth, targetHeight);
+        if (!pose || pose.reprojectionError > 18) {
+          state.marker = marker;
+          state.pose = null;
+          setLock(false);
+          setStatus("已看到黑框，但 PnP 解算不稳定。");
+          return;
+        }
+
+        state.marker = marker;
+        state.pose = pose;
+        setLock(true);
+        updatePoseReadout(marker, pose);
+        setStatus(`锁定 A4 黑框，画面延迟 ${Math.round(performance.now() - now)} ms。`);
+      }
+
+      function detectMarker(imageData, width, height, threshold) {
+        const pixels = imageData.data;
+        const total = width * height;
+        const dark = new Uint8Array(total);
+        const visited = new Uint8Array(total);
+        const queue = new Int32Array(total);
+        const minPixels = Math.max(90, total * 0.0009);
+        let best = null;
+
+        for (let index = 0, pixel = 0; index < total; index += 1, pixel += 4) {
+          const r = pixels[pixel];
+          const g = pixels[pixel + 1];
+          const b = pixels[pixel + 2];
+          const gray = (r * 77 + g * 150 + b * 29) >> 8;
+          dark[index] = gray < threshold && r < 170 && g < 170 && b < 170 ? 1 : 0;
+        }
+
+        for (let start = 0; start < total; start += 1) {
+          if (!dark[start] || visited[start]) {
+            continue;
+          }
+
+          let head = 0;
+          let tail = 0;
+          let count = 0;
+          let minX = width;
+          let minY = height;
+          let maxX = 0;
+          let maxY = 0;
+          let minSum = Infinity;
+          let maxSum = -Infinity;
+          let minDiff = Infinity;
+          let maxDiff = -Infinity;
+          let topLeft = null;
+          let topRight = null;
+          let bottomRight = null;
+          let bottomLeft = null;
+
+          queue[tail] = start;
+          tail += 1;
+          visited[start] = 1;
+
+          while (head < tail) {
+            const index = queue[head];
+            head += 1;
+            count += 1;
+
+            const x = index % width;
+            const y = (index - x) / width;
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+
+            const sum = x + y;
+            const diff = x - y;
+            if (sum < minSum) {
+              minSum = sum;
+              topLeft = { x, y };
+            }
+            if (diff > maxDiff) {
+              maxDiff = diff;
+              topRight = { x, y };
+            }
+            if (sum > maxSum) {
+              maxSum = sum;
+              bottomRight = { x, y };
+            }
+            if (diff < minDiff) {
+              minDiff = diff;
+              bottomLeft = { x, y };
+            }
+
+            const left = index - 1;
+            const right = index + 1;
+            const up = index - width;
+            const down = index + width;
+            if (x > 0 && dark[left] && !visited[left]) {
+              visited[left] = 1;
+              queue[tail] = left;
+              tail += 1;
+            }
+            if (x < width - 1 && dark[right] && !visited[right]) {
+              visited[right] = 1;
+              queue[tail] = right;
+              tail += 1;
+            }
+            if (y > 0 && dark[up] && !visited[up]) {
+              visited[up] = 1;
+              queue[tail] = up;
+              tail += 1;
+            }
+            if (y < height - 1 && dark[down] && !visited[down]) {
+              visited[down] = 1;
+              queue[tail] = down;
+              tail += 1;
+            }
+          }
+
+          if (count < minPixels || !topLeft || !topRight || !bottomRight || !bottomLeft) {
+            continue;
+          }
+
+          const corners = [topLeft, topRight, bottomRight, bottomLeft];
+          const polygonArea = Math.abs(areaOf(corners));
+          const bboxArea = Math.max(1, (maxX - minX + 1) * (maxY - minY + 1));
+          const areaRatio = polygonArea / total;
+          const top = distance(topLeft, topRight);
+          const right = distance(topRight, bottomRight);
+          const bottom = distance(bottomRight, bottomLeft);
+          const leftSide = distance(bottomLeft, topLeft);
+          const avgWidth = (top + bottom) / 2;
+          const avgHeight = (leftSide + right) / 2;
+          const minEdge = Math.min(top, right, bottom, leftSide);
+          const aspect = Math.max(avgWidth, avgHeight) / Math.max(1, Math.min(avgWidth, avgHeight));
+          const targetAspect = numberInput(elements.markerHeight, 29.7) / Math.max(1, numberInput(elements.markerWidth, 21));
+          const aspectScore = Math.max(0, 1 - Math.abs(aspect - targetAspect) / 0.85);
+          const fillRatio = count / bboxArea;
+
+          if (
+            areaRatio < 0.012 ||
+            areaRatio > 0.86 ||
+            minEdge < 28 ||
+            aspect < 1.05 ||
+            aspect > 2.35 ||
+            fillRatio > 0.82
+          ) {
+            continue;
+          }
+
+          const score = count * (0.35 + aspectScore) + polygonArea * 0.035;
+          if (!best || score > best.score) {
+            best = {
+              corners,
+              score,
+              area: polygonArea,
+              pixels: count,
+              confidence: Math.max(0, Math.min(1, 0.35 + aspectScore * 0.45 + Math.min(areaRatio, 0.2))),
+            };
+          }
+        }
+
+        return best;
+      }
+
+      function solveMarkerPose(corners, imageWidth, imageHeight) {
+        const markerWidth = Math.max(1, numberInput(elements.markerWidth, 21));
+        const markerHeight = Math.max(1, numberInput(elements.markerHeight, 29.7));
+        const objectPoints = [
+          { x: -markerWidth / 2, y: markerHeight / 2 },
+          { x: markerWidth / 2, y: markerHeight / 2 },
+          { x: markerWidth / 2, y: -markerHeight / 2 },
+          { x: -markerWidth / 2, y: -markerHeight / 2 },
+        ];
+        const homography = solveHomography(objectPoints, corners);
+        if (!homography) {
+          return null;
+        }
+
+        const fov = (Math.PI / 180) * Math.max(1, numberInput(elements.fov, 68));
+        const fx = imageWidth / 2 / Math.tan(fov / 2);
+        const fy = fx;
+        const cx = imageWidth / 2;
+        const cy = imageHeight / 2;
+
+        const b1 = [
+          (homography[0] - cx * homography[6]) / fx,
+          (homography[3] - cy * homography[6]) / fy,
+          homography[6],
+        ];
+        const b2 = [
+          (homography[1] - cx * homography[7]) / fx,
+          (homography[4] - cy * homography[7]) / fy,
+          homography[7],
+        ];
+        const b3 = [
+          (homography[2] - cx) / fx,
+          (homography[5] - cy) / fy,
+          1,
+        ];
+        let scale = 2 / (norm(b1) + norm(b2));
+        let r1 = multiplyVector(b1, scale);
+        let r2 = multiplyVector(b2, scale);
+        let t = multiplyVector(b3, scale);
+
+        if (t[2] < 0) {
+          scale = -scale;
+          r1 = multiplyVector(b1, scale);
+          r2 = multiplyVector(b2, scale);
+          t = multiplyVector(b3, scale);
+        }
+
+        r1 = normalize(r1);
+        r2 = normalize(subtractVector(r2, multiplyVector(r1, dot(r1, r2))));
+        const r3 = normalize(cross(r1, r2));
+        const camera = [-dot(r1, t), -dot(r2, t), -dot(r3, t)];
+
+        const reprojectionError = meanReprojectionError(objectPoints, corners, {
+          r1,
+          r2,
+          r3,
+          t,
+          fx,
+          fy,
+          cx,
+          cy,
+        });
+
+        return {
+          r1,
+          r2,
+          r3,
+          t,
+          fx,
+          fy,
+          cx,
+          cy,
+          camera,
+          reprojectionError,
+          bearingDeg: (Math.atan2(camera[0], camera[2]) * 180) / Math.PI,
+          planarDistance: Math.hypot(camera[0], camera[2]),
+        };
+      }
+
+      function solveHomography(objectPoints, imagePoints) {
+        const matrix = [];
+        const values = [];
+        for (let index = 0; index < 4; index += 1) {
+          const object = objectPoints[index];
+          const image = imagePoints[index];
+          const x = object.x;
+          const y = object.y;
+          const u = image.x;
+          const v = image.y;
+          matrix.push([x, y, 1, 0, 0, 0, -u * x, -u * y]);
+          values.push(u);
+          matrix.push([0, 0, 0, x, y, 1, -v * x, -v * y]);
+          values.push(v);
+        }
+        const solution = solveLinearSystem(matrix, values);
+        if (!solution) {
+          return null;
+        }
+        return [...solution, 1];
+      }
+
+      function solveLinearSystem(matrix, values) {
+        const size = values.length;
+        const augmented = matrix.map((row, index) => [...row, values[index]]);
+        for (let column = 0; column < size; column += 1) {
+          let pivot = column;
+          for (let row = column + 1; row < size; row += 1) {
+            if (Math.abs(augmented[row][column]) > Math.abs(augmented[pivot][column])) {
+              pivot = row;
+            }
+          }
+          if (Math.abs(augmented[pivot][column]) < 1e-9) {
+            return null;
+          }
+          if (pivot !== column) {
+            [augmented[column], augmented[pivot]] = [augmented[pivot], augmented[column]];
+          }
+
+          const pivotValue = augmented[column][column];
+          for (let item = column; item <= size; item += 1) {
+            augmented[column][item] /= pivotValue;
+          }
+
+          for (let row = 0; row < size; row += 1) {
+            if (row === column) {
+              continue;
+            }
+            const factor = augmented[row][column];
+            for (let item = column; item <= size; item += 1) {
+              augmented[row][item] -= factor * augmented[column][item];
+            }
+          }
+        }
+
+        return augmented.map((row) => row[size]);
+      }
+
+      function meanReprojectionError(objectPoints, imagePoints, pose) {
+        let total = 0;
+        for (let index = 0; index < objectPoints.length; index += 1) {
+          const projected = projectObjectPoint([objectPoints[index].x, objectPoints[index].y, 0], pose);
+          total += distance(projected, imagePoints[index]);
+        }
+        return total / objectPoints.length;
+      }
+
+      function projectObjectPoint(point, pose) {
+        const cameraX = pose.r1[0] * point[0] + pose.r2[0] * point[1] + pose.r3[0] * point[2] + pose.t[0];
+        const cameraY = pose.r1[1] * point[0] + pose.r2[1] * point[1] + pose.r3[1] * point[2] + pose.t[1];
+        const cameraZ = pose.r1[2] * point[0] + pose.r2[2] * point[1] + pose.r3[2] * point[2] + pose.t[2];
+        return {
+          x: pose.fx * (cameraX / cameraZ) + pose.cx,
+          y: pose.fy * (cameraY / cameraZ) + pose.cy,
+        };
+      }
+
+      function updatePoseReadout(marker, pose) {
+        const camera = pose.camera;
+        const field = localToField(camera[0], camera[2]);
+        elements.localX.textContent = formatCm(camera[0]);
+        elements.localZ.textContent = formatCm(camera[2]);
+        elements.localY.textContent = formatCm(camera[1]);
+        elements.fieldX.textContent = formatCm(field.x);
+        elements.fieldY.textContent = formatCm(field.y);
+        elements.bearing.textContent = formatDeg(pose.bearingDeg);
+        elements.reprojection.textContent = `${pose.reprojectionError.toFixed(1)} px`;
+        elements.confidence.textContent = `${Math.round(marker.confidence * 100)}%`;
+      }
+
+      function localToField(localX, localZ) {
+        const markerX = numberInput(elements.markerFieldX, 105);
+        const markerY = numberInput(elements.markerFieldY, 210);
+        const angle = (Math.PI / 180) * numberInput(elements.markerHeading, -90);
+        const normal = { x: Math.cos(angle), y: Math.sin(angle) };
+        const right = { x: Math.sin(angle), y: -Math.cos(angle) };
+        return {
+          x: markerX + localX * right.x + localZ * normal.x,
+          y: markerY + localX * right.y + localZ * normal.y,
+        };
+      }
+
+      function drawOverlay() {
+        resizeOverlay();
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        overlayContext.clearRect(0, 0, width, height);
+
+        if (!state.marker) {
+          return;
+        }
+
+        const corners = state.marker.corners.map(videoPointToOverlayPoint);
+        overlayContext.lineWidth = 3;
+        overlayContext.strokeStyle = state.pose ? "#57f0a2" : "#ffcc66";
+        overlayContext.fillStyle = "rgba(87, 240, 162, 0.16)";
+        overlayContext.beginPath();
+        overlayContext.moveTo(corners[0].x, corners[0].y);
+        for (let index = 1; index < corners.length; index += 1) {
+          overlayContext.lineTo(corners[index].x, corners[index].y);
+        }
+        overlayContext.closePath();
+        overlayContext.fill();
+        overlayContext.stroke();
+
+        const center = corners.reduce(
+          (acc, point) => ({ x: acc.x + point.x / 4, y: acc.y + point.y / 4 }),
+          { x: 0, y: 0 },
+        );
+        overlayContext.strokeStyle = "#ffffff";
+        overlayContext.lineWidth = 2;
+        overlayContext.beginPath();
+        overlayContext.moveTo(center.x - 12, center.y);
+        overlayContext.lineTo(center.x + 12, center.y);
+        overlayContext.moveTo(center.x, center.y - 12);
+        overlayContext.lineTo(center.x, center.y + 12);
+        overlayContext.stroke();
+
+        corners.forEach((point, index) => {
+          overlayContext.fillStyle = index === 0 ? "#57f0a2" : "#ffffff";
+          overlayContext.beginPath();
+          overlayContext.arc(point.x, point.y, 5, 0, Math.PI * 2);
+          overlayContext.fill();
+        });
+
+        if (state.pose) {
+          drawAxis(state.pose);
+        }
+      }
+
+      function drawAxis(pose) {
+        const markerWidth = Math.max(1, numberInput(elements.markerWidth, 21));
+        const axisLength = markerWidth * 0.33;
+        const origin = videoPointToOverlayPoint(projectObjectPoint([0, 0, 0], pose));
+        const right = videoPointToOverlayPoint(projectObjectPoint([axisLength, 0, 0], pose));
+        const up = videoPointToOverlayPoint(projectObjectPoint([0, axisLength, 0], pose));
+        drawAxisLine(origin, right, "#ff675f");
+        drawAxisLine(origin, up, "#57f0a2");
+      }
+
+      function drawAxisLine(start, end, color) {
+        overlayContext.strokeStyle = color;
+        overlayContext.lineWidth = 4;
+        overlayContext.beginPath();
+        overlayContext.moveTo(start.x, start.y);
+        overlayContext.lineTo(end.x, end.y);
+        overlayContext.stroke();
+      }
+
+      function videoPointToOverlayPoint(point) {
+        const sourceWidth = Math.max(1, analysisCanvas.width);
+        const sourceHeight = Math.max(1, analysisCanvas.height);
+        const targetWidth = window.innerWidth;
+        const targetHeight = window.innerHeight;
+        const scale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
+        const offsetX = (targetWidth - sourceWidth * scale) / 2;
+        const offsetY = (targetHeight - sourceHeight * scale) / 2;
+        return {
+          x: offsetX + point.x * scale,
+          y: offsetY + point.y * scale,
+        };
+      }
+
+      function areaOf(points) {
+        let area = 0;
+        for (let index = 0; index < points.length; index += 1) {
+          const current = points[index];
+          const next = points[(index + 1) % points.length];
+          area += current.x * next.y - next.x * current.y;
+        }
+        return area / 2;
+      }
+
+      function distance(a, b) {
+        return Math.hypot(a.x - b.x, a.y - b.y);
+      }
+
+      function dot(a, b) {
+        return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+      }
+
+      function norm(vector) {
+        return Math.hypot(vector[0], vector[1], vector[2]);
+      }
+
+      function normalize(vector) {
+        const length = norm(vector) || 1;
+        return [vector[0] / length, vector[1] / length, vector[2] / length];
+      }
+
+      function multiplyVector(vector, scalar) {
+        return [vector[0] * scalar, vector[1] * scalar, vector[2] * scalar];
+      }
+
+      function subtractVector(a, b) {
+        return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+      }
+
+      function cross(a, b) {
+        return [
+          a[1] * b[2] - a[2] * b[1],
+          a[2] * b[0] - a[0] * b[2],
+          a[0] * b[1] - a[1] * b[0],
+        ];
+      }
+
+      elements.startButton.addEventListener("click", startCamera);
+      elements.switchButton.addEventListener("click", switchCamera);
+      elements.stopButton.addEventListener("click", stopCamera);
+      elements.fov.addEventListener("input", updateRangeLabels);
+      elements.threshold.addEventListener("input", updateRangeLabels);
+      window.addEventListener("resize", drawOverlay);
+
+      updateRangeLabels();
+      clearPose();
+      if (!window.isSecureContext) {
+        setStatus("提示：手机打开相机通常需要 HTTPS。");
+      }
+    </script>
+  </body>
+</html>
