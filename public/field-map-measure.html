@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>210cm 场地测距地图</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+        background: #f4f7f9;
+        color: #17212b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+
+      .panel,
+      .badge {
+        position: fixed;
+        z-index: 5;
+        border: 1px solid rgba(23, 33, 43, 0.14);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.86);
+        box-shadow: 0 12px 28px rgba(24, 39, 57, 0.15);
+        backdrop-filter: blur(12px);
+      }
+
+      .panel {
+        top: 16px;
+        left: 16px;
+        display: grid;
+        gap: 10px;
+        width: min(360px, calc(100vw - 32px));
+        padding: 12px;
+      }
+
+      .panel strong {
+        font-size: 14px;
+        line-height: 18px;
+      }
+
+      .readout {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .readout div {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+        padding: 8px;
+        border: 1px solid rgba(23, 33, 43, 0.1);
+        border-radius: 6px;
+        background: rgba(246, 249, 250, 0.9);
+      }
+
+      .readout span,
+      .hint {
+        color: #627282;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 15px;
+      }
+
+      .readout b {
+        overflow: hidden;
+        color: #17212b;
+        font-size: 12px;
+        line-height: 16px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      button {
+        height: 32px;
+        padding: 0 12px;
+        border: 1px solid rgba(23, 33, 43, 0.16);
+        border-radius: 6px;
+        background: #17212b;
+        color: #ffffff;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: #ffffff;
+        color: #17212b;
+      }
+
+      .badge {
+        right: 16px;
+        bottom: 16px;
+        display: grid;
+        gap: 3px;
+        min-width: 164px;
+        padding: 10px 12px;
+      }
+
+      .badge strong {
+        font-size: 13px;
+        line-height: 18px;
+      }
+
+      .badge span {
+        color: #627282;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 15px;
+      }
+
+      @media (max-width: 720px) {
+        .panel {
+          top: 10px;
+          left: 10px;
+          width: calc(100vw - 20px);
+        }
+
+        .badge {
+          right: 10px;
+          bottom: 10px;
+        }
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.184.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <section class="panel" aria-label="测距面板">
+      <strong>点击场地两个点测量长度</strong>
+      <div class="readout">
+        <div><span>A 点</span><b id="pointA">--</b></div>
+        <div><span>B 点</span><b id="pointB">--</b></div>
+        <div><span>长度</span><b id="distance">-- cm</b></div>
+      </div>
+      <div class="actions">
+        <button id="resetMeasure" type="button">重置</button>
+        <button id="topView" class="secondary" type="button">俯视</button>
+      </div>
+      <span class="hint">拖拽旋转，滚轮缩放；第三次点击会重新开始一条测量线。</span>
+    </section>
+    <aside class="badge"><strong>210cm x 210cm</strong><span>打靶小车场地</span></aside>
+
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+      const FIELD_SIZE = 210;
+      const HALF_FIELD = FIELD_SIZE / 2;
+      const PRINT_BLACK = 0x151515;
+      const DASH_BLACK = 0x252525;
+      const CREASE_GRAY = 0xd7dbd8;
+      const INK = "#14202b";
+      const ORANGE = 0xff7a1a;
+      const MAT_THICKNESS = 0.12;
+      const MAT_TOP_Y = 0.02;
+      const OBSTACLE_POINTS = [
+        { x: 67, y: 124 },
+        { x: 108, y: 134 },
+        { x: 147, y: 119 },
+        { x: FIELD_SIZE - 21, y: 127 },
+      ];
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xf4f7f9);
+
+      const camera = new THREE.PerspectiveCamera(43, window.innerWidth / window.innerHeight, 0.1, 1600);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+      controls.target.set(0, 0, 0);
+      controls.minDistance = 60;
+      controls.maxDistance = 720;
+      controls.maxPolarAngle = Math.PI * 0.48;
+
+      scene.add(new THREE.AmbientLight(0xffffff, 1.75));
+      const sun = new THREE.DirectionalLight(0xffffff, 2.4);
+      sun.position.set(-85, 180, 90);
+      scene.add(sun);
+
+      const pointAEl = document.querySelector("#pointA");
+      const pointBEl = document.querySelector("#pointB");
+      const distanceEl = document.querySelector("#distance");
+      const resetButton = document.querySelector("#resetMeasure");
+      const topViewButton = document.querySelector("#topView");
+
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.46);
+      const picked = [];
+      const markers = [];
+      let measureLine = null;
+      let measureLabel = null;
+      let pointerDown = null;
+
+      function planToWorld(point, y = 0) {
+        return new THREE.Vector3(point.x - HALF_FIELD, y, point.y - HALF_FIELD);
+      }
+
+      function worldToPlan(point) {
+        return { x: point.x + HALF_FIELD, y: point.z + HALF_FIELD };
+      }
+
+      function formatPoint(point) {
+        const plan = worldToPlan(point);
+        return `${plan.x.toFixed(1)}, ${plan.y.toFixed(1)}`;
+      }
+
+      function createGroundPlane() {
+        addRoomFloorSurround();
+        const floor = new THREE.Mesh(
+          new THREE.BoxGeometry(FIELD_SIZE, MAT_THICKNESS, FIELD_SIZE),
+          new THREE.MeshStandardMaterial({ color: 0xf7faf7, roughness: 0.96 }),
+        );
+        floor.position.y = MAT_TOP_Y - MAT_THICKNESS / 2;
+        scene.add(floor);
+        addMatCreases();
+      }
+
+      function addRoomFloorSurround() {
+        const margin = FIELD_SIZE * 0.25;
+        const outerSize = FIELD_SIZE + margin * 2;
+        const material = new THREE.MeshStandardMaterial({ color: 0xd1b99e, roughness: 0.9 });
+        [
+          { width: outerSize, height: margin, x: 0, z: -HALF_FIELD - margin / 2 },
+          { width: outerSize, height: margin, x: 0, z: HALF_FIELD + margin / 2 },
+          { width: margin, height: FIELD_SIZE, x: -HALF_FIELD - margin / 2, z: 0 },
+          { width: margin, height: FIELD_SIZE, x: HALF_FIELD + margin / 2, z: 0 },
+        ].forEach((strip) => {
+          const floor = new THREE.Mesh(new THREE.PlaneGeometry(strip.width, strip.height), material);
+          floor.rotation.x = -Math.PI / 2;
+          floor.position.set(strip.x, -0.2, strip.z);
+          scene.add(floor);
+        });
+      }
+
+      function addMatCreases() {
+        const material = new THREE.LineBasicMaterial({ color: CREASE_GRAY, transparent: true, opacity: 0.48 });
+        for (let x = 18; x < FIELD_SIZE; x += 24) {
+          addRawLine([planToWorld({ x, y: 0 }, 0.08), planToWorld({ x: x + 2.2, y: FIELD_SIZE }, 0.08)], material);
+        }
+        for (let y = 18; y < FIELD_SIZE; y += 24) {
+          addRawLine([planToWorld({ x: 0, y }, 0.09), planToWorld({ x: FIELD_SIZE, y: y + 1.6 }, 0.09)], material);
+        }
+      }
+
+      function addRawLine(points, material) {
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material));
+      }
+
+      function createLineMaterial(color = PRINT_BLACK, dashed = false) {
+        return dashed
+          ? new THREE.LineDashedMaterial({ color, dashSize: 1.2, gapSize: 1.2 })
+          : new THREE.LineBasicMaterial({ color });
+      }
+
+      function addLine(points, color = PRINT_BLACK, dashed = false, y = 0.22) {
+        const line = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(points.map((point) => planToWorld(point, y))),
+          createLineMaterial(color, dashed),
+        );
+        if (dashed) line.computeLineDistances();
+        scene.add(line);
+        return line;
+      }
+
+      function addFieldBoundary() {
+        addLine(
+          [
+            { x: 0, y: 0 },
+            { x: FIELD_SIZE, y: 0 },
+            { x: FIELD_SIZE, y: FIELD_SIZE },
+            { x: 0, y: FIELD_SIZE },
+            { x: 0, y: 0 },
+          ],
+          DASH_BLACK,
+          true,
+          0.36,
+        );
+      }
+
+      function addPlanRectangle(spec, options = {}) {
+        const group = new THREE.Group();
+        group.position.copy(planToWorld(spec.center, 0));
+        group.rotation.y = spec.rotation ?? 0;
+        if (options.dashed) {
+          const x = spec.width / 2;
+          const z = spec.height / 2;
+          const outline = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([
+              new THREE.Vector3(-x, 0.32, -z),
+              new THREE.Vector3(x, 0.32, -z),
+              new THREE.Vector3(x, 0.32, z),
+              new THREE.Vector3(-x, 0.32, z),
+              new THREE.Vector3(-x, 0.32, -z),
+            ]),
+            createLineMaterial(options.borderColor ?? DASH_BLACK, true),
+          );
+          outline.computeLineDistances();
+          group.add(outline);
+        } else {
+          group.add(createPrintedBorder(spec.width, spec.height, options.borderColor ?? PRINT_BLACK));
+        }
+        if (spec.label) {
+          const label = createGroundText(spec.label, spec.width * 0.82, spec.height * 0.72);
+          label.position.y = 0.42;
+          group.add(label);
+        }
+        if (spec.heading) group.add(createHeadingTriangle(spec.width, spec.height, spec.heading));
+        scene.add(group);
+      }
+
+      function createPrintedBorder(width, height, color) {
+        const border = new THREE.Group();
+        const thickness = 1.8;
+        const material = new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide });
+        [
+          { width, height: thickness, x: 0, z: -height / 2 + thickness / 2 },
+          { width, height: thickness, x: 0, z: height / 2 - thickness / 2 },
+          { width: thickness, height, x: -width / 2 + thickness / 2, z: 0 },
+          { width: thickness, height, x: width / 2 - thickness / 2, z: 0 },
+        ].forEach((strip) => {
+          const mesh = new THREE.Mesh(new THREE.PlaneGeometry(strip.width, strip.height), material);
+          mesh.rotation.x = -Math.PI / 2;
+          mesh.position.set(strip.x, 0.34, strip.z);
+          border.add(mesh);
+        });
+        return border;
+      }
+
+      function createHeadingTriangle(width, height, heading) {
+        const edge = 4.4;
+        const inset = 5.1;
+        const halfW = width / 2;
+        const halfH = height / 2;
+        let vertices;
+        if (heading === "left") {
+          vertices = [-halfW + inset, 0.5, 0, -halfW + inset + edge * 1.35, 0.5, -edge, -halfW + inset + edge * 1.35, 0.5, edge];
+        } else if (heading === "right") {
+          vertices = [halfW - inset, 0.5, 0, halfW - inset - edge * 1.35, 0.5, edge, halfW - inset - edge * 1.35, 0.5, -edge];
+        } else if (heading === "up") {
+          vertices = [0, 0.5, -halfH + inset, -edge, 0.5, -halfH + inset + edge * 1.35, edge, 0.5, -halfH + inset + edge * 1.35];
+        } else {
+          vertices = [0, 0.5, halfH - inset, edge, 0.5, halfH - inset - edge * 1.35, -edge, 0.5, halfH - inset - edge * 1.35];
+        }
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(vertices), 3));
+        geometry.setIndex([0, 1, 2]);
+        geometry.computeVertexNormals();
+        return new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: PRINT_BLACK, side: THREE.DoubleSide }));
+      }
+
+      function createGroundText(text, width, height) {
+        const texture = createTextTexture(text, { color: INK, fontSize: 58, padding: 18 });
+        const mesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(width, height),
+          new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false }),
+        );
+        mesh.rotation.x = -Math.PI / 2;
+        return mesh;
+      }
+
+      function createTextTexture(text, { color, fontSize, padding, background, align = "center" }) {
+        const lines = text.split("\n");
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        const font = `700 ${fontSize}px "PingFang SC", "Microsoft YaHei", sans-serif`;
+        context.font = font;
+        const measuredWidth = Math.max(...lines.map((line) => context.measureText(line).width));
+        const lineHeight = fontSize * 1.24;
+        canvas.width = Math.ceil(measuredWidth + padding * 2);
+        canvas.height = Math.ceil(lineHeight * lines.length + padding * 2);
+        if (background) {
+          context.fillStyle = background;
+          context.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        context.font = font;
+        context.fillStyle = color;
+        context.textAlign = align;
+        context.textBaseline = "middle";
+        const x = align === "left" ? padding : canvas.width / 2;
+        lines.forEach((line, index) => context.fillText(line, x, padding + lineHeight * (index + 0.5)));
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.needsUpdate = true;
+        return texture;
+      }
+
+      function addGroundLabel(text, center, width, height, rotation = 0, color = INK) {
+        const texture = createTextTexture(text, { color, fontSize: 56, padding: 18 });
+        const label = new THREE.Mesh(
+          new THREE.PlaneGeometry(width, height),
+          new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false }),
+        );
+        label.position.copy(planToWorld(center, 0.44));
+        label.rotation.x = -Math.PI / 2;
+        label.rotation.z = rotation;
+        scene.add(label);
+      }
+
+      function addObstacleZone() {
+        addPlanRectangle({ center: { x: FIELD_SIZE / 2, y: 127 }, width: FIELD_SIZE, height: 36, label: "" }, { dashed: true });
+        addGroundLabel("随机障碍物区域", { x: FIELD_SIZE / 2, y: 127 }, 58, 13);
+      }
+
+      function addTargetArea() {
+        addPlanRectangle({ center: { x: FIELD_SIZE / 2, y: 195 }, width: 40, height: 30, label: "目标靶区域" });
+      }
+
+      function addShootingPositions() {
+        addPlanRectangle({ center: { x: 20 + 29.7 / 2, y: 10 + 21 / 2 }, width: 29.7, height: 21, label: "固定打靶\n1号位", heading: "left" });
+        addPlanRectangle({ center: { x: FIELD_SIZE / 2, y: 10 + 29.7 / 2 }, width: 21, height: 29.7, label: "固定\n打靶\n2号位", heading: "down" });
+        addPlanRectangle({ center: { x: 163, y: 27 }, width: 21, height: 29.7, label: "固定打靶\n3号位", rotation: Math.PI / 4, heading: "down" });
+        addPlanRectangle({ center: { x: 10 + 29.7 / 2, y: 82 }, width: 29.7, height: 21, label: "移动打靶\n结束位", heading: "left" });
+        addPlanRectangle({ center: { x: FIELD_SIZE - 10 - 29.7 / 2, y: 82 }, width: 29.7, height: 21, label: "移动打靶\n起始位", heading: "left" });
+        addPlanRectangle({ center: { x: FIELD_SIZE - 10 - 21 / 2, y: FIELD_SIZE - 29.7 / 2 }, width: 21, height: 29.7, label: "小车\n出发\n位", heading: "up" });
+      }
+
+      function addObstacles() {
+        const material = new THREE.MeshStandardMaterial({ color: 0x7cc48e, roughness: 0.7, transparent: true, opacity: 0.72 });
+        const capMaterial = new THREE.MeshStandardMaterial({ color: 0x3f8e68, roughness: 0.55 });
+        OBSTACLE_POINTS.forEach((point, index) => {
+          const bottle = new THREE.Group();
+          bottle.position.copy(planToWorld(point, 0));
+          const body = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 15, 32), material);
+          body.position.y = 7.5;
+          bottle.add(body);
+          const neck = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 2.2, 2.6, 24), material);
+          neck.position.y = 16.3;
+          bottle.add(neck);
+          const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 1.1, 24), capMaterial);
+          cap.position.y = 18.1;
+          bottle.add(cap);
+          const label = createGroundText(`${index + 1}`, 5, 5);
+          label.position.y = 18.85;
+          bottle.add(label);
+          scene.add(bottle);
+        });
+      }
+
+      function addTargetStand() {
+        const stand = new THREE.Group();
+        stand.position.copy(planToWorld({ x: FIELD_SIZE / 2, y: FIELD_SIZE + 4 }, 0));
+        stand.rotation.y = Math.PI;
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 32, 16), new THREE.MeshStandardMaterial({ color: 0x3b7fb6, roughness: 0.55 }));
+        pole.position.y = 16;
+        stand.add(pole);
+        const upperPaper = new THREE.Mesh(
+          new THREE.PlaneGeometry(21, 29.7),
+          new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.76, map: createTargetPaperTexture() }),
+        );
+        upperPaper.position.set(0, 55, 0);
+        stand.add(upperPaper);
+        const uvPaper = new THREE.Mesh(new THREE.PlaneGeometry(21, 29.7), new THREE.MeshStandardMaterial({ color: 0xe9ddff, roughness: 0.8 }));
+        uvPaper.position.set(0, 25, 0);
+        stand.add(uvPaper);
+        const frame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(23, 62, 0.7)), new THREE.LineBasicMaterial({ color: PRINT_BLACK }));
+        frame.position.y = 40;
+        stand.add(frame);
+        scene.add(stand);
+      }
+
+      function createTargetPaperTexture() {
+        const canvas = document.createElement("canvas");
+        canvas.width = 512;
+        canvas.height = 724;
+        const context = canvas.getContext("2d");
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.strokeStyle = `#${ORANGE.toString(16)}`;
+        context.lineWidth = 18;
+        context.beginPath();
+        context.arc(canvas.width / 2, canvas.height / 2, 120, 0, Math.PI * 2);
+        context.stroke();
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        return texture;
+      }
+
+      function addMeasurePoint(point) {
+        const marker = new THREE.Mesh(
+          new THREE.SphereGeometry(2.2, 24, 16),
+          new THREE.MeshBasicMaterial({ color: picked.length === 0 ? 0x0f766e : 0xf97316 }),
+        );
+        marker.position.copy(point).setY(2.6);
+        scene.add(marker);
+        markers.push(marker);
+      }
+
+      function updateMeasure() {
+        pointAEl.textContent = picked[0] ? formatPoint(picked[0]) : "--";
+        pointBEl.textContent = picked[1] ? formatPoint(picked[1]) : "--";
+        if (measureLine) {
+          scene.remove(measureLine);
+          measureLine.geometry.dispose();
+        }
+        if (measureLabel) {
+          scene.remove(measureLabel);
+          measureLabel.geometry.dispose();
+          measureLabel.material.map.dispose();
+          measureLabel.material.dispose();
+        }
+        measureLine = null;
+        measureLabel = null;
+        if (picked.length < 2) {
+          distanceEl.textContent = "-- cm";
+          return;
+        }
+
+        const distance = picked[0].distanceTo(picked[1]);
+        distanceEl.textContent = `${distance.toFixed(1)} cm`;
+        measureLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([picked[0].clone().setY(1.1), picked[1].clone().setY(1.1)]),
+          new THREE.LineBasicMaterial({ color: 0xdc2626 }),
+        );
+        scene.add(measureLine);
+
+        const mid = picked[0].clone().lerp(picked[1], 0.5);
+        const texture = createTextTexture(`${distance.toFixed(1)} cm`, {
+          color: "#ffffff",
+          fontSize: 54,
+          padding: 22,
+          background: "rgba(23, 33, 43, 0.92)",
+        });
+        measureLabel = new THREE.Mesh(
+          new THREE.PlaneGeometry(34, 10),
+          new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false }),
+        );
+        measureLabel.position.copy(mid).setY(8);
+        scene.add(measureLabel);
+      }
+
+      function clearMeasure() {
+        picked.length = 0;
+        markers.forEach((marker) => {
+          scene.remove(marker);
+          marker.geometry.dispose();
+          marker.material.dispose();
+        });
+        markers.length = 0;
+        updateMeasure();
+      }
+
+      function pickGround(clientX, clientY) {
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const point = new THREE.Vector3();
+        if (!raycaster.ray.intersectPlane(groundPlane, point)) return null;
+        if (Math.abs(point.x) > HALF_FIELD || Math.abs(point.z) > HALF_FIELD) return null;
+        point.y = 0.46;
+        return point;
+      }
+
+      function handlePointerDown(event) {
+        pointerDown = { x: event.clientX, y: event.clientY };
+      }
+
+      function handlePointerUp(event) {
+        if (!pointerDown) return;
+        const moved = Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y);
+        pointerDown = null;
+        if (moved > 5) return;
+        const point = pickGround(event.clientX, event.clientY);
+        if (!point) return;
+        if (picked.length >= 2) clearMeasure();
+        picked.push(point);
+        addMeasurePoint(point);
+        updateMeasure();
+      }
+
+      function frameCamera(top = false) {
+        const aspect = window.innerWidth / window.innerHeight;
+        if (top) {
+          camera.position.set(0, 330, 0.01);
+        } else {
+          const scale = aspect < 0.72 ? 1.95 : 1.25;
+          camera.position.set(140 * scale, 225 * scale, 255 * scale);
+        }
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+      }
+
+      function resize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      function animate() {
+        if (measureLabel) {
+          measureLabel.quaternion.copy(camera.quaternion);
+        }
+        controls.update();
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+
+      createGroundPlane();
+      addFieldBoundary();
+      addObstacleZone();
+      addTargetArea();
+      addShootingPositions();
+      addObstacles();
+      addTargetStand();
+      frameCamera();
+      updateMeasure();
+
+      renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+      renderer.domElement.addEventListener("pointerup", handlePointerUp);
+      resetButton.addEventListener("click", clearMeasure);
+      topViewButton.addEventListener("click", () => frameCamera(true));
+      window.addEventListener("resize", resize);
+      animate();
+    </script>
+  </body>
+</html>
