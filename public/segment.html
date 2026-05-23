@@ -1,0 +1,1620 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>JLC 轮廓标注器</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #eef2f5;
+      --panel: #ffffff;
+      --ink: #16202a;
+      --muted: #607080;
+      --line: #d3dbe4;
+      --soft: #f6f8fa;
+      --accent: #1468b8;
+      --accent-ink: #ffffff;
+      --ok: #167a4a;
+      --warn: #9b5d00;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: var(--ink);
+      background: #fff;
+      cursor: pointer;
+    }
+
+    button:hover {
+      border-color: #aab8c6;
+      background: #f9fbfd;
+    }
+
+    button.primary {
+      border-color: var(--accent);
+      color: var(--accent-ink);
+      background: var(--accent);
+    }
+
+    button.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(20, 104, 184, 0.15);
+    }
+
+    button:disabled {
+      cursor: default;
+      opacity: 0.55;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 330px minmax(420px, 1fr) 310px;
+      min-height: 100vh;
+    }
+
+    aside {
+      min-width: 0;
+      padding: 14px;
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+    }
+
+    aside:last-child {
+      border-right: 0;
+      border-left: 1px solid var(--line);
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 16px 0 8px;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    select, input[type="file"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    input[type="file"] {
+      font-size: 12px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .row > * {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin: 12px 0;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 7px 8px;
+      background: var(--soft);
+      min-width: 0;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 17px;
+      line-height: 1.1;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .stage {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-width: 0;
+      background: #dfe6ee;
+    }
+
+    .toolbar {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .toolbar-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .toolbar-line button {
+      min-width: 76px;
+    }
+
+    .class-button[data-class="0"].active { border-color: #239448; }
+    .class-button[data-class="1"].active { border-color: #0787c7; }
+    .class-button[data-class="2"].active { border-color: #d66a1f; }
+    .class-button[data-class="3"].active { border-color: #9a56d4; }
+
+    .canvas-wrap {
+      display: grid;
+      place-items: center;
+      min-height: 0;
+      overflow: auto;
+      padding: 12px;
+    }
+
+    canvas {
+      display: block;
+      max-width: 100%;
+      max-height: calc(100vh - 162px);
+      background: #cbd5df;
+      box-shadow: 0 1px 10px rgba(18, 30, 44, 0.22);
+    }
+
+    .statusbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 42px;
+      padding: 9px 12px;
+      border-top: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .list {
+      display: grid;
+      gap: 6px;
+      overflow: auto;
+    }
+
+    #imageList {
+      max-height: calc(100vh - 304px);
+    }
+
+    #shapeList {
+      max-height: calc(100vh - 210px);
+    }
+
+    .item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      background: #fff;
+      font-size: 13px;
+    }
+
+    .item.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(20, 104, 184, 0.13);
+    }
+
+    .item-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sub {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: 2px 7px;
+      background: #e7edf3;
+      color: var(--muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .pill.ok {
+      background: #e1f2e8;
+      color: var(--ok);
+    }
+
+    .pill.warn {
+      background: #fff1d6;
+      color: var(--warn);
+    }
+
+    .shortcut {
+      margin-left: 5px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 6px;
+      padding: 14px 10px;
+      color: var(--muted);
+      background: var(--soft);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (max-width: 1040px) {
+      main {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(520px, 1fr) auto;
+      }
+
+      aside, aside:last-child {
+        border: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      #imageList, #shapeList {
+        max-height: 260px;
+      }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <aside>
+    <h1>JLC 轮廓标注器</h1>
+    <div class="stack">
+      <button id="openDataset" class="primary" title="直接打开 manual_dataset 文件夹并写回标签">打开 manual_dataset 文件夹</button>
+      <label for="datasetInput">兼容模式：选择整个文件夹</label>
+      <input id="datasetInput" type="file" multiple webkitdirectory>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><strong id="statImages">0</strong><span>图片</span></div>
+      <div class="stat"><strong id="statLabelFiles">0</strong><span>标签文件</span></div>
+      <div class="stat"><strong id="statShapes">0</strong><span>轮廓</span></div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="splitFilter">数据划分</label>
+        <select id="splitFilter">
+          <option value="all">全部</option>
+          <option value="train">train</option>
+          <option value="val">val</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+      <div>
+        <label for="labelFilter">标注状态</label>
+        <select id="labelFilter">
+          <option value="all">全部</option>
+          <option value="labeled">有轮廓</option>
+          <option value="empty">空标签</option>
+        </select>
+      </div>
+    </div>
+
+    <h2>文件列表</h2>
+    <div id="imageList" class="list"></div>
+  </aside>
+
+  <div class="stage">
+    <div class="toolbar">
+      <div class="toolbar-line">
+        <button class="tool-button active" data-tool="polygon" title="多边形工具 P">多边形<span class="shortcut">P</span></button>
+        <button class="tool-button" data-tool="ellipse" title="椭圆工具 E">椭圆<span class="shortcut">E</span></button>
+        <button class="tool-button" data-tool="select" title="选择工具 V">选择<span class="shortcut">V</span></button>
+        <button id="undoPoint" title="撤销多边形上一个点 Z">撤点<span class="shortcut">Z</span></button>
+        <button id="deleteShape" title="删除选中轮廓 Delete">删除<span class="shortcut">Del</span></button>
+      </div>
+      <div class="toolbar-line">
+        <button class="class-button active" data-class="0" title="圆形类别 1">1 圆形</button>
+        <button class="class-button" data-class="1" title="三角形类别 2">2 三角形</button>
+        <button class="class-button" data-class="2" title="矩形类别 3">3 矩形</button>
+        <button class="class-button" data-class="3" title="A4 纸外框类别 4">4 A4纸</button>
+        <button id="saveCurrent" class="primary" title="保存当前图片标签 S">保存当前<span class="shortcut">S</span></button>
+        <button id="saveAll" title="保存全部标签 Shift+S">保存全部<span class="shortcut">Shift+S</span></button>
+      </div>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="canvas" width="960" height="720"></canvas>
+    </div>
+
+    <div class="statusbar">
+      <div id="status">请选择 manual_dataset 文件夹。</div>
+      <div id="currentName"></div>
+    </div>
+  </div>
+
+  <aside>
+    <h2>当前轮廓</h2>
+    <div id="shapeList" class="list"></div>
+  </aside>
+</main>
+
+<script>
+const CLASSES = ["circle", "triangle", "rectangle", "paper"];
+const CLASS_NAMES = ["圆形", "三角形", "矩形", "A4纸"];
+const COLORS = ["#239448", "#0787c7", "#d66a1f", "#9a56d4"];
+const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".bmp", ".webp"]);
+const ELLIPSE_MIN_POINTS = 24;
+const ELLIPSE_DEFAULT_POINTS = 48;
+const ELLIPSE_MAX_POINTS = 72;
+const HANDLE_RADIUS = 7;
+const DRAFT_CLOSE_RADIUS = 12;
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const canvasWrap = document.querySelector(".canvas-wrap");
+
+const state = {
+  images: [],
+  index: -1,
+  image: null,
+  labelsByKey: new Map(),
+  labelFileKeys: new Set(),
+  datasetDir: null,
+  tool: "polygon",
+  classId: 0,
+  draft: [],
+  draftCursor: null,
+  draftCloseHover: false,
+  ellipseStart: null,
+  ellipseEnd: null,
+  selectedShape: -1,
+  interaction: null,
+};
+
+function pathParts(path) {
+  return path.replace(/\\/g, "/").split("/").filter(Boolean);
+}
+
+function extensionOf(name) {
+  const dot = name.lastIndexOf(".");
+  return dot >= 0 ? name.slice(dot).toLowerCase() : "";
+}
+
+function stemOf(name) {
+  return name.replace(/\.[^.]+$/, "");
+}
+
+function keyFor(rootParts, split, stem) {
+  return [...rootParts, split || "other", stem].join("/");
+}
+
+function imageInfoFromPath(relPath) {
+  const parts = pathParts(relPath);
+  const name = parts.at(-1) || "";
+  if (!IMAGE_EXTENSIONS.has(extensionOf(name))) return null;
+  const imageIndex = parts.lastIndexOf("images");
+  const stem = stemOf(name);
+  if (imageIndex >= 0 && parts.length > imageIndex + 2) {
+    const rootParts = parts.slice(0, imageIndex);
+    const split = parts[imageIndex + 1] || "other";
+    return {
+      name,
+      stem,
+      split,
+      rootParts,
+      key: keyFor(rootParts, split, stem),
+      relPath: parts.join("/"),
+    };
+  }
+  return {
+    name,
+    stem,
+    split: "other",
+    rootParts: [],
+    key: keyFor([], "other", stem),
+    relPath: parts.join("/"),
+  };
+}
+
+function labelInfoFromPath(relPath) {
+  const parts = pathParts(relPath);
+  const name = parts.at(-1) || "";
+  if (extensionOf(name) !== ".txt") return null;
+  const labelsIndex = parts.lastIndexOf("labels");
+  const stem = stemOf(name);
+  if (labelsIndex >= 0 && parts.length > labelsIndex + 2) {
+    const rootParts = parts.slice(0, labelsIndex);
+    const split = parts[labelsIndex + 1] || "other";
+    return {
+      stem,
+      split,
+      rootParts,
+      key: keyFor(rootParts, split, stem),
+      relPath: parts.join("/"),
+    };
+  }
+  return {
+    stem,
+    split: "other",
+    rootParts: [],
+    key: keyFor([], "other", stem),
+    relPath: parts.join("/"),
+  };
+}
+
+function setStatus(text) {
+  document.getElementById("status").textContent = text;
+}
+
+function currentEntry() {
+  return state.images[state.index] || null;
+}
+
+function currentLabels() {
+  const entry = currentEntry();
+  if (!entry) return [];
+  if (!state.labelsByKey.has(entry.key)) state.labelsByKey.set(entry.key, []);
+  return state.labelsByKey.get(entry.key);
+}
+
+function clonePoints(points) {
+  return points.map(point => [point[0], point[1]]);
+}
+
+function cloneEllipse(ellipse) {
+  return ellipse ? { ...ellipse } : null;
+}
+
+function clamp01(value) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function clampPoint(point) {
+  return [clamp01(point[0]), clamp01(point[1])];
+}
+
+function makeLabel(classId, points, kind = "polygon", ellipse = null) {
+  return {
+    classId,
+    points: clonePoints(points),
+    kind,
+    ellipse,
+    geometryReady: kind === "ellipse",
+  };
+}
+
+function parseLabelText(text) {
+  const labels = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const parts = raw.trim().split(/\s+/).filter(Boolean);
+    if (parts.length < 5) continue;
+    const classId = Number(parts[0]);
+    const nums = parts.slice(1).map(Number);
+    if (!Number.isInteger(classId) || classId < 0 || classId >= CLASSES.length) continue;
+
+    if (nums.length === 4) {
+      const [xc, yc, w, h] = nums;
+      labels.push(makeLabel(
+        classId,
+        [
+          [xc - w / 2, yc - h / 2],
+          [xc + w / 2, yc - h / 2],
+          [xc + w / 2, yc + h / 2],
+          [xc - w / 2, yc + h / 2],
+        ],
+      ));
+    } else if (nums.length >= 6 && nums.length % 2 === 0) {
+      const points = [];
+      for (let i = 0; i < nums.length; i += 2) points.push([nums[i], nums[i + 1]]);
+      labels.push(makeLabel(classId, points));
+    }
+  }
+  return labels;
+}
+
+function labelsToText(labels) {
+  const lines = labels
+    .filter(label => label.points.length >= 3)
+    .map(label => {
+      const coords = label.points
+        .flat()
+        .map(value => Math.max(0, Math.min(1, value)).toFixed(6))
+        .join(" ");
+      return `${label.classId} ${coords}`;
+    });
+  return lines.join("\n") + (lines.length ? "\n" : "");
+}
+
+function releaseObjectUrls() {
+  for (const entry of state.images) {
+    if (entry.url) URL.revokeObjectURL(entry.url);
+  }
+}
+
+function resetDataset() {
+  releaseObjectUrls();
+  state.images = [];
+  state.index = -1;
+  state.image = null;
+  state.labelsByKey.clear();
+  state.labelFileKeys.clear();
+  state.draft = [];
+  state.draftCursor = null;
+  state.draftCloseHover = false;
+  state.ellipseStart = null;
+  state.ellipseEnd = null;
+  state.selectedShape = -1;
+  state.interaction = null;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  document.getElementById("currentName").textContent = "";
+}
+
+async function readEntriesFromDirectory(dirHandle, prefix = []) {
+  const out = [];
+  for await (const [name, handle] of dirHandle.entries()) {
+    const nextPrefix = [...prefix, name];
+    if (handle.kind === "directory") {
+      out.push(...await readEntriesFromDirectory(handle, nextPrefix));
+    } else {
+      out.push({ handle, file: await handle.getFile(), relPath: nextPrefix.join("/") });
+    }
+  }
+  return out;
+}
+
+function compareEntries(a, b) {
+  const order = { train: 0, val: 1, other: 2 };
+  return (order[a.split] ?? 3) - (order[b.split] ?? 3) || a.relPath.localeCompare(b.relPath, "zh-CN");
+}
+
+async function loadImageMetadata(entry) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      entry.width = img.naturalWidth;
+      entry.height = img.naturalHeight;
+      resolve();
+    };
+    img.onerror = resolve;
+    img.src = entry.url;
+  });
+}
+
+async function loadDatasetItems(items, { writableDir = null } = {}) {
+  resetDataset();
+  state.datasetDir = writableDir;
+  const labelItems = [];
+
+  for (const item of items) {
+    const relPath = item.relPath || item.file.webkitRelativePath || item.file.name;
+    const imageInfo = imageInfoFromPath(relPath);
+    if (imageInfo) {
+      state.images.push({
+        ...imageInfo,
+        file: item.file,
+        handle: item.handle || null,
+        url: URL.createObjectURL(item.file),
+        width: 0,
+        height: 0,
+      });
+      continue;
+    }
+
+    const labelInfo = labelInfoFromPath(relPath);
+    if (labelInfo) labelItems.push({ ...labelInfo, file: item.file });
+  }
+
+  state.images.sort(compareEntries);
+  for (const item of labelItems) {
+    state.labelsByKey.set(item.key, parseLabelText(await item.file.text()));
+    state.labelFileKeys.add(item.key);
+  }
+
+  await Promise.all(state.images.map(loadImageMetadata));
+  refreshAll();
+  if (state.images.length) {
+    await loadImage(visibleIndexes()[0] ?? 0);
+    setStatus(`已载入 ${state.images.length} 张图片。`);
+  } else {
+    setStatus("没有在文件夹里找到 images/train 或 images/val 图片。");
+  }
+}
+
+function inferEllipse(points, width, height) {
+  if (points.length < 16 || width <= 0 || height <= 0) return null;
+  const pixels = points.map(point => [point[0] * width, point[1] * height]);
+  const cx = pixels.reduce((sum, point) => sum + point[0], 0) / pixels.length;
+  const cy = pixels.reduce((sum, point) => sum + point[1], 0) / pixels.length;
+  let xx = 0;
+  let yy = 0;
+  let xy = 0;
+  for (const [x, y] of pixels) {
+    const dx = x - cx;
+    const dy = y - cy;
+    xx += dx * dx;
+    yy += dy * dy;
+    xy += dx * dy;
+  }
+  xx /= pixels.length;
+  yy /= pixels.length;
+  xy /= pixels.length;
+
+  const trace = xx + yy;
+  const disc = Math.sqrt(Math.max(0, (xx - yy) ** 2 + 4 * xy * xy));
+  const lambda1 = (trace + disc) / 2;
+  const lambda2 = (trace - disc) / 2;
+  if (lambda1 <= 0 || lambda2 <= 0) return null;
+
+  const angle = Math.abs(xy) > 1e-9 ? Math.atan2(lambda1 - xx, xy) : (xx >= yy ? 0 : Math.PI / 2);
+  const rx = Math.sqrt(lambda1 * 2);
+  const ry = Math.sqrt(lambda2 * 2);
+  if (!Number.isFinite(rx) || !Number.isFinite(ry) || rx < 3 || ry < 3) return null;
+
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  let error = 0;
+  for (const [x, y] of pixels) {
+    const dx = x - cx;
+    const dy = y - cy;
+    const lx = dx * cos + dy * sin;
+    const ly = -dx * sin + dy * cos;
+    error += Math.abs(Math.sqrt((lx / rx) ** 2 + (ly / ry) ** 2) - 1);
+  }
+  error /= pixels.length;
+  if (error > 0.18) return null;
+
+  return {
+    cx: cx / width,
+    cy: cy / height,
+    rx: rx / width,
+    ry: ry / height,
+    angle,
+  };
+}
+
+function syncEllipsePoints(label, entry = currentEntry()) {
+  if (!label.ellipse || !entry) return;
+  const { cx, cy, rx, ry, angle } = label.ellipse;
+  const width = Math.max(1, entry.width);
+  const height = Math.max(1, entry.height);
+  const centerX = cx * width;
+  const centerY = cy * height;
+  const radiusX = Math.max(1, rx * width);
+  const radiusY = Math.max(1, ry * height);
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const points = [];
+  const pointCount = ellipsePointCount(radiusX, radiusY);
+  for (let i = 0; i < pointCount; i++) {
+    const theta = (i / pointCount) * Math.PI * 2;
+    const localX = Math.cos(theta) * radiusX;
+    const localY = Math.sin(theta) * radiusY;
+    const x = centerX + localX * cos - localY * sin;
+    const y = centerY + localX * sin + localY * cos;
+    points.push([x / width, y / height]);
+  }
+  label.points = points;
+}
+
+function ellipsePointCount(radiusX, radiusY) {
+  if (!Number.isFinite(radiusX) || !Number.isFinite(radiusY) || radiusX <= 0 || radiusY <= 0) {
+    return ELLIPSE_DEFAULT_POINTS;
+  }
+  const perimeter = Math.PI * (
+    3 * (radiusX + radiusY) -
+    Math.sqrt((3 * radiusX + radiusY) * (radiusX + 3 * radiusY))
+  );
+  return Math.max(ELLIPSE_MIN_POINTS, Math.min(ELLIPSE_MAX_POINTS, Math.round(perimeter / 13)));
+}
+
+function prepareLabelsForEntry(entry) {
+  const labels = state.labelsByKey.get(entry.key) || [];
+  for (const label of labels) {
+    if (label.geometryReady) continue;
+    const ellipse = inferEllipse(label.points, entry.width, entry.height);
+    if (ellipse) {
+      label.kind = "ellipse";
+      label.ellipse = ellipse;
+    } else {
+      label.kind = "polygon";
+      label.ellipse = null;
+    }
+    label.geometryReady = true;
+  }
+}
+
+async function openDatasetFolder() {
+  if (!window.showDirectoryPicker) {
+    setStatus("当前浏览器不能直接读写文件夹，请用兼容模式选择整个 manual_dataset 文件夹。");
+    return;
+  }
+  const dir = await window.showDirectoryPicker({ mode: "readwrite" });
+  setStatus("正在扫描文件夹...");
+  await loadDatasetItems(await readEntriesFromDirectory(dir), { writableDir: dir });
+}
+
+function visibleIndexes() {
+  const split = document.getElementById("splitFilter").value;
+  const labelFilter = document.getElementById("labelFilter").value;
+  return state.images
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => split === "all" || entry.split === split)
+    .filter(({ entry }) => {
+      const count = (state.labelsByKey.get(entry.key) || []).length;
+      if (labelFilter === "labeled") return count > 0;
+      if (labelFilter === "empty") return count === 0;
+      return true;
+    })
+    .map(({ index }) => index);
+}
+
+function fitCanvas() {
+  const entry = currentEntry();
+  if (!entry) return;
+  const rect = canvasWrap.getBoundingClientRect();
+  const maxW = Math.max(320, rect.width - 24);
+  const maxH = Math.max(260, rect.height - 24);
+  const scale = Math.min(maxW / entry.width, maxH / entry.height, 1.8);
+  canvas.width = Math.max(1, Math.round(entry.width * scale));
+  canvas.height = Math.max(1, Math.round(entry.height * scale));
+}
+
+function normalizedToCanvas(point) {
+  return [point[0] * canvas.width, point[1] * canvas.height];
+}
+
+function canvasToNormalized(x, y) {
+  return [
+    Math.max(0, Math.min(1, x / canvas.width)),
+    Math.max(0, Math.min(1, y / canvas.height)),
+  ];
+}
+
+function isNearDraftStart(x, y) {
+  if (state.draft.length < 3) return false;
+  const [sx, sy] = normalizedToCanvas(state.draft[0]);
+  return Math.hypot(x - sx, y - sy) <= DRAFT_CLOSE_RADIUS;
+}
+
+function selectedLabel() {
+  const labels = currentLabels();
+  return state.selectedShape >= 0 ? labels[state.selectedShape] : null;
+}
+
+function labelCenter(label) {
+  if (label.ellipse) return [label.ellipse.cx, label.ellipse.cy];
+  if (!label.points.length) return [0, 0];
+  return [
+    label.points.reduce((sum, point) => sum + point[0], 0) / label.points.length,
+    label.points.reduce((sum, point) => sum + point[1], 0) / label.points.length,
+  ];
+}
+
+function drawHandle(x, y, fill = "#fff", stroke = "#111") {
+  ctx.beginPath();
+  ctx.arc(x, y, HANDLE_RADIUS, 0, Math.PI * 2);
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 2;
+  ctx.fill();
+  ctx.stroke();
+}
+
+function drawPath(label, selected = false) {
+  const points = label.points;
+  const color = COLORS[label.classId] || "#fff";
+  if (points.length < 2) return;
+  ctx.beginPath();
+  const first = normalizedToCanvas(points[0]);
+  ctx.moveTo(first[0], first[1]);
+  for (const point of points.slice(1)) {
+    const [x, y] = normalizedToCanvas(point);
+    ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = `${color}33`;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = selected ? 4 : 2;
+  ctx.fill();
+  ctx.stroke();
+
+  if (selected && label.kind !== "ellipse") {
+    for (const point of points) {
+      const [x, y] = normalizedToCanvas(point);
+      drawHandle(x, y, "#fff", color);
+    }
+  }
+}
+
+function rotatePoint(x, y, angle) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return [x * cos - y * sin, x * sin + y * cos];
+}
+
+function ellipseCanvasParams(label) {
+  const ellipse = label.ellipse;
+  return {
+    cx: ellipse.cx * canvas.width,
+    cy: ellipse.cy * canvas.height,
+    rx: Math.max(2, ellipse.rx * canvas.width),
+    ry: Math.max(2, ellipse.ry * canvas.height),
+    angle: ellipse.angle,
+  };
+}
+
+function ellipseHandlePositions(label) {
+  if (!label.ellipse) return [];
+  const { cx, cy, rx, ry, angle } = ellipseCanvasParams(label);
+  const defs = [
+    ["nw", -rx, -ry],
+    ["n", 0, -ry],
+    ["ne", rx, -ry],
+    ["e", rx, 0],
+    ["se", rx, ry],
+    ["s", 0, ry],
+    ["sw", -rx, ry],
+    ["w", -rx, 0],
+  ];
+  const handles = defs.map(([name, lx, ly]) => {
+    const [dx, dy] = rotatePoint(lx, ly, angle);
+    return { name, x: cx + dx, y: cy + dy, role: "resize" };
+  });
+  const [rx0, ry0] = rotatePoint(0, -ry - 34, angle);
+  handles.push({ name: "rotate", x: cx + rx0, y: cy + ry0, role: "rotate" });
+  return handles;
+}
+
+function drawEllipseControls(label) {
+  if (!label.ellipse) return;
+  const color = COLORS[label.classId] || "#fff";
+  const { cx, cy, rx, ry, angle } = ellipseCanvasParams(label);
+  const corners = [
+    rotatePoint(-rx, -ry, angle),
+    rotatePoint(rx, -ry, angle),
+    rotatePoint(rx, ry, angle),
+    rotatePoint(-rx, ry, angle),
+  ].map(([dx, dy]) => [cx + dx, cy + dy]);
+
+  ctx.beginPath();
+  ctx.moveTo(corners[0][0], corners[0][1]);
+  for (const corner of corners.slice(1)) ctx.lineTo(corner[0], corner[1]);
+  ctx.closePath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const handles = ellipseHandlePositions(label);
+  const rotate = handles.find(handle => handle.role === "rotate");
+  const top = handles.find(handle => handle.name === "n");
+  if (rotate && top) {
+    ctx.beginPath();
+    ctx.moveTo(top.x, top.y);
+    ctx.lineTo(rotate.x, rotate.y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  for (const handle of handles) {
+    drawHandle(handle.x, handle.y, handle.role === "rotate" ? "#fff3cc" : "#fff", color);
+  }
+}
+
+function drawSelectedControls() {
+  const label = selectedLabel();
+  if (!label) return;
+  if (label.kind === "ellipse" && label.ellipse) drawEllipseControls(label);
+}
+
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!state.image) return;
+  ctx.drawImage(state.image, 0, 0, canvas.width, canvas.height);
+
+  currentLabels().forEach((label, index) => {
+    drawPath(label, index === state.selectedShape);
+  });
+  drawSelectedControls();
+
+  if (state.draft.length) {
+    ctx.beginPath();
+    const [x0, y0] = normalizedToCanvas(state.draft[0]);
+    ctx.moveTo(x0, y0);
+    for (const point of state.draft.slice(1)) {
+      const [x, y] = normalizedToCanvas(point);
+      ctx.lineTo(x, y);
+    }
+    if (state.draftCursor) {
+      const previewPoint = state.draftCloseHover ? state.draft[0] : state.draftCursor;
+      const [px, py] = normalizedToCanvas(previewPoint);
+      ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = COLORS[state.classId];
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    for (const [index, point] of state.draft.entries()) {
+      const [x, y] = normalizedToCanvas(point);
+      ctx.beginPath();
+      ctx.arc(x, y, index === 0 && state.draftCloseHover ? 7 : 4, 0, Math.PI * 2);
+      ctx.fillStyle = index === 0 && state.draftCloseHover ? "#fff3cc" : "#fff";
+      ctx.fill();
+      ctx.strokeStyle = COLORS[state.classId];
+      ctx.lineWidth = index === 0 && state.draftCloseHover ? 3 : 1;
+      ctx.stroke();
+    }
+  }
+
+  if (state.ellipseStart && state.ellipseEnd) {
+    const [x0, y0] = normalizedToCanvas(state.ellipseStart);
+    const [x1, y1] = normalizedToCanvas(state.ellipseEnd);
+    ctx.beginPath();
+    ctx.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.abs(x1 - x0) / 2, Math.abs(y1 - y0) / 2, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = COLORS[state.classId];
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+function refreshStats() {
+  let shapeCount = 0;
+  for (const labels of state.labelsByKey.values()) shapeCount += labels.length;
+  document.getElementById("statImages").textContent = String(state.images.length);
+  document.getElementById("statLabelFiles").textContent = String(state.labelFileKeys.size);
+  document.getElementById("statShapes").textContent = String(shapeCount);
+}
+
+function refreshButtons() {
+  document.querySelectorAll(".tool-button").forEach(button => {
+    button.classList.toggle("active", button.dataset.tool === state.tool);
+  });
+  document.querySelectorAll(".class-button").forEach(button => {
+    button.classList.toggle("active", Number(button.dataset.class) === state.classId);
+  });
+}
+
+function refreshImageList() {
+  const imageList = document.getElementById("imageList");
+  imageList.innerHTML = "";
+  const indexes = visibleIndexes();
+  if (!indexes.length) {
+    imageList.innerHTML = '<div class="empty">没有匹配的图片</div>';
+    return;
+  }
+
+  for (const index of indexes) {
+    const entry = state.images[index];
+    const labels = state.labelsByKey.get(entry.key) || [];
+    const hasLabelFile = state.labelFileKeys.has(entry.key);
+    const button = document.createElement("button");
+    button.className = `item${index === state.index ? " active" : ""}`;
+    button.innerHTML = `
+      <span class="item-name">${entry.name}<span class="sub">${entry.relPath}</span></span>
+      <span class="pill ${labels.length ? "ok" : hasLabelFile ? "" : "warn"}">${labels.length}</span>
+    `;
+    button.onclick = () => loadImage(index);
+    imageList.appendChild(button);
+  }
+
+  const active = imageList.querySelector(".item.active");
+  if (active) active.scrollIntoView({ block: "nearest" });
+}
+
+function refreshShapeList() {
+  const shapeList = document.getElementById("shapeList");
+  shapeList.innerHTML = "";
+  const labels = currentLabels();
+  if (!labels.length) {
+    shapeList.innerHTML = '<div class="empty">当前图片没有轮廓</div>';
+    return;
+  }
+
+  labels.forEach((label, index) => {
+    const button = document.createElement("button");
+    button.className = `item${index === state.selectedShape ? " active" : ""}`;
+    button.innerHTML = `
+      <span class="item-name">${index + 1}. ${CLASS_NAMES[label.classId]}<span class="sub">${CLASSES[label.classId]}</span></span>
+      <span class="pill">${label.points.length} 点</span>
+    `;
+    button.onclick = () => {
+      state.selectedShape = index;
+      setClass(label.classId);
+    };
+    shapeList.appendChild(button);
+  });
+}
+
+function refreshAll() {
+  refreshStats();
+  refreshButtons();
+  refreshImageList();
+  refreshShapeList();
+}
+
+async function loadImage(index) {
+  if (index < 0 || index >= state.images.length) return;
+  state.index = index;
+  state.selectedShape = -1;
+  state.draft = [];
+  state.draftCursor = null;
+  state.draftCloseHover = false;
+  state.ellipseStart = null;
+  state.ellipseEnd = null;
+  const entry = currentEntry();
+  document.getElementById("currentName").textContent = entry ? `${entry.split}/${entry.name}` : "";
+  if (!entry) return;
+  prepareLabelsForEntry(entry);
+
+  const img = new Image();
+  img.onload = () => {
+    state.image = img;
+    fitCanvas();
+    refreshAll();
+    render();
+  };
+  img.src = entry.url;
+}
+
+function moveImage(delta) {
+  const indexes = visibleIndexes();
+  if (!indexes.length) return;
+  const position = Math.max(0, indexes.indexOf(state.index));
+  const next = indexes[(position + delta + indexes.length) % indexes.length];
+  loadImage(next);
+}
+
+function setTool(tool) {
+  state.tool = tool;
+  state.draft = tool === "polygon" ? state.draft : [];
+  state.draftCursor = null;
+  state.draftCloseHover = false;
+  state.ellipseStart = null;
+  state.ellipseEnd = null;
+  state.interaction = null;
+  refreshButtons();
+  render();
+}
+
+function cancelDraftPolygon() {
+  if (!state.draft.length && !state.ellipseStart && !state.interaction) return false;
+  state.draft = [];
+  state.draftCursor = null;
+  state.draftCloseHover = false;
+  state.ellipseStart = null;
+  state.ellipseEnd = null;
+  state.interaction = null;
+  refreshAll();
+  render();
+  return true;
+}
+
+function setClass(classId) {
+  state.classId = classId;
+  if (state.selectedShape >= 0) {
+    const labels = currentLabels();
+    if (labels[state.selectedShape]) {
+      labels[state.selectedShape].classId = classId;
+      state.labelFileKeys.add(currentEntry().key);
+    }
+  }
+  refreshAll();
+  render();
+}
+
+function closeDraftPolygon() {
+  const entry = currentEntry();
+  if (entry && state.draft.length >= 3) {
+    currentLabels().push(makeLabel(state.classId, state.draft.slice()));
+    state.labelFileKeys.add(entry.key);
+    state.selectedShape = currentLabels().length - 1;
+  }
+  state.draft = [];
+  state.draftCursor = null;
+  state.draftCloseHover = false;
+  refreshAll();
+  render();
+}
+
+function deleteSelected() {
+  if (state.selectedShape < 0) return;
+  currentLabels().splice(state.selectedShape, 1);
+  state.labelFileKeys.add(currentEntry().key);
+  state.selectedShape = -1;
+  refreshAll();
+  render();
+}
+
+function selectShapeAt(x, y) {
+  const point = canvasToNormalized(x, y);
+  const labels = currentLabels();
+  state.selectedShape = -1;
+  for (let index = labels.length - 1; index >= 0; index--) {
+    if (pointInPolygon(point, labels[index].points)) {
+      state.selectedShape = index;
+      break;
+    }
+  }
+  if (state.selectedShape >= 0) state.classId = labels[state.selectedShape].classId;
+  refreshAll();
+  render();
+}
+
+function pointInPolygon(point, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][0], yi = polygon[i][1];
+    const xj = polygon[j][0], yj = polygon[j][1];
+    const intersect = ((yi > point[1]) !== (yj > point[1])) &&
+      (point[0] < (xj - xi) * (point[1] - yi) / ((yj - yi) || 1e-9) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function distance(x0, y0, x1, y1) {
+  return Math.hypot(x0 - x1, y0 - y1);
+}
+
+function hitPolygonVertex(label, x, y) {
+  let best = null;
+  label.points.forEach((point, index) => {
+    const [px, py] = normalizedToCanvas(point);
+    const d = distance(x, y, px, py);
+    if (d <= HANDLE_RADIUS + 5 && (!best || d < best.distance)) {
+      best = { type: "vertex", pointIndex: index, distance: d };
+    }
+  });
+  return best;
+}
+
+function hitEllipseHandle(label, x, y) {
+  if (!label.ellipse) return null;
+  for (const handle of ellipseHandlePositions(label)) {
+    if (distance(x, y, handle.x, handle.y) <= HANDLE_RADIUS + 5) {
+      return handle.role === "rotate"
+        ? { type: "ellipse-rotate" }
+        : { type: "ellipse-resize", handle: handle.name };
+    }
+  }
+  return null;
+}
+
+function hitSelectedHandle(x, y) {
+  const label = selectedLabel();
+  if (!label) return null;
+  if (label.kind === "ellipse" && label.ellipse) return hitEllipseHandle(label, x, y);
+  return hitPolygonVertex(label, x, y);
+}
+
+function startMoveInteraction(x, y) {
+  const label = selectedLabel();
+  if (!label) return;
+  state.interaction = {
+    type: "move",
+    start: canvasToNormalized(x, y),
+    startPoints: clonePoints(label.points),
+    startEllipse: cloneEllipse(label.ellipse),
+  };
+}
+
+function startHandleInteraction(hit, x, y) {
+  const label = selectedLabel();
+  if (!label) return false;
+  if (hit.type === "vertex") {
+    state.interaction = { type: "vertex", pointIndex: hit.pointIndex };
+  } else if (hit.type === "ellipse-resize") {
+    state.interaction = { type: "ellipse-resize", handle: hit.handle };
+  } else if (hit.type === "ellipse-rotate") {
+    state.interaction = { type: "ellipse-rotate" };
+  }
+  if (state.interaction) {
+    state.interaction.start = canvasToNormalized(x, y);
+    state.interaction.startPoints = clonePoints(label.points);
+    state.interaction.startEllipse = cloneEllipse(label.ellipse);
+  }
+  return Boolean(state.interaction);
+}
+
+function resizeEllipse(label, handle, x, y) {
+  const start = state.interaction?.startEllipse || label.ellipse;
+  const angle = start.angle;
+  const centerX = start.cx * canvas.width;
+  const centerY = start.cy * canvas.height;
+  const startRx = Math.max(6, start.rx * canvas.width);
+  const startRy = Math.max(6, start.ry * canvas.height);
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const dx = x - centerX;
+  const dy = y - centerY;
+  const pointerLocalX = dx * cos + dy * sin;
+  const pointerLocalY = -dx * sin + dy * cos;
+  const xSign = handle.includes("e") ? 1 : handle.includes("w") ? -1 : 0;
+  const ySign = handle.includes("s") ? 1 : handle.includes("n") ? -1 : 0;
+  const minRadius = 6;
+
+  let nextRx = startRx;
+  let nextRy = startRy;
+  let centerLocalX = 0;
+  let centerLocalY = 0;
+  if (xSign) {
+    const fixedX = -xSign * startRx;
+    nextRx = Math.max(minRadius, Math.abs(pointerLocalX - fixedX) / 2);
+    centerLocalX = (pointerLocalX + fixedX) / 2;
+  }
+  if (ySign) {
+    const fixedY = -ySign * startRy;
+    nextRy = Math.max(minRadius, Math.abs(pointerLocalY - fixedY) / 2);
+    centerLocalY = (pointerLocalY + fixedY) / 2;
+  }
+
+  const [centerDx, centerDy] = rotatePoint(centerLocalX, centerLocalY, angle);
+  label.ellipse = {
+    ...start,
+    cx: (centerX + centerDx) / canvas.width,
+    cy: (centerY + centerDy) / canvas.height,
+    rx: nextRx / canvas.width,
+    ry: nextRy / canvas.height,
+  };
+  syncEllipsePoints(label);
+}
+
+function rotateEllipse(label, x, y) {
+  const { cx, cy } = ellipseCanvasParams(label);
+  label.ellipse.angle = Math.atan2(y - cy, x - cx) + Math.PI / 2;
+  syncEllipsePoints(label);
+}
+
+function updateInteraction(x, y) {
+  const label = selectedLabel();
+  const entry = currentEntry();
+  if (!label || !state.interaction || !entry) return;
+  const current = canvasToNormalized(x, y);
+  const dx = current[0] - state.interaction.start[0];
+  const dy = current[1] - state.interaction.start[1];
+
+  if (state.interaction.type === "move") {
+    label.points = state.interaction.startPoints.map(point => clampPoint([point[0] + dx, point[1] + dy]));
+    if (label.ellipse && state.interaction.startEllipse) {
+      label.ellipse = {
+        ...state.interaction.startEllipse,
+        cx: clamp01(state.interaction.startEllipse.cx + dx),
+        cy: clamp01(state.interaction.startEllipse.cy + dy),
+      };
+      syncEllipsePoints(label);
+    }
+  } else if (state.interaction.type === "vertex") {
+    label.kind = "polygon";
+    label.ellipse = null;
+    label.geometryReady = true;
+    label.points[state.interaction.pointIndex] = clampPoint(current);
+  } else if (state.interaction.type === "ellipse-resize") {
+    resizeEllipse(label, state.interaction.handle, x, y);
+  } else if (state.interaction.type === "ellipse-rotate") {
+    rotateEllipse(label, x, y);
+  }
+
+  state.labelFileKeys.add(entry.key);
+  refreshStats();
+  refreshShapeList();
+  render();
+}
+
+function updateCursor(x, y) {
+  if (state.tool !== "select") {
+    canvas.style.cursor = state.tool === "polygon" ? "crosshair" : "cell";
+    return;
+  }
+  const hit = hitSelectedHandle(x, y);
+  if (hit) {
+    canvas.style.cursor = hit.type === "ellipse-rotate" ? "grab" : "pointer";
+    return;
+  }
+  const label = selectedLabel();
+  const point = canvasToNormalized(x, y);
+  canvas.style.cursor = label && pointInPolygon(point, label.points) ? "move" : "default";
+}
+
+async function ensureDirectory(root, parts) {
+  let dir = root;
+  for (const part of parts) dir = await dir.getDirectoryHandle(part, { create: true });
+  return dir;
+}
+
+async function writeLabelFile(entry, text) {
+  const name = `${entry.stem}.txt`;
+  if (state.datasetDir) {
+    const dir = await ensureDirectory(state.datasetDir, [...entry.rootParts, "labels", entry.split]);
+    const handle = await dir.getFileHandle(name, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write(text);
+    await writable.close();
+    state.labelFileKeys.add(entry.key);
+    return `已写回 ${[...entry.rootParts, "labels", entry.split, name].join("/")}`;
+  }
+
+  const blob = new Blob([text], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  state.labelFileKeys.add(entry.key);
+  return `已下载 ${name}`;
+}
+
+async function saveCurrent() {
+  const entry = currentEntry();
+  if (!entry) return;
+  try {
+    const message = await writeLabelFile(entry, labelsToText(currentLabels()));
+    refreshAll();
+    setStatus(message);
+  } catch (error) {
+    setStatus(`保存失败：${error.message || error}`);
+  }
+}
+
+async function saveAll() {
+  if (!state.images.length) return;
+  if (!state.datasetDir && state.images.length > 8 && !confirm(`将下载 ${state.images.length} 个标签文件，继续？`)) return;
+  let count = 0;
+  try {
+    for (const entry of state.images) {
+      const labels = state.labelsByKey.get(entry.key) || [];
+      await writeLabelFile(entry, labelsToText(labels));
+      count++;
+    }
+    refreshAll();
+    setStatus(`已保存 ${count} 个标签文件。`);
+  } catch (error) {
+    setStatus(`保存失败：${error.message || error}`);
+  }
+}
+
+document.getElementById("openDataset").onclick = () => {
+  openDatasetFolder().catch(error => setStatus(`打开失败：${error.message || error}`));
+};
+
+document.getElementById("datasetInput").addEventListener("change", event => {
+  const files = Array.from(event.target.files || []).map(file => ({
+    file,
+    relPath: file.webkitRelativePath || file.name,
+  }));
+  loadDatasetItems(files).catch(error => setStatus(`读取失败：${error.message || error}`));
+});
+
+document.getElementById("splitFilter").onchange = () => {
+  const indexes = visibleIndexes();
+  if (!indexes.includes(state.index) && indexes.length) loadImage(indexes[0]);
+  refreshAll();
+};
+
+document.getElementById("labelFilter").onchange = () => {
+  const indexes = visibleIndexes();
+  if (!indexes.includes(state.index) && indexes.length) loadImage(indexes[0]);
+  refreshAll();
+};
+
+document.querySelectorAll(".tool-button").forEach(button => {
+  button.onclick = () => setTool(button.dataset.tool);
+});
+
+document.querySelectorAll(".class-button").forEach(button => {
+  button.onclick = () => setClass(Number(button.dataset.class));
+});
+
+document.getElementById("undoPoint").onclick = () => {
+  state.draft.pop();
+  state.draftCursor = null;
+  state.draftCloseHover = false;
+  render();
+};
+document.getElementById("deleteShape").onclick = deleteSelected;
+document.getElementById("saveCurrent").onclick = saveCurrent;
+document.getElementById("saveAll").onclick = saveAll;
+
+canvas.addEventListener("mousedown", event => {
+  if (!currentEntry()) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  if (state.tool === "polygon") {
+    if (isNearDraftStart(x, y)) {
+      closeDraftPolygon();
+      return;
+    }
+    state.draft.push(canvasToNormalized(x, y));
+    state.draftCursor = null;
+    state.draftCloseHover = false;
+    render();
+  } else if (state.tool === "ellipse") {
+    state.ellipseStart = canvasToNormalized(x, y);
+    state.ellipseEnd = state.ellipseStart;
+    render();
+  } else {
+    let hit = hitSelectedHandle(x, y);
+    if (!hit) {
+      selectShapeAt(x, y);
+      hit = hitSelectedHandle(x, y);
+    }
+    if (hit && startHandleInteraction(hit, x, y)) return;
+    if (selectedLabel() && pointInPolygon(canvasToNormalized(x, y), selectedLabel().points)) {
+      startMoveInteraction(x, y);
+    }
+  }
+});
+
+canvas.addEventListener("mousemove", event => {
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  if (state.interaction) {
+    updateInteraction(x, y);
+    return;
+  }
+  if (state.ellipseStart) {
+    state.ellipseEnd = canvasToNormalized(x, y);
+    render();
+    return;
+  }
+  if (state.tool === "polygon" && state.draft.length) {
+    state.draftCursor = canvasToNormalized(x, y);
+    state.draftCloseHover = isNearDraftStart(x, y);
+    canvas.style.cursor = state.draftCloseHover ? "pointer" : "crosshair";
+    render();
+    return;
+  }
+  updateCursor(x, y);
+});
+
+canvas.addEventListener("mouseup", () => {
+  if (state.interaction) {
+    state.interaction = null;
+    refreshAll();
+    render();
+    return;
+  }
+  if (!state.ellipseStart || !state.ellipseEnd) return;
+  const [x0, y0] = state.ellipseStart;
+  const [x1, y1] = state.ellipseEnd;
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  const rx = Math.abs(x1 - x0) / 2;
+  const ry = Math.abs(y1 - y0) / 2;
+  if (rx > 0.003 && ry > 0.003) {
+    const label = makeLabel(state.classId, [], "ellipse", { cx, cy, rx, ry, angle: 0 });
+    syncEllipsePoints(label);
+    currentLabels().push(label);
+    state.labelFileKeys.add(currentEntry().key);
+    state.selectedShape = currentLabels().length - 1;
+    state.tool = "select";
+  }
+  state.ellipseStart = null;
+  state.ellipseEnd = null;
+  refreshAll();
+  render();
+});
+
+canvas.addEventListener("mouseleave", () => {
+  if (state.interaction) {
+    state.interaction = null;
+    refreshAll();
+    render();
+    return;
+  }
+  if (state.draftCursor) {
+    state.draftCursor = null;
+    state.draftCloseHover = false;
+    render();
+  }
+});
+
+window.addEventListener("keydown", event => {
+  const target = event.target;
+  if (target && ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName)) return;
+  const key = event.key.toLowerCase();
+
+  if ((event.metaKey || event.ctrlKey) && key === "s") {
+    event.preventDefault();
+    saveCurrent();
+    return;
+  }
+  if (event.key === "Escape") {
+    if (cancelDraftPolygon()) event.preventDefault();
+  } else if (event.key === "ArrowUp" || key === "a" || key === "k") {
+    event.preventDefault();
+    moveImage(-1);
+  } else if (event.key === "ArrowDown" || key === "d" || key === "j") {
+    event.preventDefault();
+    moveImage(1);
+  } else if (key === "p") {
+    setTool("polygon");
+  } else if (key === "e") {
+    setTool("ellipse");
+  } else if (key === "v") {
+    setTool("select");
+  } else if (/^[1-4]$/.test(event.key)) {
+    setClass(Number(event.key) - 1);
+  } else if (key === "z") {
+    state.draft.pop();
+    state.draftCursor = null;
+    state.draftCloseHover = false;
+    render();
+  } else if (event.key === "Delete" || event.key === "Backspace") {
+    event.preventDefault();
+    deleteSelected();
+  } else if (key === "s" && event.shiftKey) {
+    saveAll();
+  } else if (key === "s") {
+    saveCurrent();
+  }
+});
+
+window.addEventListener("resize", () => {
+  if (currentEntry()) {
+    fitCanvas();
+    render();
+  }
+});
+
+refreshAll();
+</script>
+</body>
+</html>
