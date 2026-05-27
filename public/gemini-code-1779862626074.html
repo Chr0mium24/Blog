@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>陀螺仪 3D 透视效果</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background-color: #0d1117;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            /* 1. 设置视距（透视眼），值越小透视畸变越强烈 */
+            perspective: 800px;
+            /* 将透视原点设在屏幕中心 */
+            perspective-origin: 50% 50%;
+        }
+
+        /* 3D 场景容器 */
+        .scene {
+            width: 300px;
+            height: 300px;
+            position: relative;
+            /* 允许子元素保留 3D 空间结构 */
+            transform-style: preserve-3d;
+            /* 默认平滑过渡，让晃动不那么生硬 */
+            transition: transform 0.1s ease-out;
+        }
+
+        /* 3D 盒子样式 */
+        .box {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform-style: preserve-3d;
+        }
+
+        /* 盒子的每个面 */
+        .face {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            border-radius: 16px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+        }
+
+        /* 运用 3D 变换把它们拼成一个有深度感的空间 */
+        .face-front  { background: rgba(0, 255, 204, 0.1); transform: translateZ(50px); }
+        .face-back   { background: rgba(255, 0, 128, 0.1); transform: translateZ(-150px) rotateY(180deg); }
+        .face-left   { background: rgba(0, 153, 255, 0.1); transform: translateX(-100px) translateZ(-50px) rotateY(-90deg); width: 200px;}
+        .face-right  { background: rgba(255, 153, 0, 0.1); transform: translateX(200px) translateZ(-50px) rotateY(90deg); width: 200px;}
+
+        /* 提示与权限按钮 */
+        .info-panel {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.6);
+            text-align: center;
+            z-index: 10;
+            font-size: 14px;
+            pointer-events: none;
+        }
+
+        .btn-auth {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background: #00ffcc;
+            color: #0d1117;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 255, 204, 0.4);
+            display: none; /* 默认隐藏，仅在 iOS 需要时显示 */
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="info-panel">
+        <p id="status">请在手机浏览器中打开此页面</p>
+        <p id="data" style="margin-top: 8px; font-family: monospace;"></p>
+    </div>
+
+    <button class="btn-auth" id="authBtn">开启陀螺仪权限</button>
+
+    <div class="scene" id="scene">
+        <div class="box">
+            <div class="face face-front">FRONT (前)</div>
+            <div class="face face-left">LEFT</div>
+            <div class="face face-right">RIGHT</div>
+            <div class="face face-back">BACK (后)</div>
+        </div>
+    </div>
+
+    <script>
+        const scene = document.getElementById('scene');
+        const statusText = document.getElementById('status');
+        const dataText = document.getElementById('data');
+        const authBtn = document.getElementById('authBtn');
+
+        // 核心逻辑：根据陀螺仪角度改变 CSS Perspective Origin 或 Transform
+        function handleOrientation(event) {
+            // beta: 前后倾斜 (-180 到 180) -> 映射为绕 X 轴旋转
+            // gamma: 左右倾斜 (-90 到 90) -> 映射为绕 Y 轴旋转
+            let beta = event.beta;
+            let gamma = event.gamma;
+
+            if (beta === null || gamma === null) return;
+
+            // 限制范围，防止动作过大导致画面翻转
+            beta = Math.max(-45, Math.min(45, beta));
+            gamma = Math.max(-45, Math.min(45, gamma));
+
+            // 显示实时数据
+            statusText.innerText = "陀螺仪已连接 📱 摇晃手机看看";
+            dataText.innerText = `X轴(Beta): ${Math.round(beta)}° | Y轴(Gamma): ${Math.round(gamma)}°`;
+
+            /**
+             * 核心算法：
+             * 我们通过旋转场景（scene）来模拟透视改变。
+             * 乘以 0.8 是为了降低灵敏度，让动效更丝滑。
+             */
+            const rotateX = beta * 0.8; 
+            const rotateY = -gamma * 0.8; // 取反符合直觉的视角跟随
+
+            scene.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        }
+
+        // 初始化与权限处理（兼容 iOS 13+ 的严格隐私策略）
+        function initGyroscope() {
+            if (typeof DeviceOrientationEvent !== 'undefined') {
+                
+                // 检查 iOS 是否需要显式请求权限
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    authBtn.style.display = 'block';
+                    statusText.innerText = 'iOS 设备需要点击下方按钮授权';
+                    
+                    authBtn.addEventListener('click', () => {
+                        DeviceOrientationEvent.requestPermission()
+                            .then(permissionState => {
+                                if (permissionState === 'granted') {
+                                    authBtn.style.display = 'none';
+                                    window.addEventListener('deviceorientation', handleOrientation);
+                                } else {
+                                    statusText.innerText = '权限被拒绝，无法使用陀螺仪';
+                                }
+                            })
+                            .catch(console.error);
+                    });
+                } else {
+                    // 安卓或普通浏览器直接监听
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    statusText.innerText = '正在等待陀螺仪数据...';
+                }
+            } else {
+                statusText.innerText = '您的浏览器或设备不支持陀螺仪';
+            }
+        }
+
+        // 页面加载后启动
+        window.addEventListener('DOMContentLoaded', initGyroscope);
+    </script>
+</body>
+</html>
