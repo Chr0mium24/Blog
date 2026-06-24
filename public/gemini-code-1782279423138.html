@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sky 智能编码器</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success: #16a34a;
+            --warning: #ca8a04;
+            --warning-hover: #a16207;
+            --bg: #f3f4f6;
+            --surface: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .card {
+            background-color: var(--surface);
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 640px;
+        }
+
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        /* 统一输入区 */
+        .input-area {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 160px;
+            padding: 16px;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            box-sizing: border-box;
+            resize: vertical;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            background-color: #f9fafb;
+            color: var(--text-main);
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        textarea:focus, textarea.dragover {
+            border-color: var(--primary);
+            background-color: #eff6ff;
+            outline: none;
+        }
+
+        /* 待加密图片的缩略图提示 */
+        #pending-image-container {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        
+        #pending-image-container img {
+            height: 40px;
+            border-radius: 4px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary { background-color: var(--primary); }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-warning { background-color: var(--warning); }
+        .btn-warning:hover { background-color: var(--warning-hover); }
+        .btn-success { background-color: var(--success); }
+
+        /* 智能输出区 */
+        .output-area {
+            border-top: 1px solid var(--border);
+            padding-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .copy-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 14px;
+            padding: 0;
+            cursor: pointer;
+            flex: none;
+            font-weight: 600;
+        }
+
+        #output-text {
+            height: 120px;
+            border: 1px solid var(--border);
+            border-style: solid;
+        }
+
+        #output-image {
+            display: none;
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Sky 智能编码器</h1>
+    <div class="subtitle">支持文本输入，或直接粘贴/拖拽图片到输入框</div>
+
+    <div class="input-area">
+        <textarea id="main-input" placeholder="在此输入普通文本、Sky 密文，或直接 `Ctrl+V` 粘贴图片..."></textarea>
+    </div>
+
+    <div id="pending-image-container">
+        <img id="pending-image-thumb" src="" alt="thumb">
+        <span style="font-size: 14px; color: #166534;">已捕获图片，点击"加密"将其转换为 Sky 密文</span>
+        <button onclick="clearPendingImage()" style="flex: none; padding: 4px 8px; font-size: 12px; background: transparent; color: #166534; border: 1px solid currentColor;">取消</button>
+    </div>
+    
+    <div class="btn-group">
+        <button class="btn-primary" onclick="handleEncrypt()">加 密</button>
+        <button class="btn-warning" onclick="handleDecrypt()">解 密</button>
+    </div>
+    
+    <div class="output-area">
+        <div class="output-header">
+            <span id="output-label">输出结果</span>
+            <button class="copy-btn" id="copy-btn" onclick="copyResult()">复制结果</button>
+        </div>
+        
+        <textarea id="output-text" readonly placeholder="结果将显示在这里..."></textarea>
+        <img id="output-image" alt="解密出的图片">
+    </div>
+</div>
+
+<script>
+    const skyMap = ["sky", "skY", "sKy", "sKY", "Sky", "SkY", "SKy", "SKY"];
+    let pendingImageBase64 = null; // 暂存用户粘贴或拖拽的图片数据
+
+    // ================== 核心算法 ==================
+    function coreEncrypt(text) {
+        if (!text) return "";
+        const encoder = new TextEncoder();
+        const bytes = encoder.encode(text);
+        
+        let binaryArray = [];
+        for (let b of bytes) binaryArray.push(b.toString(2).padStart(8, '0'));
+        let binary = binaryArray.join('');
+
+        let result = [];
+        for (let i = 0; i < binary.length; i += 3) {
+            let chunk = binary.substring(i, i + 3);
+            if (chunk.length < 3) chunk = chunk.padEnd(3, '0');
+            result.push(skyMap[parseInt(chunk, 2)]);
+        }
+        return result.join('');
+    }
+
+    function coreDecrypt(skyText) {
+        skyText = skyText.replace(/\s+/g, '');
+        if (!skyText) return "";
+
+        let binaryArray = [];
+        for (let i = 0; i < skyText.length; i += 3) {
+            const word = skyText.substring(i, i + 3);
+            const index = skyMap.indexOf(word);
+            if (index !== -1) binaryArray.push(index.toString(2).padStart(3, '0'));
+        }
+        let binary = binaryArray.join('');
+
+        const bytes = [];
+        for (let i = 0; i < binary.length; i += 8) {
+            if (i + 8 <= binary.length) bytes.push(parseInt(binary.substring(i, i + 8), 2));
+        }
+
+        const decoder = new TextDecoder();
+        return decoder.decode(new Uint8Array(bytes));
+    }
+
+    // ================== UI 交互逻辑 ==================
+
+    function handleEncrypt() {
+        const inputStr = document.getElementById('main-input').value;
+        const outputText = document.getElementById('output-text');
+        
+        try {
+            // 如果存在暂存的图片，优先加密图片；否则加密文本框内容
+            const sourceData = pendingImageBase64 ? pendingImageBase64 : inputStr;
+            if (!sourceData) return;
+
+            const encrypted = coreEncrypt(sourceData);
+            showTextOutput(encrypted, "Sky 密文");
+            clearPendingImage(); // 加密完成后清理待办图片
+        } catch (e) {
+            showTextOutput("加密失败，请检查输入。", "错误");
+        }
+    }
+
+    function handleDecrypt() {
+        const inputStr = document.getElementById('main-input').value;
+        if (!inputStr) return;
+
+        try {
+            const decrypted = coreDecrypt(inputStr);
+            
+            // 【核心逻辑：Magic Header 识别】
+            // 检查解密后的字符串是否以标准的图片 Base64 格式开头
+            if (decrypted.startsWith('data:image/')) {
+                showImageOutput(decrypted);
+            } else {
+                showTextOutput(decrypted, "普通文本");
+            }
+        } catch (e) {
+            showTextOutput("解密失败，密文格式有误。", "错误");
+        }
+    }
+
+    // ================== 显示切换逻辑 ==================
+
+    function showTextOutput(text, labelStr) {
+        document.getElementById('output-text').style.display = 'block';
+        document.getElementById('output-image').style.display = 'none';
+        document.getElementById('output-text').value = text;
+        document.getElementById('output-label').innerText = "输出结果 (" + labelStr + ")";
+        document.getElementById('copy-btn').style.display = 'block';
+    }
+
+    function showImageOutput(base64Src) {
+        document.getElementById('output-text').style.display = 'none';
+        const imgEl = document.getElementById('output-image');
+        imgEl.style.display = 'block';
+        imgEl.src = base64Src;
+        document.getElementById('output-label').innerText = "输出结果 (还原的图片)";
+        document.getElementById('copy-btn').style.display = 'none'; // 图片不需要文本复制按钮
+    }
+
+    // ================== 剪贴板与拖拽支持 ==================
+
+    const mainInput = document.getElementById('main-input');
+
+    // 1. 监听粘贴事件 (Ctrl+V)
+    mainInput.addEventListener('paste', function(e) {
+        const items = e.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                e.preventDefault(); // 阻止默认的粘贴行为
+                processImageFile(items[i].getAsFile());
+                return;
+            }
+        }
+        // 如果不是图片，正常走文本粘贴流程，同时清空可能存在的旧图片
+        clearPendingImage();
+    });
+
+    // 2. 监听拖拽事件
+    mainInput.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        mainInput.classList.add('dragover');
+    });
+    mainInput.addEventListener('dragleave', () => mainInput.classList.remove('dragover'));
+    mainInput.addEventListener('drop', (e) => {
+        e.preventDefault();
+        mainInput.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            const file = e.dataTransfer.files[0];
+            if (file.type.startsWith('image/')) {
+                processImageFile(file);
+            }
+        }
+    });
+
+    // 处理读取到的图片文件
+    function processImageFile(file) {
+        if (file.size > 500 * 1024) {
+            alert("图片大小不能超过 500KB！");
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            pendingImageBase64 = event.target.result; // 自带 data:image/... Magic Header
+            
+            // UI 反馈
+            mainInput.value = ""; 
+            mainInput.placeholder = "已捕获图片，暂不可输入文本。如需输入文本请取消。";
+            mainInput.disabled = true;
+            
+            document.getElementById('pending-image-container').style.display = 'flex';
+            document.getElementById('pending-image-thumb').src = pendingImageBase64;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function clearPendingImage() {
+        pendingImageBase64 = null;
+        mainInput.disabled = false;
+        mainInput.placeholder = "在此输入普通文本、Sky 密文，或直接 `Ctrl+V` 粘贴图片...";
+        document.getElementById('pending-image-container').style.display = 'none';
+    }
+
+    function copyResult() {
+        const text = document.getElementById('output-text').value;
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.getElementById('copy-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "已复制！";
+            setTimeout(() => btn.innerText = originalText, 1500);
+        });
+    }
+</script>
+
+</body>
+</html>
