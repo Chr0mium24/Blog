@@ -1,0 +1,1429 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>图片颜色识别</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3f4f1;
+      --ink: #171b18;
+      --muted: #6c746d;
+      --line: #d4d9d2;
+      --panel: #ffffff;
+      --accent: #1f6b54;
+      --active: #e3eee8;
+      --stage: #e8e9e5;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", sans-serif;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .file-input {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    .app {
+      display: grid;
+      min-height: 100vh;
+    }
+
+    @supports (min-height: 100dvh) {
+      .app {
+        min-height: 100dvh;
+      }
+    }
+
+    .upload-button,
+    .side-upload {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      padding: 0 16px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #ffffff;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .workspace {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 220px;
+      min-height: 100vh;
+    }
+
+    @supports (min-height: 100dvh) {
+      .workspace {
+        min-height: 100dvh;
+      }
+    }
+
+    .app:not(.has-image) .workspace {
+      grid-template-columns: 1fr;
+    }
+
+    .app:not(.has-image) .image-pane {
+      cursor: pointer;
+    }
+
+    .image-pane {
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+      padding: 14px;
+      background: var(--stage);
+    }
+
+    canvas {
+      display: none;
+      max-width: 100%;
+      max-height: calc(100vh - 28px);
+      width: auto;
+      height: auto;
+      background: #ffffff;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .color-column {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      min-width: 0;
+      overflow: hidden;
+      border-left: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.94);
+    }
+
+    .app:not(.has-image) .color-column {
+      display: none;
+    }
+
+    .colors {
+      display: grid;
+      align-content: start;
+      gap: 1px;
+      padding: 8px;
+      overflow-y: auto;
+    }
+
+    .color-item {
+      position: relative;
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 50px;
+      padding: 8px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .color-item > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .color-item:hover {
+      border-color: #b9cbc1;
+      background: var(--active);
+    }
+
+    .color-item.is-active {
+      border-color: #050505;
+      background: #050505;
+      color: #ffffff;
+    }
+
+    .color-item.is-picked {
+      border-style: dashed;
+    }
+
+    .swatch {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.18);
+    }
+
+    .color-item.is-active .swatch {
+      border-color: rgba(255, 255, 255, 0.7);
+    }
+
+    .color-name {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .links {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    .empty {
+      display: grid;
+      place-items: center;
+      gap: 18px;
+      min-width: min(360px, 84vw);
+      min-height: 240px;
+      padding: 28px;
+      border: 1px dashed #8b9890;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.58);
+      color: var(--muted);
+      font-size: 15px;
+      text-align: center;
+      transition: border-color 160ms ease, background-color 160ms ease;
+    }
+
+    .app.is-dragging .empty {
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.78);
+    }
+
+    .empty-title {
+      margin: 0;
+      color: var(--ink);
+      font-size: 24px;
+      line-height: 1.2;
+      font-weight: 760;
+    }
+
+    .empty-hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .side-footer {
+      position: sticky;
+      bottom: 0;
+      padding: 10px 8px;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.96);
+    }
+
+    .side-upload {
+      width: 100%;
+      min-height: 42px;
+    }
+
+    @media (max-width: 760px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        min-height: 100vh;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(300px, 1fr) auto;
+      }
+
+      .image-pane {
+        padding: 8px;
+        max-height: 66vh;
+      }
+
+      .app:not(.has-image) .image-pane {
+        max-height: none;
+      }
+
+      canvas {
+        max-height: calc(66vh - 16px);
+      }
+
+      .color-column {
+        display: grid;
+        max-height: 34vh;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .colors {
+        padding: 6px;
+      }
+
+      .empty {
+        min-width: min(330px, 88vw);
+        min-height: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <input class="file-input" id="fileInput" type="file" accept="image/*">
+  <div class="app" id="app">
+    <main class="workspace" id="workspace">
+      <section class="image-pane" id="imagePane">
+        <canvas id="displayCanvas" aria-label="图片颜色画布"></canvas>
+        <div class="empty" id="emptyState">
+          <h1 class="empty-title">图片颜色识别</h1>
+          <p class="empty-hint">点击页面、粘贴图片或拖入图片</p>
+          <label class="upload-button" for="fileInput">打开图片</label>
+        </div>
+      </section>
+      <aside class="color-column" id="colorColumn">
+        <div class="colors" id="results"></div>
+        <div class="side-footer">
+          <label class="side-upload" for="fileInput">重新选图</label>
+        </div>
+      </aside>
+      <svg class="links" id="linkLayer" aria-hidden="true"></svg>
+    </main>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const app = document.getElementById("app");
+    const workspace = document.getElementById("workspace");
+    const imagePane = document.getElementById("imagePane");
+    const displayCanvas = document.getElementById("displayCanvas");
+    const emptyState = document.getElementById("emptyState");
+    const results = document.getElementById("results");
+    const linkLayer = document.getElementById("linkLayer");
+    const ctx = displayCanvas.getContext("2d", { willReadFrequently: true });
+
+    const state = {
+      image: null,
+      clusters: [],
+      picked: null,
+      selectedId: null,
+      renderScale: 1,
+      draggingPick: false,
+      pendingPick: null,
+      pickFrame: 0,
+      transition: null,
+      transitionFrame: 0,
+      maskCache: new Map()
+    };
+
+    const namedColors = [
+      ["黑色", 15, 15, 15],
+      ["炭黑色", 36, 38, 39],
+      ["白色", 246, 246, 242],
+      ["象牙白", 235, 228, 208],
+      ["浅灰色", 202, 207, 205],
+      ["灰色", 126, 132, 130],
+      ["深灰色", 72, 76, 78],
+      ["米色", 213, 197, 161],
+      ["卡其色", 178, 154, 105],
+      ["棕色", 125, 78, 43],
+      ["深棕色", 78, 48, 31],
+      ["红色", 213, 45, 45],
+      ["深红色", 126, 29, 42],
+      ["酒红色", 111, 31, 55],
+      ["粉色", 238, 126, 164],
+      ["玫红色", 203, 42, 116],
+      ["橙色", 232, 111, 31],
+      ["珊瑚色", 226, 91, 77],
+      ["金色", 202, 159, 58],
+      ["黄色", 231, 198, 47],
+      ["浅黄色", 239, 222, 128],
+      ["橄榄绿", 115, 128, 49],
+      ["黄绿色", 135, 177, 57],
+      ["绿色", 52, 151, 84],
+      ["深绿色", 29, 92, 58],
+      ["薄荷绿", 111, 204, 162],
+      ["青色", 36, 174, 184],
+      ["湖蓝色", 37, 142, 190],
+      ["天蓝色", 96, 169, 222],
+      ["蓝色", 48, 97, 196],
+      ["深蓝色", 33, 60, 138],
+      ["靛蓝色", 71, 74, 166],
+      ["紫色", 134, 70, 181],
+      ["深紫色", 86, 49, 125],
+      ["淡紫色", 183, 153, 218]
+    ].map(([name, r, g, b]) => ({ name, lab: rgbToLab(r, g, b) }));
+
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (file) loadFile(file);
+    });
+
+    document.addEventListener("click", (event) => {
+      if (state.image) return;
+      if (event.target === fileInput || event.target.closest("label")) return;
+      fileInput.click();
+    });
+
+    document.addEventListener("paste", (event) => {
+      if (state.image) return;
+      const file = getImageFile(event.clipboardData && event.clipboardData.items);
+      if (!file) return;
+      event.preventDefault();
+      loadFile(file);
+    });
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      document.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        if (state.image) return;
+        app.classList.add("is-dragging");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      document.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        if (state.image) return;
+        if (eventName === "dragleave" && event.relatedTarget) return;
+        app.classList.remove("is-dragging");
+      });
+    });
+
+    document.addEventListener("drop", (event) => {
+      if (state.image) return;
+      const file = getImageFile(event.dataTransfer && event.dataTransfer.items)
+        || getImageFile(event.dataTransfer && event.dataTransfer.files);
+      if (file) loadFile(file);
+    });
+
+    displayCanvas.addEventListener("pointerdown", (event) => {
+      if (!state.image) return;
+      state.draggingPick = true;
+      displayCanvas.setPointerCapture(event.pointerId);
+      scheduleCanvasPick(event.clientX, event.clientY);
+      event.preventDefault();
+    });
+
+    displayCanvas.addEventListener("pointermove", (event) => {
+      if (!state.image || !state.draggingPick) return;
+      scheduleCanvasPick(event.clientX, event.clientY);
+      event.preventDefault();
+    });
+
+    ["pointerup", "pointercancel", "pointerleave"].forEach((eventName) => {
+      displayCanvas.addEventListener(eventName, (event) => {
+        if (!state.draggingPick) return;
+        state.draggingPick = false;
+        if (displayCanvas.hasPointerCapture(event.pointerId)) {
+          displayCanvas.releasePointerCapture(event.pointerId);
+        }
+      });
+    });
+
+    window.addEventListener("resize", () => {
+      requestAnimationFrame(drawLinks);
+    });
+
+    if ("ResizeObserver" in window) {
+      const observer = new ResizeObserver(() => requestAnimationFrame(drawLinks));
+      observer.observe(workspace);
+      observer.observe(displayCanvas);
+      observer.observe(results);
+    }
+
+    function loadFile(file) {
+      if (!file.type.startsWith("image/")) {
+        alert("请选择图片文件");
+        return;
+      }
+
+      const image = new Image();
+      const url = URL.createObjectURL(file);
+
+      image.onload = () => {
+        URL.revokeObjectURL(url);
+        state.image = image;
+        state.picked = null;
+        state.selectedId = null;
+        stopViewTransition();
+        state.maskCache.clear();
+        app.classList.add("has-image");
+        app.classList.remove("is-dragging");
+        emptyState.style.display = "none";
+        displayCanvas.style.display = "block";
+        fileInput.value = "";
+        analyzeImage();
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        alert("图片读取失败");
+      };
+
+      image.src = url;
+    }
+
+    function getImageFile(items) {
+      if (!items) return null;
+      for (const item of Array.from(items)) {
+        if (item.kind === "file" && item.type && item.type.startsWith("image/")) {
+          return item.getAsFile();
+        }
+        if (item instanceof File && item.type.startsWith("image/")) {
+          return item;
+        }
+      }
+      return null;
+    }
+
+    function analyzeImage() {
+      state.clusters = extractDominantColors(state.image, 4, true).map((cluster, index) => ({
+        ...cluster,
+        id: `cluster-${index}`
+      }));
+      renderResults();
+      startViewTransition(null, null, { type: "load", duration: 620 });
+      drawCanvas({ center: true });
+      requestAnimationFrame(drawLinks);
+    }
+
+    function renderResults() {
+      results.innerHTML = "";
+      const items = [];
+      if (state.picked) items.push(state.picked);
+      items.push(...state.clusters);
+
+      items.forEach((item) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "color-item";
+        button.dataset.id = item.id;
+        if (item.id === state.selectedId) button.classList.add("is-active");
+        if (item.kind === "picked") button.classList.add("is-picked");
+        button.innerHTML = `
+          <span class="swatch" style="background:${item.hex}"></span>
+          <span class="color-name">${item.kind === "picked" ? "点选：" : ""}${item.name}</span>
+        `;
+        button.addEventListener("click", () => {
+          const nextId = state.selectedId === item.id ? null : item.id;
+          selectColor(nextId, { animate: true });
+          renderResults();
+          drawCanvas();
+          requestAnimationFrame(drawLinks);
+        });
+        results.appendChild(button);
+      });
+
+      requestAnimationFrame(drawLinks);
+    }
+
+    function drawCanvas(options = {}) {
+      if (!state.image) return;
+      const maxSide = 1500;
+      const scale = Math.min(1, maxSide / Math.max(state.image.naturalWidth, state.image.naturalHeight));
+      const width = Math.max(1, Math.round(state.image.naturalWidth * scale));
+      const height = Math.max(1, Math.round(state.image.naturalHeight * scale));
+      state.renderScale = scale;
+
+      displayCanvas.width = width;
+      displayCanvas.height = height;
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(state.image, 0, 0, width, height);
+
+      const selected = getSelectedColor();
+      if (selected || state.transition) applyVisualMask(selected);
+      drawMarkers(selected);
+      if (options.center) requestAnimationFrame(centerImage);
+    }
+
+    function drawMarkers(selected) {
+      const items = selected ? [selected] : state.clusters;
+      const radius = Math.max(6, Math.round(Math.max(displayCanvas.width, displayCanvas.height) / 180));
+
+      items.forEach((item) => {
+        const x = clamp(item.centerX * displayCanvas.width, radius + 2, displayCanvas.width - radius - 2);
+        const y = clamp(item.centerY * displayCanvas.height, radius + 2, displayCanvas.height - radius - 2);
+        ctx.lineWidth = Math.max(2, Math.round(radius / 3));
+        ctx.fillStyle = item.hex;
+        ctx.strokeStyle = contrastColor(item.hex) === "#ffffff" ? "#ffffff" : "#151815";
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
+    }
+
+    function drawLinks() {
+      linkLayer.innerHTML = "";
+      if (!state.image) return;
+
+      const workspaceRect = workspace.getBoundingClientRect();
+      const canvasRect = displayCanvas.getBoundingClientRect();
+      if (!canvasRect.width || !canvasRect.height) return;
+
+      linkLayer.setAttribute("viewBox", `0 0 ${workspaceRect.width} ${workspaceRect.height}`);
+      linkLayer.setAttribute("width", workspaceRect.width);
+      linkLayer.setAttribute("height", workspaceRect.height);
+
+      const selected = getSelectedColor();
+      const items = selected ? [selected] : state.clusters;
+
+      items.forEach((item) => {
+        const row = results.querySelector(`[data-id="${item.id}"]`);
+        if (!row) return;
+
+        const rowRect = row.getBoundingClientRect();
+        const markerX = canvasRect.left + item.centerX * canvasRect.width - workspaceRect.left;
+        const markerY = canvasRect.top + item.centerY * canvasRect.height - workspaceRect.top;
+        const rowLeft = rowRect.left - workspaceRect.left;
+        const rowRight = rowRect.right - workspaceRect.left;
+        const rowCenterY = rowRect.top + rowRect.height / 2 - workspaceRect.top;
+        const rowCenterX = rowRect.left + rowRect.width / 2 - workspaceRect.left;
+        const isBelow = rowRect.top > canvasRect.bottom - 4;
+        const targetX = isBelow ? rowCenterX : rowLeft;
+        const targetY = isBelow ? rowRect.top - workspaceRect.top : rowCenterY;
+
+        addLine(markerX, markerY, targetX, targetY, "#ffffff", 5, 0.78);
+        addLine(markerX, markerY, targetX, targetY, item.hex, 2, 0.9);
+
+        if (!isBelow) {
+          addLine(rowLeft, rowCenterY, rowRight, rowCenterY, item.hex, 2, 0.85);
+        }
+      });
+    }
+
+    function addLine(x1, y1, x2, y2, color, width, opacity) {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", x1);
+      line.setAttribute("y1", y1);
+      line.setAttribute("x2", x2);
+      line.setAttribute("y2", y2);
+      line.setAttribute("stroke", color);
+      line.setAttribute("stroke-width", width);
+      line.setAttribute("stroke-linecap", "round");
+      line.setAttribute("opacity", opacity);
+      linkLayer.appendChild(line);
+    }
+
+    function centerImage() {
+      imagePane.scrollLeft = Math.max(0, (imagePane.scrollWidth - imagePane.clientWidth) / 2);
+      imagePane.scrollTop = Math.max(0, (imagePane.scrollHeight - imagePane.clientHeight) / 2);
+      requestAnimationFrame(drawLinks);
+    }
+
+    function scheduleCanvasPick(clientX, clientY) {
+      state.pendingPick = { clientX, clientY };
+      if (state.pickFrame) return;
+      state.pickFrame = requestAnimationFrame(() => {
+        const pending = state.pendingPick;
+        state.pickFrame = 0;
+        state.pendingPick = null;
+        if (pending) pickCanvasColor(pending.clientX, pending.clientY);
+      });
+    }
+
+    function pickCanvasColor(clientX, clientY) {
+      const rect = displayCanvas.getBoundingClientRect();
+      const canvasX = clamp((clientX - rect.left) * displayCanvas.width / rect.width, 0, displayCanvas.width - 1);
+      const canvasY = clamp((clientY - rect.top) * displayCanvas.height / rect.height, 0, displayCanvas.height - 1);
+      const sourceX = clamp(Math.floor(canvasX / state.renderScale), 0, state.image.naturalWidth - 1);
+      const sourceY = clamp(Math.floor(canvasY / state.renderScale), 0, state.image.naturalHeight - 1);
+      const rgb = sampleOriginalPixel(sourceX, sourceY);
+
+      state.picked = {
+        id: "picked",
+        kind: "picked",
+        rgb,
+        hsl: rgbToHsl(rgb[0], rgb[1], rgb[2]),
+        lab: rgbToLab(rgb[0], rgb[1], rgb[2]),
+        name: colorName(rgb),
+        hex: rgbToHex(rgb[0], rgb[1], rgb[2]),
+        centerX: canvasX / displayCanvas.width,
+        centerY: canvasY / displayCanvas.height
+      };
+      selectColor("picked", { animate: false });
+      renderResults();
+      drawCanvas();
+      requestAnimationFrame(drawLinks);
+    }
+
+    function sampleOriginalPixel(x, y) {
+      const sampler = document.createElement("canvas");
+      sampler.width = 1;
+      sampler.height = 1;
+      const samplerCtx = sampler.getContext("2d", { willReadFrequently: true });
+      samplerCtx.drawImage(state.image, x, y, 1, 1, 0, 0, 1, 1);
+      const data = samplerCtx.getImageData(0, 0, 1, 1).data;
+      return [data[0], data[1], data[2]];
+    }
+
+    function getSelectedColor() {
+      if (!state.selectedId) return null;
+      if (state.picked && state.selectedId === state.picked.id) return state.picked;
+      return state.clusters.find((cluster) => cluster.id === state.selectedId) || null;
+    }
+
+    function selectColor(nextId, options = {}) {
+      const previous = cloneColor(getSelectedColor());
+      state.selectedId = nextId;
+      const next = cloneColor(getSelectedColor());
+      if (options.animate) {
+        startViewTransition(previous, next, options);
+      } else {
+        stopViewTransition();
+      }
+    }
+
+    function startViewTransition(from, to, options = {}) {
+      const duration = options.duration || 760;
+      state.transition = {
+        from,
+        to,
+        startedAt: performance.now(),
+        inDuration: duration,
+        outDuration: 260,
+        baseDuration: to ? 340 : duration,
+        type: options.type || (to ? "selection" : "main")
+      };
+      requestTransitionFrame();
+    }
+
+    function stopViewTransition() {
+      state.transition = null;
+      if (state.transitionFrame) {
+        cancelAnimationFrame(state.transitionFrame);
+        state.transitionFrame = 0;
+      }
+    }
+
+    function requestTransitionFrame() {
+      if (!state.transitionFrame) {
+        state.transitionFrame = requestAnimationFrame(stepTransition);
+      }
+    }
+
+    function stepTransition() {
+      state.transitionFrame = 0;
+      if (!state.transition) return;
+      drawCanvas();
+      if (isTransitionActive(state.transition)) {
+        requestTransitionFrame();
+      } else {
+        state.transition = null;
+        drawCanvas();
+      }
+    }
+
+    function isTransitionActive(transition) {
+      const elapsed = performance.now() - transition.startedAt;
+      return elapsed < Math.max(transition.inDuration, transition.outDuration, transition.baseDuration);
+    }
+
+    function cloneColor(item) {
+      if (!item) return null;
+      return {
+        ...item,
+        rgb: item.rgb.slice(),
+        hsl: { ...item.hsl },
+        lab: item.lab.slice()
+      };
+    }
+
+    function applyVisualMask(selected) {
+      const imageData = ctx.getImageData(0, 0, displayCanvas.width, displayCanvas.height);
+      const data = imageData.data;
+      const width = displayCanvas.width;
+      const height = displayCanvas.height;
+      const visual = getVisualState(selected, data, width, height);
+
+      for (let index = 0, pixel = 0; index < data.length; index += 4, pixel += 1) {
+        let keep = visual.baseKeep;
+        if (visual.fromMask) {
+          keep = Math.max(keep, (visual.fromMask[pixel] / 255) * visual.fromKeep);
+        }
+        if (visual.toMask) {
+          const toKeep = visual.revealProgress === null
+            ? visual.toMask[pixel] / 255
+            : getCircularRevealKeep(visual.toMask, pixel, width, visual.to, visual.revealProgress);
+          keep = Math.max(keep, toKeep);
+        }
+        const shade = 0.12 + keep * 0.88;
+        data[index] = Math.round(data[index] * shade);
+        data[index + 1] = Math.round(data[index + 1] * shade);
+        data[index + 2] = Math.round(data[index + 2] * shade);
+      }
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function getVisualState(selected, data, width, height) {
+      const transition = state.transition;
+      if (!transition) {
+        return {
+          baseKeep: selected ? 0 : 1,
+          fromMask: null,
+          fromKeep: 0,
+          toMask: selected ? getRegionMask(data, width, height, selected) : null,
+          to: selected,
+          revealProgress: null
+        };
+      }
+
+      const elapsed = performance.now() - transition.startedAt;
+      const baseProgress = easeOutQuart(elapsed / transition.baseDuration);
+      const inProgress = easeOutQuart(elapsed / transition.inDuration);
+      const outProgress = easeOutQuart(elapsed / transition.outDuration);
+      const toSelection = Boolean(transition.to);
+
+      return {
+        baseKeep: toSelection
+          ? (transition.from ? 0 : 1 - baseProgress)
+          : baseProgress,
+        fromMask: transition.from ? getRegionMask(data, width, height, transition.from) : null,
+        fromKeep: transition.from ? 1 - outProgress : 0,
+        toMask: transition.to ? getRegionMask(data, width, height, transition.to) : null,
+        to: transition.to,
+        revealProgress: transition.to ? inProgress : null
+      };
+    }
+
+    function getRegionMask(data, width, height, selected) {
+      const key = [
+        selected.id,
+        width,
+        height,
+        Math.round(selected.centerX * width),
+        Math.round(selected.centerY * height),
+        selected.hex
+      ].join(":");
+      if (state.maskCache.has(key)) return state.maskCache.get(key);
+
+      const threshold = selected.kind === "picked" ? 30 : 36;
+      const feather = Math.max(7, Math.round(Math.min(width, height) / 70));
+      const mask = buildLocalColorRegion(data, width, height, selected, selected.rgb, threshold, feather);
+      state.maskCache.set(key, mask);
+      return mask;
+    }
+
+    function getCircularRevealKeep(region, pixel, width, selected, progress) {
+      const base = region[pixel] / 255;
+      if (!base) return 0;
+
+      const x = pixel % width;
+      const y = (pixel - x) / width;
+      const cx = selected.centerX * displayCanvas.width;
+      const cy = selected.centerY * displayCanvas.height;
+      const dx = x - cx;
+      const dy = y - cy;
+      const distance = Math.hypot(dx, dy);
+      const maxRadius = getSelectionRadius(displayCanvas.width, displayCanvas.height, selected.kind);
+      const edgeWidth = Math.max(10, Math.min(displayCanvas.width, displayCanvas.height) * 0.045);
+      const radius = progress * (maxRadius + edgeWidth);
+      const edge = smoothstep(clamp((radius - distance + edgeWidth) / (edgeWidth * 2), 0, 1));
+      return base * edge;
+    }
+
+    function buildLocalColorRegion(data, width, height, selected, target, threshold, feather) {
+      const total = width * height;
+      const seed = findRegionSeed(data, width, height, selected, target);
+      const maxRadius = getSelectionRadius(width, height, selected.kind);
+      const maxRadiusSq = maxRadius * maxRadius;
+      const mask = new Uint8Array(total);
+      const soft = new Uint8Array(total);
+      const queue = new Int32Array(total);
+      const regionPixels = [];
+      let head = 0;
+      let tail = 0;
+
+      queue[tail++] = seed.index;
+      mask[seed.index] = 1;
+
+      while (head < tail) {
+        const current = queue[head++];
+        regionPixels.push(current);
+        const x = current % width;
+        const y = (current - x) / width;
+        const neighbors = [
+          current - 1,
+          current + 1,
+          current - width,
+          current + width
+        ];
+
+        for (let i = 0; i < neighbors.length; i += 1) {
+          const next = neighbors[i];
+          if (next < 0 || next >= total || mask[next]) continue;
+          const nx = next % width;
+          const ny = (next - nx) / width;
+          if ((x === 0 && nx === width - 1) || (x === width - 1 && nx === 0)) continue;
+          const dx = nx - seed.x;
+          const dy = ny - seed.y;
+          if (dx * dx + dy * dy > maxRadiusSq) continue;
+
+          const offset = next * 4;
+          if (colorDistance(data[offset], data[offset + 1], data[offset + 2], target) > threshold) continue;
+          mask[next] = 1;
+          queue[tail++] = next;
+        }
+      }
+
+      let front = regionPixels;
+      front.forEach((index) => {
+        soft[index] = 255;
+      });
+
+      for (let step = 1; step <= feather; step += 1) {
+        const nextFront = [];
+        const value = Math.max(0, Math.round(255 * (1 - step / (feather + 1))));
+        front.forEach((current) => {
+          const x = current % width;
+          const candidates = [
+            current - 1,
+            current + 1,
+            current - width,
+            current + width
+          ];
+          candidates.forEach((next) => {
+            if (next < 0 || next >= total || soft[next]) return;
+            const nx = next % width;
+            if ((x === 0 && nx === width - 1) || (x === width - 1 && nx === 0)) return;
+            soft[next] = value;
+            nextFront.push(next);
+          });
+        });
+        front = nextFront;
+        if (!front.length) break;
+      }
+
+      return soft;
+    }
+
+    function getSelectionRadius(width, height, kind) {
+      return Math.round(clamp(
+        Math.min(width, height) * (kind === "picked" ? 0.18 : 0.24),
+        42,
+        kind === "picked" ? 170 : 230
+      ));
+    }
+
+    function smoothstep(value) {
+      return value * value * (3 - 2 * value);
+    }
+
+    function easeOutQuart(value) {
+      const progress = clamp(value, 0, 1);
+      return 1 - Math.pow(1 - progress, 4);
+    }
+
+    function findRegionSeed(data, width, height, selected, target) {
+      const centerX = clamp(Math.round(selected.centerX * (width - 1)), 0, width - 1);
+      const centerY = clamp(Math.round(selected.centerY * (height - 1)), 0, height - 1);
+      const searchRadius = Math.max(8, Math.round(Math.min(width, height) / 28));
+      let best = { x: centerX, y: centerY, index: centerY * width + centerX };
+      let bestDistance = Infinity;
+
+      for (let y = Math.max(0, centerY - searchRadius); y <= Math.min(height - 1, centerY + searchRadius); y += 1) {
+        for (let x = Math.max(0, centerX - searchRadius); x <= Math.min(width - 1, centerX + searchRadius); x += 1) {
+          const index = y * width + x;
+          const offset = index * 4;
+          const distance = colorDistance(data[offset], data[offset + 1], data[offset + 2], target)
+            + Math.hypot(x - centerX, y - centerY) * 0.08;
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            best = { x, y, index };
+          }
+        }
+      }
+
+      return best;
+    }
+
+    function colorDistance(r, g, b, target) {
+      const dr = r - target[0];
+      const dg = g - target[1];
+      const db = b - target[2];
+      return Math.sqrt(dr * dr * 0.32 + dg * dg * 0.52 + db * db * 0.16);
+    }
+
+    function extractDominantColors(image, desiredCount, softenBackground) {
+      const analysis = document.createElement("canvas");
+      const maxSide = 360;
+      const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+      const width = Math.max(1, Math.round(image.naturalWidth * scale));
+      const height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const analysisCtx = analysis.getContext("2d", { willReadFrequently: true });
+      analysis.width = width;
+      analysis.height = height;
+      analysisCtx.drawImage(image, 0, 0, width, height);
+
+      const data = analysisCtx.getImageData(0, 0, width, height).data;
+      const fullSamples = samplePixels(data, width, height, false);
+      let samples = samplePixels(data, width, height, softenBackground);
+      if (samples.length < 180) samples = fullSamples;
+      if (!samples.length) return [];
+
+      const k = Math.min(Math.max(desiredCount + 4, 7), 12, samples.length);
+      const clusters = runKMeans(samples, k);
+      const total = samples.reduce((sum, sample) => sum + sample.weight, 0);
+
+      const normalized = clusters
+        .filter((cluster) => cluster.weight > 0)
+        .map((cluster) => {
+          const rgb = [
+            Math.round(cluster.r / cluster.weight),
+            Math.round(cluster.g / cluster.weight),
+            Math.round(cluster.b / cluster.weight)
+          ];
+          const hsl = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+          const plainBackground = isPlainBackground(rgb, hsl);
+          const coverage = cluster.weight / total;
+          const avgCenterX = clamp(cluster.x / cluster.weight / width, 0, 1);
+          const avgCenterY = clamp(cluster.y / cluster.weight / height, 0, 1);
+          const centerX = clamp((cluster.representativeX ?? cluster.x / cluster.weight) / width, 0, 1);
+          const centerY = clamp((cluster.representativeY ?? cluster.y / cluster.weight) / height, 0, 1);
+          const score = coverage
+            * (0.44 + hsl.s * 0.56)
+            * (plainBackground && softenBackground ? 0.34 : 1)
+            * (0.74 + centerBias(avgCenterX, avgCenterY) * 0.26);
+
+          return {
+            rgb,
+            lab: rgbToLab(rgb[0], rgb[1], rgb[2]),
+            hsl,
+            name: colorName(rgb),
+            hex: rgbToHex(rgb[0], rgb[1], rgb[2]),
+            centerX,
+            centerY,
+            coverage,
+            score,
+            plainBackground
+          };
+        })
+        .sort((a, b) => b.score - a.score);
+
+      const selected = [];
+      const foreground = normalized.filter((cluster) => !cluster.plainBackground);
+      const candidates = foreground.length >= Math.min(desiredCount, 3) ? foreground : normalized;
+
+      candidates.forEach((cluster) => {
+        if (selected.length >= desiredCount) return;
+        const tooClose = selected.some((item) => labDistance(item.lab, cluster.lab) < 10);
+        const tooSmall = cluster.coverage < 0.012 && selected.length >= 2;
+        if (!tooClose && !tooSmall) selected.push(cluster);
+      });
+
+      if (selected.length < Math.min(desiredCount, candidates.length)) {
+        candidates.forEach((cluster) => {
+          if (selected.length >= desiredCount) return;
+          if (!selected.includes(cluster)) selected.push(cluster);
+        });
+      }
+
+      return selected.sort((a, b) => b.coverage - a.coverage);
+    }
+
+    function samplePixels(data, width, height, softenBackground) {
+      const maxSamples = 14000;
+      const step = Math.max(1, Math.ceil(Math.sqrt((width * height) / maxSamples)));
+      const samples = [];
+
+      for (let y = 0; y < height; y += step) {
+        for (let x = 0; x < width; x += step) {
+          const index = (y * width + x) * 4;
+          const alpha = data[index + 3];
+          if (alpha < 48) continue;
+
+          const r = data[index];
+          const g = data[index + 1];
+          const b = data[index + 2];
+          const hsl = rgbToHsl(r, g, b);
+          if (softenBackground && isPlainBackground([r, g, b], hsl)) {
+            const center = centerBias(x / width, y / height);
+            if (center < 0.58 && (x + y) % (step * 5) !== 0) continue;
+          }
+
+          samples.push({
+            r,
+            g,
+            b,
+            x,
+            y,
+            lab: rgbToLab(r, g, b),
+            weight: alpha / 255,
+            step
+          });
+        }
+      }
+
+      return samples;
+    }
+
+    function runKMeans(samples, k) {
+      let centers = initializeCenters(samples, k);
+      let assignments = new Array(samples.length).fill(0);
+
+      for (let iteration = 0; iteration < 9; iteration += 1) {
+        const sums = Array.from({ length: centers.length }, () => ({
+          r: 0,
+          g: 0,
+          b: 0,
+          l: 0,
+          a: 0,
+          labB: 0,
+          x: 0,
+          y: 0,
+          weight: 0
+        }));
+
+        samples.forEach((sample, index) => {
+          let bestIndex = 0;
+          let bestDistance = Infinity;
+          centers.forEach((center, centerIndex) => {
+            const distance = labDistance(sample.lab, center.lab);
+            if (distance < bestDistance) {
+              bestDistance = distance;
+              bestIndex = centerIndex;
+            }
+          });
+
+          assignments[index] = bestIndex;
+          const sum = sums[bestIndex];
+          const weight = sample.weight;
+          sum.r += sample.r * weight;
+          sum.g += sample.g * weight;
+          sum.b += sample.b * weight;
+          sum.l += sample.lab[0] * weight;
+          sum.a += sample.lab[1] * weight;
+          sum.labB += sample.lab[2] * weight;
+          sum.x += sample.x * weight;
+          sum.y += sample.y * weight;
+          sum.weight += weight;
+        });
+
+        centers = centers.map((center, index) => {
+          const sum = sums[index];
+          if (!sum.weight) return center;
+          return {
+            lab: [sum.l / sum.weight, sum.a / sum.weight, sum.labB / sum.weight],
+            rgb: [sum.r / sum.weight, sum.g / sum.weight, sum.b / sum.weight]
+          };
+        });
+      }
+
+      const clusters = Array.from({ length: centers.length }, () => ({
+        r: 0,
+        g: 0,
+        b: 0,
+        x: 0,
+        y: 0,
+        weight: 0,
+        representativeX: null,
+        representativeY: null
+      }));
+
+      samples.forEach((sample, index) => {
+        const cluster = clusters[assignments[index]];
+        const weight = sample.weight;
+        cluster.r += sample.r * weight;
+        cluster.g += sample.g * weight;
+        cluster.b += sample.b * weight;
+        cluster.x += sample.x * weight;
+        cluster.y += sample.y * weight;
+        cluster.weight += weight;
+      });
+
+      chooseLargestComponentRepresentatives(samples, assignments, clusters, centers);
+
+      return clusters;
+    }
+
+    function chooseLargestComponentRepresentatives(samples, assignments, clusters, centers) {
+      const step = samples[0] && samples[0].step ? samples[0].step : 1;
+      const byCoordinate = new Map();
+      samples.forEach((sample, index) => {
+        byCoordinate.set(`${sample.x},${sample.y}`, index);
+      });
+
+      clusters.forEach((cluster, clusterIndex) => {
+        if (!cluster.weight) return;
+
+        const visited = new Set();
+        let bestComponent = null;
+
+        samples.forEach((sample, startIndex) => {
+          if (assignments[startIndex] !== clusterIndex || visited.has(startIndex)) return;
+
+          const queue = [startIndex];
+          const component = [];
+          let head = 0;
+          let weight = 0;
+          let xSum = 0;
+          let ySum = 0;
+          visited.add(startIndex);
+
+          while (head < queue.length) {
+            const index = queue[head++];
+            const current = samples[index];
+            const currentWeight = current.weight;
+            component.push(index);
+            weight += currentWeight;
+            xSum += current.x * currentWeight;
+            ySum += current.y * currentWeight;
+
+            getSampleNeighbors(current, step).forEach((key) => {
+              const neighborIndex = byCoordinate.get(key);
+              if (neighborIndex === undefined) return;
+              if (visited.has(neighborIndex) || assignments[neighborIndex] !== clusterIndex) return;
+              visited.add(neighborIndex);
+              queue.push(neighborIndex);
+            });
+          }
+
+          if (!bestComponent || weight > bestComponent.weight) {
+            bestComponent = {
+              indexes: component,
+              weight,
+              centerX: xSum / weight,
+              centerY: ySum / weight
+            };
+          }
+        });
+
+        if (!bestComponent) return;
+
+        let representativeIndex = bestComponent.indexes[0];
+        let bestScore = Infinity;
+        bestComponent.indexes.forEach((index) => {
+          const sample = samples[index];
+          const colorScore = labDistance(sample.lab, centers[clusterIndex].lab);
+          const positionScore = Math.hypot(
+            sample.x - bestComponent.centerX,
+            sample.y - bestComponent.centerY
+          ) * 0.035;
+          const score = colorScore + positionScore;
+          if (score < bestScore) {
+            bestScore = score;
+            representativeIndex = index;
+          }
+        });
+
+        cluster.representativeX = samples[representativeIndex].x;
+        cluster.representativeY = samples[representativeIndex].y;
+        cluster.componentWeight = bestComponent.weight;
+      });
+    }
+
+    function getSampleNeighbors(sample, step) {
+      return [
+        `${sample.x - step},${sample.y}`,
+        `${sample.x + step},${sample.y}`,
+        `${sample.x},${sample.y - step}`,
+        `${sample.x},${sample.y + step}`,
+        `${sample.x - step},${sample.y - step}`,
+        `${sample.x + step},${sample.y - step}`,
+        `${sample.x - step},${sample.y + step}`,
+        `${sample.x + step},${sample.y + step}`
+      ];
+    }
+
+    function initializeCenters(samples, k) {
+      const avg = samples.reduce((sum, sample) => {
+        sum[0] += sample.lab[0];
+        sum[1] += sample.lab[1];
+        sum[2] += sample.lab[2];
+        return sum;
+      }, [0, 0, 0]).map((value) => value / samples.length);
+
+      const centers = [];
+      let first = samples[0];
+      let firstDistance = -1;
+      samples.forEach((sample) => {
+        const distance = labDistance(sample.lab, avg);
+        if (distance > firstDistance) {
+          firstDistance = distance;
+          first = sample;
+        }
+      });
+      centers.push({ lab: first.lab.slice(), rgb: [first.r, first.g, first.b] });
+
+      while (centers.length < k) {
+        let next = samples[0];
+        let nextDistance = -1;
+        samples.forEach((sample) => {
+          const distance = Math.min(...centers.map((center) => labDistance(sample.lab, center.lab)));
+          if (distance > nextDistance) {
+            nextDistance = distance;
+            next = sample;
+          }
+        });
+        centers.push({ lab: next.lab.slice(), rgb: [next.r, next.g, next.b] });
+      }
+
+      return centers;
+    }
+
+    function colorName(rgb) {
+      const [r, g, b] = rgb;
+      const hsl = rgbToHsl(r, g, b);
+
+      if (hsl.l < 0.09) return "黑色";
+      if (hsl.l > 0.94 && hsl.s < 0.2) return "白色";
+      if (hsl.s < 0.08) {
+        if (hsl.l < 0.28) return "深灰色";
+        if (hsl.l > 0.78) return "浅灰色";
+        return "灰色";
+      }
+
+      let nearest = namedColors[0];
+      let best = Infinity;
+      const lab = rgbToLab(r, g, b);
+      namedColors.forEach((candidate) => {
+        const distance = labDistance(lab, candidate.lab);
+        if (distance < best) {
+          best = distance;
+          nearest = candidate;
+        }
+      });
+
+      return nearest.name;
+    }
+
+    function isPlainBackground(rgb, hsl) {
+      const [r, g, b] = rgb;
+      const edgeWhite = hsl.l > 0.9 && hsl.s < 0.18;
+      const edgeBlack = hsl.l < 0.08 && hsl.s < 0.16;
+      const flatGray = hsl.s < 0.06 && hsl.l > 0.18 && hsl.l < 0.86;
+      const nearPaper = r > 228 && g > 224 && b > 214;
+      return edgeWhite || edgeBlack || flatGray || nearPaper;
+    }
+
+    function centerBias(x, y) {
+      const distance = Math.hypot(x - 0.5, y - 0.5);
+      return clamp(1 - distance / 0.72, 0, 1);
+    }
+
+    function rgbToHsl(r, g, b) {
+      r /= 255;
+      g /= 255;
+      b /= 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      let h = 0;
+      let s = 0;
+      const l = (max + min) / 2;
+
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r:
+            h = (g - b) / d + (g < b ? 6 : 0);
+            break;
+          case g:
+            h = (b - r) / d + 2;
+            break;
+          default:
+            h = (r - g) / d + 4;
+        }
+        h *= 60;
+      }
+
+      return { h, s, l };
+    }
+
+    function rgbToLab(r, g, b) {
+      let x;
+      let y;
+      let z;
+      r = srgbToLinear(r / 255);
+      g = srgbToLinear(g / 255);
+      b = srgbToLinear(b / 255);
+
+      x = r * 0.4124564 + g * 0.3575761 + b * 0.1804375;
+      y = r * 0.2126729 + g * 0.7151522 + b * 0.072175;
+      z = r * 0.0193339 + g * 0.119192 + b * 0.9503041;
+
+      x /= 0.95047;
+      y /= 1;
+      z /= 1.08883;
+
+      x = xyzPivot(x);
+      y = xyzPivot(y);
+      z = xyzPivot(z);
+
+      return [
+        116 * y - 16,
+        500 * (x - y),
+        200 * (y - z)
+      ];
+    }
+
+    function srgbToLinear(value) {
+      return value <= 0.04045
+        ? value / 12.92
+        : Math.pow((value + 0.055) / 1.055, 2.4);
+    }
+
+    function xyzPivot(value) {
+      return value > 0.008856
+        ? Math.cbrt(value)
+        : (7.787 * value) + 16 / 116;
+    }
+
+    function labDistance(a, b) {
+      return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    }
+
+    function rgbToHex(r, g, b) {
+      return `#${[r, g, b].map((value) => value.toString(16).padStart(2, "0")).join("").toUpperCase()}`;
+    }
+
+    function contrastColor(hex) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+      return luminance > 0.55 ? "#171b18" : "#ffffff";
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+  </script>
+</body>
+</html>
