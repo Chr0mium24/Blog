@@ -3,23 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sky 智能编码器</title>
+    <title>Sky Code</title>
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --success: #16a34a;
-            --warning: #ca8a04;
-            --warning-hover: #a16207;
-            --bg: #f3f4f6;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --warning-hover: #d97706;
+            --bg: #f8fafc;
             --surface: #ffffff;
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
-            --border: #e5e7eb;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --accent-bg: #eef2ff;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: var(--bg);
             color: var(--text-main);
             display: flex;
@@ -33,30 +34,26 @@
 
         .card {
             background-color: var(--surface);
-            padding: 32px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
             width: 100%;
-            max-width: 640px;
+            max-width: 700px;
+            border: 1px solid var(--border);
         }
 
         h1 {
-            margin: 0 0 8px 0;
-            font-size: 24px;
+            margin: 0 0 24px 0;
+            font-size: 26px;
+            font-weight: 700;
             text-align: center;
+            letter-spacing: -0.025em;
+            color: #1e1b4b;
         }
 
-        .subtitle {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 14px;
-            margin-bottom: 24px;
-        }
-
-        /* 统一输入区 */
         .input-area {
             position: relative;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
 
         textarea {
@@ -64,70 +61,80 @@
             height: 160px;
             padding: 16px;
             border: 2px dashed var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             box-sizing: border-box;
             resize: vertical;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
             font-size: 14px;
-            background-color: #f9fafb;
+            background-color: #f1f5f9;
             color: var(--text-main);
-            transition: border-color 0.2s, background-color 0.2s;
+            transition: all 0.2s ease;
         }
 
         textarea:focus, textarea.dragover {
             border-color: var(--primary);
-            background-color: #eff6ff;
+            background-color: var(--accent-bg);
             outline: none;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
         }
 
-        /* 待加密图片的缩略图提示 */
         #pending-image-container {
             display: none;
             align-items: center;
+            justify-content: space-between;
             gap: 12px;
-            padding: 12px;
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            border-radius: 8px;
-            margin-bottom: 16px;
+            padding: 14px;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease;
         }
         
-        #pending-image-container img {
-            height: 40px;
-            border-radius: 4px;
+        .thumb-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #pending-image-thumb {
+            height: 48px;
+            width: 48px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #10b981;
         }
 
         .btn-group {
             display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
+            gap: 16px;
+            margin-bottom: 28px;
         }
 
         button {
             flex: 1;
-            padding: 12px;
+            padding: 14px;
             border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 500;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
             color: white;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
         .btn-primary { background-color: var(--primary); }
-        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
         .btn-warning { background-color: var(--warning); }
-        .btn-warning:hover { background-color: var(--warning-hover); }
-        .btn-success { background-color: var(--success); }
+        .btn-warning:hover { background-color: var(--warning-hover); transform: translateY(-1px); }
 
-        /* 智能输出区 */
         .output-area {
             border-top: 1px solid var(--border);
             padding-top: 24px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 14px;
         }
 
         .output-header {
@@ -148,43 +155,62 @@
             cursor: pointer;
             flex: none;
             font-weight: 600;
+            box-shadow: none;
         }
+        .copy-btn:hover { color: var(--primary-hover); text-decoration: underline; }
 
         #output-text {
-            height: 120px;
+            height: 140px;
             border: 1px solid var(--border);
+            background-color: #ffffff;
             border-style: solid;
         }
 
-        #output-image {
+        #output-image-container {
             display: none;
-            max-width: 100%;
-            max-height: 300px;
-            border-radius: 8px;
+            text-align: center;
+            padding: 12px;
+            background: #f8fafc;
             border: 1px solid var(--border);
-            margin: 0 auto;
+            border-radius: 10px;
+        }
+
+        #output-image {
+            max-width: 100%;
+            max-height: 350px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h1>Sky 智能编码器</h1>
-    <div class="subtitle">支持文本输入，或直接粘贴/拖拽图片到输入框</div>
+    <h1>Sky Code</h1>
 
     <div class="input-area">
-        <textarea id="main-input" placeholder="在此输入普通文本、Sky 密文，或直接 `Ctrl+V` 粘贴图片..."></textarea>
+        <textarea id="main-input" placeholder="在此输入文本，或直接粘贴、拖拽图片文件..."></textarea>
     </div>
 
     <div id="pending-image-container">
-        <img id="pending-image-thumb" src="" alt="thumb">
-        <span style="font-size: 14px; color: #166534;">已捕获图片，点击"加密"将其转换为 Sky 密文</span>
-        <button onclick="clearPendingImage()" style="flex: none; padding: 4px 8px; font-size: 12px; background: transparent; color: #166534; border: 1px solid currentColor;">取消</button>
+        <div class="thumb-info">
+            <img id="pending-image-thumb" src="" alt="thumb">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 14px; font-weight: 600; color: #065f46;">成功加载图片</span>
+                <span id="compress-info" style="font-size: 12px; color: #047857;">正在计算尺寸...</span>
+            </div>
+        </div>
+        <button onclick="clearPendingImage()" style="flex: none; width: auto; padding: 6px 12px; font-size: 13px; background-color: #e11d48; color: white;">取消</button>
     </div>
     
     <div class="btn-group">
-        <button class="btn-primary" onclick="handleEncrypt()">加 密</button>
-        <button class="btn-warning" onclick="handleDecrypt()">解 密</button>
+        <button class="btn-primary" onclick="handleEncrypt()">加密</button>
+        <button class="btn-warning" onclick="handleDecrypt()">解密</button>
     </div>
     
     <div class="output-area">
@@ -193,71 +219,120 @@
             <button class="copy-btn" id="copy-btn" onclick="copyResult()">复制结果</button>
         </div>
         
-        <textarea id="output-text" readonly placeholder="结果将显示在这里..."></textarea>
-        <img id="output-image" alt="解密出的图片">
+        <textarea id="output-text" readonly placeholder="结果将呈现在这里..."></textarea>
+        
+        <div id="output-image-container">
+            <img id="output-image" alt="解密还原出的图片">
+        </div>
     </div>
 </div>
 
 <script>
-    const skyMap = ["sky", "skY", "sKy", "sKY", "Sky", "SkY", "SKy", "SKY"];
-    let pendingImageBase64 = null; // 暂存用户粘贴或拖拽的图片数据
+    // ================== 同形字 64 阶矩阵设计 ==================
+    const sChars = ['s', 'S', 'ѕ', 'Ѕ']; 
+    const kChars = ['k', 'K', 'к', 'К']; 
+    const yChars = ['y', 'Y', 'у', 'У']; 
 
-    // ================== 核心算法 ==================
-    function coreEncrypt(text) {
-        if (!text) return "";
-        const encoder = new TextEncoder();
-        const bytes = encoder.encode(text);
-        
-        let binaryArray = [];
-        for (let b of bytes) binaryArray.push(b.toString(2).padStart(8, '0'));
-        let binary = binaryArray.join('');
+    const b64Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const encodeMap = {};
+    const decodeMap = {};
 
+    (function initMatrix() {
+        let index = 0;
+        for (let s of sChars) {
+            for (let k of kChars) {
+                for (let y of yChars) {
+                    const skyWord = s + k + y;
+                    const b64Char = b64Alphabet[index];
+                    encodeMap[b64Char] = skyWord;
+                    decodeMap[skyWord] = b64Char;
+                    index++;
+                }
+            }
+        }
+    })();
+
+    let pendingImageBase64 = null; 
+
+    // 安全的双向 UTF-8 Base64 转换，确保密文不含任何非 Base64 字符（如冒号、分号、逗号）
+    function utoa(str) {
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+            return String.fromCharCode(parseInt(p1, 16));
+        }));
+    }
+
+    function atou(str) {
+        return decodeURIComponent(atob(str).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+    }
+    
+    // 加密核心：完美映射标准 Base64 字符到 Sky 同形字矩阵
+    function coreEncrypt(sourceStr) {
+        if (!sourceStr) return "";
         let result = [];
-        for (let i = 0; i < binary.length; i += 3) {
-            let chunk = binary.substring(i, i + 3);
-            if (chunk.length < 3) chunk = chunk.padEnd(3, '0');
-            result.push(skyMap[parseInt(chunk, 2)]);
+        for (let i = 0; i < sourceStr.length; i++) {
+            const char = sourceStr[i];
+            if (char === '=') {
+                continue;
+            }
+            const skyCombination = encodeMap[char];
+            if (skyCombination) {
+                result.push(skyCombination);
+            } else {
+                result.push(char);
+            }
         }
         return result.join('');
     }
 
+    // 解密核心：高容错还原 Base64 序列
     function coreDecrypt(skyText) {
         skyText = skyText.replace(/\s+/g, '');
         if (!skyText) return "";
 
-        let binaryArray = [];
-        for (let i = 0; i < skyText.length; i += 3) {
-            const word = skyText.substring(i, i + 3);
-            const index = skyMap.indexOf(word);
-            if (index !== -1) binaryArray.push(index.toString(2).padStart(3, '0'));
+        let b64Result = [];
+        let i = 0;
+        while (i < skyText.length) {
+            const chunk = skyText.substring(i, i + 3);
+            if (decodeMap[chunk]) {
+                b64Result.push(decodeMap[chunk]);
+                i += 3;
+            } else {
+                b64Result.push(skyText[i]);
+                i += 1;
+            }
         }
-        let binary = binaryArray.join('');
 
-        const bytes = [];
-        for (let i = 0; i < binary.length; i += 8) {
-            if (i + 8 <= binary.length) bytes.push(parseInt(binary.substring(i, i + 8), 2));
-        }
-
-        const decoder = new TextDecoder();
-        return decoder.decode(new Uint8Array(bytes));
+        let b64Str = b64Result.join('');
+        const missingEquals = (4 - (b64Str.length % 4)) % 4;
+        if (missingEquals === 2) b64Str += "==";
+        if (missingEquals === 3) b64Str += "=";
+        
+        return b64Str;
     }
 
-    // ================== UI 交互逻辑 ==================
+    // ================== UI 业务逻辑交互 ==================
 
     function handleEncrypt() {
         const inputStr = document.getElementById('main-input').value;
-        const outputText = document.getElementById('output-text');
-        
         try {
-            // 如果存在暂存的图片，优先加密图片；否则加密文本框内容
-            const sourceData = pendingImageBase64 ? pendingImageBase64 : inputStr;
-            if (!sourceData) return;
+            let rawPayload = "";
+            if (pendingImageBase64) {
+                rawPayload = pendingImageBase64;
+            } else {
+                if (!inputStr) return;
+                rawPayload = inputStr;
+            }
 
-            const encrypted = coreEncrypt(sourceData);
-            showTextOutput(encrypted, "Sky 密文");
-            clearPendingImage(); // 加密完成后清理待办图片
+            // 先进行全安全的 Base64 转化，消除所有的特殊字符干扰
+            const base64Data = utoa(rawPayload);
+            const encrypted = coreEncrypt(base64Data);
+            
+            showTextOutput(encrypted, "密文");
+            clearPendingImage(); 
         } catch (e) {
-            showTextOutput("加密失败，请检查输入。", "错误");
+            showTextOutput("加密失败，请确认输入数据是否正常。", "错误");
         }
     }
 
@@ -266,62 +341,53 @@
         if (!inputStr) return;
 
         try {
-            const decrypted = coreDecrypt(inputStr);
+            const decryptedB64 = coreDecrypt(inputStr);
+            const rawPayload = atou(decryptedB64);
             
-            // 【核心逻辑：Magic Header 识别】
-            // 检查解密后的字符串是否以标准的图片 Base64 格式开头
-            if (decrypted.startsWith('data:image/')) {
-                showImageOutput(decrypted);
+            if (rawPayload.startsWith('data:image/')) {
+                showImageOutput(rawPayload);
             } else {
-                showTextOutput(decrypted, "普通文本");
+                showTextOutput(rawPayload, "还原文本");
             }
         } catch (e) {
-            showTextOutput("解密失败，密文格式有误。", "错误");
+            showTextOutput("解密失败。密文被破坏。", "错误");
         }
     }
 
-    // ================== 显示切换逻辑 ==================
-
     function showTextOutput(text, labelStr) {
         document.getElementById('output-text').style.display = 'block';
-        document.getElementById('output-image').style.display = 'none';
+        document.getElementById('output-image-container').style.display = 'none';
         document.getElementById('output-text').value = text;
-        document.getElementById('output-label').innerText = "输出结果 (" + labelStr + ")";
+        document.getElementById('output-label').innerText = "明文 (" + labelStr + ")";
         document.getElementById('copy-btn').style.display = 'block';
     }
 
     function showImageOutput(base64Src) {
         document.getElementById('output-text').style.display = 'none';
+        document.getElementById('output-image-container').style.display = 'block';
         const imgEl = document.getElementById('output-image');
-        imgEl.style.display = 'block';
         imgEl.src = base64Src;
-        document.getElementById('output-label').innerText = "输出结果 (还原的图片)";
-        document.getElementById('copy-btn').style.display = 'none'; // 图片不需要文本复制按钮
+        document.getElementById('output-label').innerText = "明文";
+        document.getElementById('copy-btn').style.display = 'none';
     }
 
-    // ================== 剪贴板与拖拽支持 ==================
+    // ================== Canvas 图像处理引擎 ==================
 
     const mainInput = document.getElementById('main-input');
 
-    // 1. 监听粘贴事件 (Ctrl+V)
     mainInput.addEventListener('paste', function(e) {
         const items = e.clipboardData.items;
         for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image') !== -1) {
-                e.preventDefault(); // 阻止默认的粘贴行为
-                processImageFile(items[i].getAsFile());
+                e.preventDefault();
+                compressAndProcessImage(items[i].getAsFile());
                 return;
             }
         }
-        // 如果不是图片，正常走文本粘贴流程，同时清空可能存在的旧图片
         clearPendingImage();
     });
 
-    // 2. 监听拖拽事件
-    mainInput.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        mainInput.classList.add('dragover');
-    });
+    mainInput.addEventListener('dragover', (e) => { e.preventDefault(); mainInput.classList.add('dragover'); });
     mainInput.addEventListener('dragleave', () => mainInput.classList.remove('dragover'));
     mainInput.addEventListener('drop', (e) => {
         e.preventDefault();
@@ -329,28 +395,54 @@
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             const file = e.dataTransfer.files[0];
             if (file.type.startsWith('image/')) {
-                processImageFile(file);
+                compressAndProcessImage(file);
             }
         }
     });
 
-    // 处理读取到的图片文件
-    function processImageFile(file) {
-        if (file.size > 500 * 1024) {
-            alert("图片大小不能超过 500KB！");
-            return;
-        }
+    function compressAndProcessImage(file) {
+        const originSizeKB = (file.size / 1024).toFixed(1);
         const reader = new FileReader();
+        
         reader.onload = function(event) {
-            pendingImageBase64 = event.target.result; // 自带 data:image/... Magic Header
-            
-            // UI 反馈
-            mainInput.value = ""; 
-            mainInput.placeholder = "已捕获图片，暂不可输入文本。如需输入文本请取消。";
-            mainInput.disabled = true;
-            
-            document.getElementById('pending-image-container').style.display = 'flex';
-            document.getElementById('pending-image-thumb').src = pendingImageBase64;
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                const MAX_BOUND = 800;
+                if (width > MAX_BOUND || height > MAX_BOUND) {
+                    if (width > height) {
+                        height = Math.round((height * MAX_BOUND) / width);
+                        width = MAX_BOUND;
+                    } else {
+                        width = Math.round((width * MAX_BOUND) / height);
+                        height = MAX_BOUND;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                pendingImageBase64 = canvas.toDataURL('image/jpeg', 0.65);
+                const compressedSizeKB = Math.round((pendingImageBase64.length * 3) / 4 / 1024);
+                
+                mainInput.value = ""; 
+                mainInput.placeholder = "图片正在加密...";
+                mainInput.disabled = true;
+                
+                document.getElementById('compress-info').innerText = 
+                    `原图: ${originSizeKB}KB -> 压缩后: ${compressedSizeKB}KB (${width}x${height}px)`;
+                document.getElementById('pending-image-container').style.display = 'flex';
+                document.getElementById('pending-image-thumb').src = pendingImageBase64;
+            };
+            img.src = event.target.result;
         };
         reader.readAsDataURL(file);
     }
@@ -358,7 +450,8 @@
     function clearPendingImage() {
         pendingImageBase64 = null;
         mainInput.disabled = false;
-        mainInput.placeholder = "在此输入普通文本、Sky 密文，或直接 `Ctrl+V` 粘贴图片...";
+        mainInput.value = "";
+        mainInput.placeholder = "在此输入文本，或直接粘贴、拖拽图片文件...";
         document.getElementById('pending-image-container').style.display = 'none';
     }
 
@@ -368,7 +461,7 @@
         navigator.clipboard.writeText(text).then(() => {
             const btn = document.getElementById('copy-btn');
             const originalText = btn.innerText;
-            btn.innerText = "已复制！";
+            btn.innerText = "✓ 复制成功";
             setTimeout(() => btn.innerText = originalText, 1500);
         });
     }
