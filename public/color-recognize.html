@@ -259,21 +259,38 @@
 
     @media (max-width: 760px) {
       body {
-        overflow: auto;
+        overflow: hidden;
       }
 
       .app {
-        min-height: 100vh;
+        min-height: 0;
+        height: 100vh;
+      }
+
+      @supports (height: 100dvh) {
+        .app {
+          height: 100dvh;
+        }
       }
 
       .workspace {
-        grid-template-columns: 1fr;
-        grid-template-rows: minmax(300px, 1fr) auto;
+        min-height: 0;
       }
 
-      .image-pane {
-        padding: 8px;
-        max-height: 66vh;
+      .app.has-image .workspace {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: auto minmax(0, 1fr) auto auto;
+        gap: 6px;
+        height: 100%;
+        overflow: hidden;
+        padding: 6px;
+        background: var(--stage);
+      }
+
+      .app.has-image .image-pane {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        padding: 0;
       }
 
       .app:not(.has-image) .image-pane {
@@ -281,18 +298,36 @@
       }
 
       canvas {
-        max-height: calc(66vh - 16px);
+        max-height: 100%;
       }
 
-      .color-column {
-        display: grid;
-        max-height: 34vh;
+      .app.has-image .color-column,
+      .app.has-image .colors {
+        display: contents;
+      }
+
+      .app.has-image .color-column {
         border-left: 0;
-        border-top: 1px solid var(--line);
       }
 
-      .colors {
-        padding: 6px;
+      .app.has-image .color-item {
+        z-index: 2;
+        min-height: 56px;
+        background: rgba(255, 255, 255, 0.96);
+      }
+
+      .app.has-image .color-item:hover {
+        background: rgba(227, 238, 232, 0.96);
+      }
+
+      .app.has-image .side-footer {
+        position: relative;
+        z-index: 2;
+        grid-column: 1 / -1;
+        grid-row: 4;
+        padding: 0;
+        border-top: 0;
+        background: transparent;
       }
 
       .empty {
@@ -334,6 +369,7 @@
     const results = document.getElementById("results");
     const linkLayer = document.getElementById("linkLayer");
     const ctx = displayCanvas.getContext("2d", { willReadFrequently: true });
+    const mobileMedia = window.matchMedia("(max-width: 760px)");
 
     const state = {
       image: null,
@@ -346,7 +382,8 @@
       pickFrame: 0,
       transition: null,
       transitionFrame: 0,
-      maskCache: new Map()
+      maskCache: new Map(),
+      mobileLayout: mobileMedia.matches
     };
 
     const namedColors = [
@@ -455,6 +492,12 @@
     });
 
     window.addEventListener("resize", () => {
+      const isMobile = mobileMedia.matches;
+      if (state.image && isMobile !== state.mobileLayout) {
+        state.mobileLayout = isMobile;
+        renderResults();
+        return;
+      }
       requestAnimationFrame(drawLinks);
     });
 
@@ -523,9 +566,7 @@
 
     function renderResults() {
       results.innerHTML = "";
-      const items = [];
-      if (state.picked) items.push(state.picked);
-      items.push(...state.clusters);
+      const items = getDisplayItems();
 
       items.forEach((item) => {
         const button = document.createElement("button");
@@ -549,6 +590,20 @@
       });
 
       requestAnimationFrame(drawLinks);
+    }
+
+    function getDisplayItems() {
+      const items = [];
+      if (state.picked) items.push(state.picked);
+      items.push(...state.clusters);
+      if (!mobileMedia.matches || items.length <= 2) return items;
+
+      const sorted = items
+        .slice()
+        .sort((a, b) => (a.centerY - b.centerY) || (a.centerX - b.centerX));
+      const topItems = sorted.slice(0, 2).sort((a, b) => a.centerX - b.centerX);
+      const bottomItems = sorted.slice(2).sort((a, b) => a.centerX - b.centerX);
+      return topItems.concat(bottomItems);
     }
 
     function drawCanvas(options = {}) {
@@ -602,7 +657,7 @@
       linkLayer.setAttribute("height", workspaceRect.height);
 
       const selected = getSelectedColor();
-      const items = selected ? [selected] : state.clusters;
+      const items = selected ? [selected] : getDisplayItems().filter((item) => item.kind !== "picked");
 
       items.forEach((item) => {
         const row = results.querySelector(`[data-id="${item.id}"]`);
@@ -613,16 +668,19 @@
         const markerY = canvasRect.top + item.centerY * canvasRect.height - workspaceRect.top;
         const rowLeft = rowRect.left - workspaceRect.left;
         const rowRight = rowRect.right - workspaceRect.left;
+        const rowTop = rowRect.top - workspaceRect.top;
+        const rowBottom = rowRect.bottom - workspaceRect.top;
         const rowCenterY = rowRect.top + rowRect.height / 2 - workspaceRect.top;
         const rowCenterX = rowRect.left + rowRect.width / 2 - workspaceRect.left;
+        const isAbove = rowRect.bottom < canvasRect.top + 4;
         const isBelow = rowRect.top > canvasRect.bottom - 4;
-        const targetX = isBelow ? rowCenterX : rowLeft;
-        const targetY = isBelow ? rowRect.top - workspaceRect.top : rowCenterY;
+        const targetX = (isAbove || isBelow) ? rowCenterX : rowLeft;
+        const targetY = isAbove ? rowBottom : (isBelow ? rowTop : rowCenterY);
 
         addLine(markerX, markerY, targetX, targetY, "#ffffff", 5, 0.78);
         addLine(markerX, markerY, targetX, targetY, item.hex, 2, 0.9);
 
-        if (!isBelow) {
+        if (!isAbove && !isBelow) {
           addLine(rowLeft, rowCenterY, rowRight, rowCenterY, item.hex, 2, 0.85);
         }
       });
@@ -1038,7 +1096,7 @@
 
       const selected = [];
       const foreground = normalized.filter((cluster) => !cluster.plainBackground);
-      const candidates = foreground.length >= Math.min(desiredCount, 3) ? foreground : normalized;
+      const candidates = foreground.length ? foreground : normalized;
 
       candidates.forEach((cluster) => {
         if (selected.length >= desiredCount) return;
@@ -1050,7 +1108,8 @@
       if (selected.length < Math.min(desiredCount, candidates.length)) {
         candidates.forEach((cluster) => {
           if (selected.length >= desiredCount) return;
-          if (!selected.includes(cluster)) selected.push(cluster);
+          const tooSmall = cluster.coverage < 0.018 && selected.length >= 2;
+          if (!selected.includes(cluster) && !tooSmall) selected.push(cluster);
         });
       }
 
@@ -1328,7 +1387,7 @@
       const edgeWhite = hsl.l > 0.9 && hsl.s < 0.18;
       const edgeBlack = hsl.l < 0.08 && hsl.s < 0.16;
       const flatGray = hsl.s < 0.06 && hsl.l > 0.18 && hsl.l < 0.86;
-      const nearPaper = r > 228 && g > 224 && b > 214;
+      const nearPaper = r > 216 && g > 216 && b > 216;
       return edgeWhite || edgeBlack || flatGray || nearPaper;
     }
 
