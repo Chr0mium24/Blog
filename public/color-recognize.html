@@ -316,8 +316,18 @@
         background: rgba(255, 255, 255, 0.96);
       }
 
+      .app.has-image .color-item.is-picked {
+        border-style: solid;
+      }
+
       .app.has-image .color-item:hover {
         background: rgba(227, 238, 232, 0.96);
+      }
+
+      .app.has-image .color-item.is-active {
+        border-color: #050505;
+        background: #050505;
+        color: #ffffff;
       }
 
       .app.has-image .side-footer {
@@ -338,7 +348,7 @@
   </style>
 </head>
 <body>
-  <input class="file-input" id="fileInput" type="file" accept="image/*">
+  <input class="file-input" id="fileInput" type="file" accept="image/*" capture="environment">
   <div class="app" id="app">
     <main class="workspace" id="workspace">
       <section class="image-pane" id="imagePane">
@@ -577,7 +587,7 @@
         if (item.kind === "picked") button.classList.add("is-picked");
         button.innerHTML = `
           <span class="swatch" style="background:${item.hex}"></span>
-          <span class="color-name">${item.kind === "picked" ? "点选：" : ""}${item.name}</span>
+          <span class="color-name">${getItemLabel(item)}</span>
         `;
         button.addEventListener("click", () => {
           const nextId = state.selectedId === item.id ? null : item.id;
@@ -592,10 +602,16 @@
       requestAnimationFrame(drawLinks);
     }
 
+    function getItemLabel(item) {
+      if (item.kind !== "picked" || mobileMedia.matches) return item.name;
+      return `点选：${item.name}`;
+    }
+
     function getDisplayItems() {
-      const items = [];
-      if (state.picked) items.push(state.picked);
-      items.push(...state.clusters);
+      let items = state.clusters.slice();
+      if (state.picked) {
+        items = getItemsWithPickedColor(items);
+      }
       if (!mobileMedia.matches || items.length <= 2) return items;
 
       const sorted = items
@@ -604,6 +620,27 @@
       const topItems = sorted.slice(0, 2).sort((a, b) => a.centerX - b.centerX);
       const bottomItems = sorted.slice(2).sort((a, b) => a.centerX - b.centerX);
       return topItems.concat(bottomItems);
+    }
+
+    function getItemsWithPickedColor(clusters) {
+      if (!mobileMedia.matches) return [state.picked, ...clusters];
+      if (clusters.length < 4) return [state.picked, ...clusters];
+
+      const removable = clusters
+        .slice()
+        .sort((a, b) => pickedReplacementScore(a) - pickedReplacementScore(b))
+        .find((cluster) => cluster.id !== state.selectedId) || clusters[0];
+
+      return [
+        state.picked,
+        ...clusters.filter((cluster) => cluster.id !== removable.id)
+      ];
+    }
+
+    function pickedReplacementScore(cluster) {
+      if (!state.picked) return 0;
+      return labDistance(cluster.lab, state.picked.lab) * 0.75
+        + Math.hypot(cluster.centerX - state.picked.centerX, cluster.centerY - state.picked.centerY) * 45;
     }
 
     function drawCanvas(options = {}) {
@@ -628,7 +665,7 @@
     }
 
     function drawMarkers(selected) {
-      const items = selected ? [selected] : state.clusters;
+      const items = selected ? [selected] : getDisplayItems();
       const radius = Math.max(6, Math.round(Math.max(displayCanvas.width, displayCanvas.height) / 180));
 
       items.forEach((item) => {
@@ -657,7 +694,7 @@
       linkLayer.setAttribute("height", workspaceRect.height);
 
       const selected = getSelectedColor();
-      const items = selected ? [selected] : getDisplayItems().filter((item) => item.kind !== "picked");
+      const items = selected ? [selected] : getDisplayItems();
 
       items.forEach((item) => {
         const row = results.querySelector(`[data-id="${item.id}"]`);
