@@ -1396,14 +1396,13 @@
     function colorName(rgb) {
       const [r, g, b] = rgb;
       const hsl = rgbToHsl(r, g, b);
+      const neutralName = neutralGrayName(rgb, hsl);
+      const mutedName = mutedHueName(rgb, hsl);
 
       if (hsl.l < 0.09) return "黑色";
       if (hsl.l > 0.94 && hsl.s < 0.2) return "白色";
-      if (hsl.s < 0.08) {
-        if (hsl.l < 0.28) return "深灰色";
-        if (hsl.l > 0.78) return "浅灰色";
-        return "灰色";
-      }
+      if (neutralName) return neutralName;
+      if (mutedName) return mutedName;
 
       let nearest = namedColors[0];
       let best = Infinity;
@@ -1417,6 +1416,46 @@
       });
 
       return nearest.name;
+    }
+
+    function neutralGrayName(rgb, hsl) {
+      const spread = rgbSpread(rgb);
+      if (hsl.s > 0.06 || spread > 14) return null;
+      if (hsl.l < 0.28) return "深灰色";
+      if (hsl.l > 0.78) return "浅灰色";
+      return "灰色";
+    }
+
+    function mutedHueName(rgb, hsl) {
+      const spread = rgbSpread(rgb);
+      if (spread < 12) return null;
+      const family = mutedHueFamily(hsl.h);
+      if (!family) return null;
+
+      const isCoolHue = hsl.h >= 80 && hsl.h <= 285;
+      const minSaturation = isCoolHue ? 0.055 : 0.09;
+      const maxSaturation = isCoolHue ? 0.36 : 0.2;
+      if (hsl.s < minSaturation || hsl.s > maxSaturation) return null;
+      if (!isCoolHue && hsl.l > 0.75) return null;
+
+      if (hsl.l < 0.36) return `深灰${family}色`;
+      if (hsl.l > 0.72) return `浅灰${family}色`;
+      return `灰${family}色`;
+    }
+
+    function mutedHueFamily(hue) {
+      if (hue < 12 || hue >= 345) return "红";
+      if (hue < 35) return "橙";
+      if (hue < 75) return "黄";
+      if (hue < 160) return "绿";
+      if (hue < 190) return "青";
+      if (hue < 245) return "蓝";
+      if (hue < 285) return "紫";
+      return "粉";
+    }
+
+    function rgbSpread(rgb) {
+      return Math.max(...rgb) - Math.min(...rgb);
     }
 
     function isPlainBackground(rgb, hsl) {
