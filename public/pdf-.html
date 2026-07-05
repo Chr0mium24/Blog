@@ -606,16 +606,17 @@
 
                     if (chunkEnd - chunkStart <= 2) continue; 
 
-                    // 在当前块中，找出所有落在此块内部的“空白切除区”
+                    // 1. 【新增优化】给主线程一丝喘息机会，防止 UI 卡死并允许浏览器进行垃圾回收
+                    await new Promise(resolve => setTimeout(resolve, 60));
+                    document.getElementById('loading-text').textContent = `正在导出第 ${i+1} / ${boundaryLines.length - 1} 张超清切片...`;
+
                     let localZones = zonesArr.map(z => ({
                         top: Math.max(chunkStart, z.top),
                         bottom: Math.min(chunkEnd, z.bottom)
-                    })).filter(z => z.bottom > z.top); // 筛选出真正和当前切片相交的空白区
+                    })).filter(z => z.bottom > z.top);
 
-                    // 将空白区融合同步排序
                     localZones.sort((a,b) => a.top - b.top);
 
-                    // 核心：构建出“需要真正保留渲染的纵向视口段落”
                     let activeSegments = [];
                     let currentY = chunkStart;
                     
@@ -629,20 +630,13 @@
                         activeSegments.push({ start: currentY, end: chunkEnd });
                     }
 
-                    if (activeSegments.length === 0) continue; // 说明整张图全被空白切除了
+                    if (activeSegments.length === 0) continue;
 
-                    // 计算该图片拼装后的总高清高宽
-                    // 宽度取第一页的原始宽度
                     const realTargetWidth = pageHeightsArr[0].realWidth;
                     let totalRealHeight = 0;
 
                     let renderTasks = [];
                     for(let seg of activeSegments) {
-                        // 计算这段保留内容在原画布上的像素高
-                        let startInfo = mapToRealPixel(seg.start);
-                        let endInfo = mapToRealPixel(seg.end);
-
-                        // 跨页切片复杂处理流：分解为单页内任务
                         let tempY = seg.start;
                         while (tempY < seg.end) {
                             let currentInfo = mapToRealPixel(tempY);
@@ -674,19 +668,31 @@
                     outCtx.fillStyle = "#FFFFFF";
                     outCtx.fillRect(0, 0, realTargetWidth, totalRealHeight);
 
-                    // 将各个高清页面的像素数据精准缝合
                     for(let task of renderTasks) {
                         const srcCanvas = pageCanvases[task.pageIdx];
                         outCtx.drawImage(
                             srcCanvas,
-                            0, task.sourceY, srcCanvas.width, task.pixelHeight, // 高清原产地
-                            0, task.targetTop, realTargetWidth, task.pixelHeight  // 无缝组合装配地
+                            0, task.sourceY, srcCanvas.width, task.pixelHeight,
+                            0, task.targetTop, realTargetWidth, task.pixelHeight
                         );
                     }
 
-                    // 输出绝对清脆、无降采样失真的超清 JPG
-                    const imgData = outCanvas.toDataURL('image/jpeg', 0.95);
-                    downloadBlob(imgData, `高清切片_${i+1}.jpg`);
+                    // 2. 【核心优化】使用异步的 HTMLCanvasElement.toBlob 替代同步的 toDataURL
+                    // 这能大幅度降低 Base64 编码带来的瞬时内存峰值
+                    await new Promise((resolve) => {
+                        outCanvas.toBlob((blob) => {
+                            const blobUrl = URL.createObjectURL(blob);
+                            downloadBlob(blobUrl, `高清切片_${i+1}.jpg`);
+                            
+                            // 释放 Blob URL 占用内存
+                            setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                            resolve();
+                        }, 'image/jpeg', 0.95);
+                    });
+
+                    // 3. 【核心优化】显式释放 Canvas 内存，切断引用逼迫垃圾回收
+                    outCanvas.width = 0;
+                    outCanvas.height = 0;
                 }
 
                 statusText.textContent = `成功！所有切片已完成超高清无缝拼接导出。`;
