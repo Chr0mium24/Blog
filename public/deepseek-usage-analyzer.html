@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek API 用量分析与涨价预估</title>
+    <!-- 引入 JSZip 用于前端解压 ZIP（支持嵌套） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- 引入 PapaParse 用于前端解析 CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- 引入 ECharts 用于图表 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --background-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --danger: #dc2626;
+            --highlight: #f8fafc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-main);
+            padding: 2rem 1rem;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            padding: 1.5rem 2rem;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .header p {
+            font-size: 0.85rem;
+            opacity: 0.85;
+            margin-top: 0.3rem;
+        }
+
+        /* --- 视图切换 --- */
+        .view {
+            padding: 2rem;
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+        .view.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- 上传区 --- */
+        #upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8fafc;
+        }
+        .guide {
+            background: var(--highlight);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .guide h3 {
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-main);
+        }
+        .guide ol, .guide ul {
+            padding-left: 1.25rem;
+            font-size: 0.88rem;
+            color: var(--text-main);
+        }
+        .guide li {
+            margin-bottom: 0.4rem;
+        }
+        .guide .tip {
+            background: #eff6ff;
+            border-left: 3px solid var(--primary-color);
+            padding: 0.6rem 0.9rem;
+            border-radius: 0 6px 6px 0;
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+            color: #1e40af;
+        }
+        .guide .warn {
+            background: #fef2f2;
+            border-left: 3px solid var(--danger);
+            padding: 0.6rem 0.9rem;
+            border-radius: 0 6px 6px 0;
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+            color: #991b1b;
+        }
+        #upload-area:hover, #upload-area.dragover {
+            border-color: var(--primary-color);
+            background: #eff6ff;
+        }
+        #upload-area h2 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            color: #1e293b;
+        }
+        #upload-area p {
+            color: #64748b;
+            margin: 0;
+        }
+        #file-input {
+            display: none;
+        }
+        #loading-msg {
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+            color: #64748b;
+        }
+
+        /* --- 数据视图 --- */
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+        .header-actions h2 {
+            margin: 0;
+            color: #1e293b;
+            font-size: 1.25rem;
+        }
+        .header-actions .sub {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 400;
+        }
+        button.action-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+        button.action-btn:hover { opacity: 0.9; }
+        button.action-btn.ghost {
+            background: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+        button.action-btn.ghost:hover { background: #eff6ff; }
+
+        /* --- 汇总卡片 --- */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.85rem;
+            margin-bottom: 1.5rem;
+        }
+        .summary-card {
+            background: var(--highlight);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.9rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .summary-label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .summary-value {
+            font-size: 1.35rem;
+            font-weight: 700;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+        .summary-extra {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .card-red .summary-value { color: var(--danger); }
+        .card-blue .summary-value { color: #2563eb; }
+        .card-purple .summary-value { color: #7c3aed; }
+        .card-green .summary-value { color: #059669; }
+        .card-orange .summary-value { color: #d97706; }
+
+        /* --- 图表 --- */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-panel {
+            background: var(--highlight);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card-panel h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+        .chart-box {
+            width: 100%;
+            height: 320px;
+        }
+
+        /* --- 表格 --- */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 0.75rem;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+        .results-table th,
+        .results-table td {
+            padding: 0.7rem 0.9rem;
+            text-align: right;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+        .results-table th:first-child,
+        .results-table td:first-child {
+            text-align: left;
+            border-right: 1px solid var(--border-color);
+            background-color: var(--highlight);
+            font-weight: 500;
+        }
+        .results-table th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            letter-spacing: 0.03em;
+        }
+        .results-table tr:last-child td {
+            border-bottom: none;
+        }
+        .results-table tr.total-row td {
+            background-color: #eff6ff !important;
+            font-weight: 700;
+            border-top: 2px solid var(--primary-color);
+        }
+        .results-table tr.date-total td {
+            background-color: #fefce8 !important;
+            font-weight: 600;
+            color: #854d0e;
+            border-top: 1px dashed #e2e8f0;
+        }
+        .cost-col { color: #b91c1c; font-weight: 600; font-family: ui-monospace, SFMono-Regular, monospace; }
+        .new-col { color: #1d4ed8; font-weight: 600; font-family: ui-monospace, SFMono-Regular, monospace; }
+        .price { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-weight: 600; }
+        .increase { color: var(--danger); font-weight: 700; }
+        .badge-pro { background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+        .badge-flash { background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+        .badge-peak { background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+        .badge-idle { background: #ecfdf5; color: #047857; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+
+        #daily-detail-wrap {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>DeepSeek API 用量分析与涨价预估</h1>
+            <p>本地解析账单 ZIP，支持嵌套压缩包；小时级数据按高峰/空闲时段精确计价，天级数据给出上下界估算</p>
+        </div>
+
+        <!-- 上传视图 -->
+        <div id="view-upload" class="view active">
+            <div id="upload-area">
+                <h2>📦 导入 DeepSeek 用量账单</h2>
+                <p>点击此处或拖拽导出的 ZIP 压缩包到这里</p>
+                <p style="font-size: 12px; margin-top: 10px;">全部在本地解析，保护您的隐私</p>
+                <input type="file" id="file-input" accept=".zip">
+            </div>
+            <div id="loading-msg">正在解析 ZIP 文件...</div>
+
+            <div class="guide">
+                <h3>📖 使用说明：如何拿到小时级账单（双层打包）</h3>
+                <ol>
+                    <li>
+                        <strong>每天导出一个 ZIP</strong>：DeepSeek 开放平台 → 用量（Usage）→ 导出数据，
+                        日期范围选择<strong>同一天</strong>（例如 8月6日 ~ 8月6日），下载得到当天的小时级 ZIP（如 <code>usage_data_2026-08-06_2026-08-06.zip</code>）。
+                        单日导出的账单是<strong>逐小时</strong>记录的，才能区分高峰/空闲时段。
+                    </li>
+                    <li>
+                        <strong>重复操作</strong>：想统计几天就导出几天，每天一个 ZIP。
+                    </li>
+                    <li>
+                        <strong>双层打包</strong>：把每天的 ZIP 放进同一个文件夹 → 全选 → 压缩成一个 ZIP。
+                        即外层 ZIP 里面装的是一堆「天级 ZIP」——本工具会递归解压，自动识别出小时级数据。
+                    </li>
+                    <li>
+                        <strong>拖进来</strong>：把外层 ZIP（或任意单日 ZIP）拖入上方区域，即可按高峰/空闲时段精确计算涨价后的费用。
+                    </li>
+                </ol>
+                <div class="tip">
+                    ✅ <strong>推荐</strong>：单日导出（小时级）→ 按真实高峰/空闲时段精确计价，并给出高峰用量占比。
+                </div>
+                <div class="warn">
+                    ⚠️ <strong>注意</strong>：若直接导出多天范围（如 8月1日 ~ 8月17日），账单只有天级聚合数据（每天一条，无小时信息），
+                    无法区分高峰/空闲，工具会退回「全空闲 / 全高峰」上下界估算模式。
+                </div>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.75rem;">
+                    高峰时段定义（北京时间）：<strong>9:00–12:00、14:00–18:00</strong>，其余为空闲时段；空闲价为高峰价的一半。
+                    新价格（元/百万 Token）见页面内计算逻辑，Flash 与 Pro 各分空闲/高峰两档。
+                </p>
+            </div>
+        </div>
+
+        <!-- 数据视图 -->
+        <div id="view-data" class="view">
+            <div class="header-actions">
+                <h2>📊 用量与涨价预估 <span class="sub" id="data-overview"></span></h2>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="action-btn ghost" id="btn-daily" onclick="toggleDaily()">📋 每日明细</button>
+                    <button class="action-btn" onclick="resetView()">↩ 返回重新上传</button>
+                </div>
+            </div>
+
+            <!-- 汇总卡片 -->
+            <div class="summary-grid" id="summary-cards"></div>
+
+            <!-- 图表 -->
+            <div class="chart-grid">
+                <div class="card-panel">
+                    <h3 id="chart-cost-title">📈 每日费用趋势</h3>
+                    <div id="chart-cost" class="chart-box"></div>
+                </div>
+                <div class="card-panel">
+                    <h3>📊 每日 Token 用量构成</h3>
+                    <div id="chart-tokens" class="chart-box"></div>
+                </div>
+                <div class="card-panel">
+                    <h3 id="chart-model-title">🏷️ 各模型费用对比</h3>
+                    <div id="chart-model" class="chart-box"></div>
+                </div>
+            </div>
+
+            <!-- 模型汇总表 -->
+            <div class="card-panel" style="margin-bottom: 1.5rem;">
+                <h3>📋 模型费用汇总</h3>
+                <div class="table-container">
+                    <table class="results-table" id="model-table">
+                        <thead id="model-table-head"></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 每日明细（默认折叠） -->
+            <div class="card-panel" id="daily-detail-wrap">
+                <h3>🗓️ 每日明细（含当日合计）</h3>
+                <div class="table-container">
+                    <table class="results-table" id="usage-table">
+                        <thead id="usage-table-head"></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 新增价格配置（元 / 百万 Token）：高峰 9:00-12:00、14:00-18:00（北京时间），空闲为高峰一半 ---
+        const pricing = {
+            new: {
+                flash: {
+                    idle: { hit: 0.05, miss: 1.5, out: 4.5 },
+                    peak: { hit: 0.1, miss: 3, out: 9 }
+                },
+                pro: {
+                    idle: { hit: 0.15, miss: 4.5, out: 13.5 },
+                    peak: { hit: 0.3, miss: 9, out: 27 }
+                }
+            }
+        };
+
+        // --- 工具函数 ---
+        function formatMoney(amount) {
+            if (amount === 0) return '¥ 0.00';
+            if (amount < 0.01) {
+                return '¥ ' + amount.toFixed(6).replace(/\.?0+$/, '');
+            }
+            return '¥ ' + amount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function shortNum(v) {
+            if (v >= 1e8) return (v / 1e8).toFixed(2) + ' 亿';
+            if (v >= 1e4) return (v / 1e4).toFixed(2) + ' 万';
+            return Math.round(v).toLocaleString();
+        }
+
+        function incPct(newV, oldV) {
+            if (oldV > 0) return ((newV - oldV) / oldV) * 100;
+            return newV > 0 ? Infinity : 0;
+        }
+
+        function incText(pct) {
+            if (pct === Infinity) return '+∞%';
+            if (pct === 0) return '+0.0%';
+            return (pct > 0 ? '+' : '') + pct.toFixed(1) + '%';
+        }
+
+        function incHtml(pct) {
+            if (pct === Infinity) return '<span class="price increase">+∞%</span>';
+            if (pct === 0) return '<span class="price">+0.0%</span>';
+            return `<span class="price ${pct > 0 ? 'increase' : ''}">${(pct > 0 ? '+' : '') + pct.toFixed(1)}%</span>`;
+        }
+
+        function hourOf(iso) {
+            const t = iso.split('T')[1] || '00:00:00';
+            return parseInt(t.slice(0, 2), 10) || 0;
+        }
+
+        // 高峰: 9:00-12:00、14:00-18:00（北京时间）
+        function isPeakHour(h) {
+            return (h >= 9 && h < 12) || (h >= 14 && h < 18);
+        }
+
+        // --- DOM 引用 ---
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const viewUpload = document.getElementById('view-upload');
+        const viewData = document.getElementById('view-data');
+        const loadingMsg = document.getElementById('loading-msg');
+        const charts = {};
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                handleZipFile(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleZipFile(e.target.files[0]);
+            }
+        });
+
+        function disposeCharts() {
+            Object.values(charts).forEach(c => { try { c.dispose(); } catch (e) {} });
+            for (const k in charts) delete charts[k];
+        }
+
+        function resetView() {
+            disposeCharts();
+            viewData.classList.remove('active');
+            viewUpload.classList.add('active');
+            fileInput.value = '';
+            document.getElementById('usage-table').querySelector('tbody').innerHTML = '';
+            document.getElementById('model-table').querySelector('tbody').innerHTML = '';
+            document.getElementById('summary-cards').innerHTML = '';
+            document.getElementById('data-overview').textContent = '';
+            const wrap = document.getElementById('daily-detail-wrap');
+            wrap.style.display = 'none';
+            document.getElementById('btn-daily').textContent = '📋 每日明细';
+        }
+
+        function toggleDaily() {
+            const wrap = document.getElementById('daily-detail-wrap');
+            const btn = document.getElementById('btn-daily');
+            const hidden = wrap.style.display === 'none';
+            wrap.style.display = hidden ? 'block' : 'none';
+            btn.textContent = hidden ? '🙈 隐藏每日明细' : '📋 每日明细';
+            if (hidden) Object.values(charts).forEach(c => c.resize());
+        }
+
+        // --- ZIP 解析（支持任意层嵌套） ---
+        async function collectCsvFiles(zip, files) {
+            for (const entry of Object.values(zip.files)) {
+                if (entry.dir) continue;
+                if (entry.name.toLowerCase().endsWith('.zip')) {
+                    const nested = await JSZip.loadAsync(await entry.async('arraybuffer'));
+                    await collectCsvFiles(nested, files);
+                } else if (entry.name.toLowerCase().endsWith('.csv')) {
+                    files.push({ name: entry.name, content: await entry.async('string') });
+                }
+            }
+        }
+
+        async function handleZipFile(file) {
+            if (!file.name.endsWith('.zip')) {
+                alert('请上传有效的 ZIP 文件！');
+                return;
+            }
+            loadingMsg.style.display = 'block';
+
+            try {
+                const zip = await JSZip.loadAsync(file);
+                const csvFiles = [];
+                await collectCsvFiles(zip, csvFiles);
+
+                const amountCsvs = csvFiles.filter(f => f.name.includes('amount-') && f.name.endsWith('.csv')).map(f => f.content);
+                const costCsvs = csvFiles.filter(f => f.name.includes('cost-') && f.name.endsWith('.csv')).map(f => f.content);
+
+                if (!amountCsvs.length && !costCsvs.length) {
+                    alert('在 ZIP 文件中未找到 amount-*.csv 或 cost-*.csv 文件！');
+                    loadingMsg.style.display = 'none';
+                    return;
+                }
+
+                const { statsData, hourly } = processUsageData(amountCsvs, costCsvs);
+
+                loadingMsg.style.display = 'none';
+                viewUpload.classList.remove('active');
+                viewData.classList.add('active');
+
+                renderAll(statsData, hourly);
+
+            } catch (error) {
+                console.error(error);
+                alert('解析 ZIP 文件时发生错误：' + error.message);
+                loadingMsg.style.display = 'none';
+            }
+        }
+
+        function processUsageData(amountCsvs, costCsvs) {
+            // 收集所有行（amount 与 cost），用于先检测粒度
+            const rawRows = [];
+            amountCsvs.forEach(csv => {
+                Papa.parse(csv, { header: true, skipEmptyLines: true }).data.forEach(r => {
+                    if (r.start_time_iso) rawRows.push({ r, cost: null });
+                });
+            });
+            costCsvs.forEach(csv => {
+                Papa.parse(csv, { header: true, skipEmptyLines: true }).data.forEach(r => {
+                    if (r.start_time_iso) rawRows.push({ r, cost: parseFloat(r.cost) || 0 });
+                });
+            });
+
+            // 粒度检测：只要存在非 0 点的小时 → 小时级（单日导出）
+            const hourly = rawRows.some(({ r }) => hourOf(r.start_time_iso) !== 0);
+
+            const stats = {};
+            const initStatKey = (date, period, model) => {
+                const key = `${date}|${period}|${model}`;
+                if (!stats[key]) {
+                    stats[key] = {
+                        date, period, model,
+                        cacheHit: 0, cacheMiss: 0, output: 0,
+                        requests: 0, cost: 0
+                    };
+                }
+                return key;
+            };
+
+            rawRows.forEach(({ r, cost }) => {
+                const date = r.start_time_iso.split('T')[0];
+                const h = hourOf(r.start_time_iso);
+                const period = hourly ? (isPeakHour(h) ? 'peak' : 'idle') : 'daily';
+                const key = initStatKey(date, period, r.model);
+                const s = stats[key];
+
+                if (cost !== null) { // cost 行
+                    s.cost += cost;
+                    return;
+                }
+                const amount = parseFloat(r.amount) || 0;
+                if (r.type === 'input_cache_hit_tokens') s.cacheHit += amount;
+                else if (r.type === 'input_cache_miss_tokens') s.cacheMiss += amount;
+                else if (r.type === 'output_tokens') s.output += amount;
+                else if (r.type === 'request_count') s.requests += amount;
+            });
+
+            const statsData = Object.values(stats).sort((a, b) =>
+                b.date.localeCompare(a.date) || (b.period || '').localeCompare(a.period || ''));
+
+            return { statsData, hourly };
+        }
+
+        // --- 数据聚合 ---
+        function getRowCosts(row) {
+            const modelKey = row.model.toLowerCase().includes('flash') ? 'flash' : 'pro';
+            const P = pricing.new[modelKey];
+            const hitM = row.cacheHit / 1e6, missM = row.cacheMiss / 1e6, outM = row.output / 1e6;
+            const total = (p) => hitM * p.hit + missM * p.miss + outM * p.out;
+            const idle = total(P.idle);
+            const peak = total(P.peak);
+            let actual = null;
+            if (row.period === 'peak') actual = peak;
+            else if (row.period === 'idle') actual = idle;
+            return { idle, peak, actual };
+        }
+
+        function aggregate(statsData) {
+            const asc = [...statsData].sort((a, b) => a.date.localeCompare(b.date));
+            const dMap = {}, mMap = {};
+            const overall = { requests: 0, hit: 0, miss: 0, out: 0, old: 0, actual: 0, idle: 0, peak: 0, peakActual: 0, idleActual: 0, peakTokens: 0, idleTokens: 0 };
+
+            asc.forEach(row => {
+                const c = getRowCosts(row);
+                const d = dMap[row.date] || (dMap[row.date] = { old: 0, actual: 0, idle: 0, peak: 0, peakActual: 0, idleActual: 0, hit: 0, miss: 0, out: 0, requests: 0, peakTokens: 0, idleTokens: 0 });
+                const m = mMap[row.model] || (mMap[row.model] = { model: row.model, requests: 0, hit: 0, miss: 0, out: 0, old: 0, actual: 0, idle: 0, peak: 0, peakActual: 0, idleActual: 0, peakTokens: 0, idleTokens: 0 });
+                const tok = row.cacheHit + row.cacheMiss + row.output;
+
+                [d, m, overall].forEach(t => {
+                    t.requests += row.requests;
+                    t.hit += row.cacheHit; t.miss += row.cacheMiss; t.out += row.output;
+                    t.old += row.cost;
+                    t.idle += c.idle; t.peak += c.peak;
+                    if (c.actual !== null) {
+                        t.actual += c.actual;
+                        if (row.period === 'peak') t.peakActual += c.actual;
+                        else if (row.period === 'idle') t.idleActual += c.actual;
+                    }
+                    if (row.period === 'peak') t.peakTokens += tok;
+                    else if (row.period === 'idle') t.idleTokens += tok;
+                });
+            });
+            return { asc, dMap, mMap, overall };
+        }
+
+        // --- 渲染入口 ---
+        function renderAll(statsData, hourly) {
+            disposeCharts();
+            const { asc, dMap, mMap, overall } = aggregate(statsData);
+            const days = asc.length;
+            const models = Object.keys(mMap);
+
+            document.getElementById('data-overview').textContent =
+                `共 ${days} 天 · ${models.length} 个模型 · ${hourly ? '小时级数据 → 按高峰/空闲时段精确计价' : '天级数据 → 空闲/高峰上下界估算'}` +
+                ` · ${asc[0].date} 至 ${asc[days - 1].date}`;
+
+            if (hourly) {
+                renderSummaryCardsHourly(overall, days);
+                renderChartsHourly(asc, dMap, models);
+                renderModelTableHourly(mMap, models, overall);
+                renderUsageTableHourly(statsData);
+            } else {
+                renderSummaryCardsDaily(overall, days, asc);
+                renderChartsDaily(asc, dMap, models);
+                renderModelTableDaily(mMap, models, overall);
+                renderUsageTableDaily(statsData);
+            }
+        }
+
+        // ============ 小时级模式（单日导出，按实际高峰/空闲时段计价） ============
+
+        function renderSummaryCardsHourly(o, days) {
+            const actualPct = incPct(o.actual, o.old);
+            const idlePct = incPct(o.idle, o.old);
+            const peakPct = incPct(o.peak, o.old);
+            const totalTok = o.hit + o.miss + o.out;
+            const peakShare = totalTok > 0 ? (o.peakTokens / totalTok) * 100 : 0;
+
+            const cards = [
+                { label: '统计天数', value: days + ' 天', cls: '' },
+                { label: '总请求次数', value: shortNum(o.requests), cls: 'card-green' },
+                { label: '缓存命中 Tokens', value: shortNum(o.hit), cls: 'card-green' },
+                { label: '缓存未命中 Tokens', value: shortNum(o.miss), cls: 'card-orange' },
+                { label: '输出 Tokens', value: shortNum(o.out), cls: 'card-orange' },
+                { label: '原总费用', value: formatMoney(o.old), cls: 'card-red' },
+                { label: '新总费用 · 按实际时段', value: formatMoney(o.actual), extra: '涨幅 ' + incText(actualPct), cls: 'card-blue' },
+                { label: '高峰时段用量占比', value: peakShare.toFixed(1) + '%', extra: '全高峰价 ' + incText(peakPct) + ' · 全空闲价 ' + incText(idlePct), cls: 'card-purple' }
+            ];
+            document.getElementById('summary-cards').innerHTML = cards.map(c =>
+                `<div class="summary-card ${c.cls}"><div class="summary-label">${c.label}</div>` +
+                `<div class="summary-value">${c.value}</div>` +
+                (c.extra ? `<div class="summary-extra">${c.extra}</div>` : '') + `</div>`
+            ).join('');
+        }
+
+        function renderChartsHourly(asc, dMap, models) {
+            if (typeof echarts === 'undefined') {
+                document.querySelectorAll('.chart-box').forEach(el => {
+                    el.innerHTML = '<p style="color:#b91c1c;padding:1rem;">ECharts 加载失败（需要网络），无法显示图表。</p>';
+                });
+                return;
+            }
+            const dates = asc.map(d => d.date);
+            const moneyFmt = (v) => v == null ? '-' : '¥ ' + Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            document.getElementById('chart-cost-title').textContent = '📈 每日费用趋势（原价 vs 新价·按实际时段）';
+            const c1 = echarts.init(document.getElementById('chart-cost'));
+            c1.setOption({
+                tooltip: { trigger: 'axis', valueFormatter: moneyFmt },
+                legend: { data: ['原费用', '新费用·实际时段'], top: 0 },
+                grid: { left: 80, right: 20, top: 40, bottom: 30 },
+                xAxis: { type: 'category', data: dates, boundaryGap: false },
+                yAxis: { type: 'value', name: '费用 (¥)', axisLabel: { formatter: v => v.toLocaleString('zh-CN', { maximumFractionDigits: 0 }) } },
+                series: [
+                    { name: '原费用', type: 'line', smooth: true, symbolSize: 5, data: dates.map(d => dMap[d].old), itemStyle: { color: '#ef4444' } },
+                    { name: '新费用·实际时段', type: 'line', smooth: true, symbolSize: 5, data: dates.map(d => +dMap[d].actual.toFixed(4)), itemStyle: { color: '#2563eb' } }
+                ]
+            });
+            charts['chart-cost'] = c1;
+
+            const c2 = echarts.init(document.getElementById('chart-tokens'));
+            c2.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: params => {
+                        let html = `<strong>${params[0].axisValue}</strong><br/>`;
+                        params.forEach(p => html += `${p.marker}${p.seriesName}: <strong>${Number(p.value).toLocaleString()}</strong><br/>`);
+                        return html;
+                    }
+                },
+                legend: { data: ['缓存命中', '缓存未命中', '输出'], top: 0 },
+                grid: { left: 80, right: 20, top: 40, bottom: 30 },
+                xAxis: { type: 'category', data: dates },
+                yAxis: { type: 'value', name: 'Tokens', axisLabel: { formatter: shortNum } },
+                series: [
+                    { name: '缓存命中', type: 'bar', stack: 't', data: dates.map(d => dMap[d].hit), itemStyle: { color: '#10b981' } },
+                    { name: '缓存未命中', type: 'bar', stack: 't', data: dates.map(d => dMap[d].miss), itemStyle: { color: '#f59e0b' } },
+                    { name: '输出', type: 'bar', stack: 't', data: dates.map(d => dMap[d].out), itemStyle: { color: '#3b82f6' } }
+                ]
+            });
+            charts['chart-tokens'] = c2;
+
+            document.getElementById('chart-model-title').textContent = '⏱️ 每日高峰/空闲时段费用（新价）';
+            const c3 = echarts.init(document.getElementById('chart-model'));
+            c3.setOption({
+                tooltip: { trigger: 'axis', valueFormatter: moneyFmt },
+                legend: { data: ['空闲时段费用', '高峰时段费用'], top: 0 },
+                grid: { left: 80, right: 20, top: 40, bottom: 30 },
+                xAxis: { type: 'category', data: dates },
+                yAxis: { type: 'value', name: '费用 (¥)', axisLabel: { formatter: v => v.toLocaleString('zh-CN', { maximumFractionDigits: 0 }) } },
+                series: [
+                    { name: '空闲时段费用', type: 'bar', stack: 'p', data: dates.map(d => +dMap[d].idleActual.toFixed(4)), itemStyle: { color: '#34d399' }, barMaxWidth: 36 },
+                    { name: '高峰时段费用', type: 'bar', stack: 'p', data: dates.map(d => +dMap[d].peakActual.toFixed(4)), itemStyle: { color: '#f87171' }, barMaxWidth: 36 }
+                ]
+            });
+            charts['chart-model'] = c3;
+
+            window.addEventListener('resize', () => Object.values(charts).forEach(c => c.resize()));
+        }
+
+        function renderModelTableHourly(mMap, models, overall) {
+            document.getElementById('model-table-head').innerHTML = `
+                <tr>
+                    <th>模型</th><th>请求次数</th><th>原费用</th><th>新费用·实际时段</th><th>涨幅</th>
+                    <th>高峰用量占比</th><th>全高峰价</th><th>全空闲价</th>
+                </tr>`;
+            const tbody = document.querySelector('#model-table tbody');
+            tbody.innerHTML = '';
+            models.forEach(m => {
+                const v = mMap[m];
+                const actualPct = incPct(v.actual, v.old);
+                const totalTok = v.hit + v.miss + v.out;
+                const share = totalTok > 0 ? (v.peakTokens / totalTok) * 100 : 0;
+                const badge = v.model.toLowerCase().includes('flash')
+                    ? `<span class="badge-flash">${v.model}</span>`
+                    : `<span class="badge-pro">${v.model}</span>`;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${badge}</td>
+                    <td>${v.requests.toLocaleString()}</td>
+                    <td class="cost-col">${formatMoney(v.old)}</td>
+                    <td class="new-col">${formatMoney(v.actual)}</td>
+                    <td>${incHtml(actualPct)}</td>
+                    <td>${share.toFixed(1)}%</td>
+                    <td class="new-col">${formatMoney(v.peak)}</td>
+                    <td class="new-col">${formatMoney(v.idle)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            const tr = document.createElement('tr');
+            tr.className = 'total-row';
+            const totalTok = overall.hit + overall.miss + overall.out;
+            const share = totalTok > 0 ? (overall.peakTokens / totalTok) * 100 : 0;
+            tr.innerHTML = `
+                <td>总计</td>
+                <td>${overall.requests.toLocaleString()}</td>
+                <td class="cost-col">${formatMoney(overall.old)}</td>
+                <td class="new-col">${formatMoney(overall.actual)}</td>
+                <td>${incHtml(incPct(overall.actual, overall.old))}</td>
+                <td>${share.toFixed(1)}%</td>
+                <td class="new-col">${formatMoney(overall.peak)}</td>
+                <td class="new-col">${formatMoney(overall.idle)}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function renderUsageTableHourly(statsData) {
+            document.getElementById('usage-table-head').innerHTML = `
+                <tr>
+                    <th>日期</th><th>时段</th><th>模型</th><th>请求次数</th><th>缓存命中 (Tokens)</th>
+                    <th>缓存未命中 (Tokens)</th><th>输出 (Tokens)</th><th>原费用</th><th>新费用·实际</th><th>涨幅</th>
+                </tr>`;
+            const tbody = document.querySelector('#usage-table tbody');
+            tbody.innerHTML = '';
+
+            if (statsData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">没有解析到数据</td></tr>';
+                return;
+            }
+
+            const groups = [];
+            let cur = null;
+            statsData.forEach(row => {
+                if (!cur || cur.date !== row.date) {
+                    cur = { date: row.date, rows: [], totals: { requests: 0, hit: 0, miss: 0, out: 0, old: 0, actual: 0 } };
+                    groups.push(cur);
+                }
+                const c = getRowCosts(row);
+                cur.rows.push({ row, c });
+                const t = cur.totals;
+                t.requests += row.requests; t.hit += row.cacheHit; t.miss += row.cacheMiss; t.out += row.output;
+                t.old += row.cost; t.actual += c.actual;
+            });
+
+            groups.forEach(g => {
+                const rowspan = g.rows.length + 1;
+                g.rows.forEach(({ row, c }, idx) => {
+                    const badge = row.model.toLowerCase().includes('flash')
+                        ? `<span class="badge-flash">${row.model}</span>`
+                        : `<span class="badge-pro">${row.model}</span>`;
+                    const periodBadge = row.period === 'peak'
+                        ? '<span class="badge-peak">高峰 9-12/14-18</span>'
+                        : '<span class="badge-idle">空闲</span>';
+                    const tr = document.createElement('tr');
+                    const cells = [];
+                    if (idx === 0) {
+                        cells.push(`<td rowspan="${rowspan}" style="text-align:left;"><strong>${g.date}</strong></td>`);
+                    }
+                    cells.push(`
+                        <td>${periodBadge}</td>
+                        <td>${badge}</td>
+                        <td>${row.requests.toLocaleString()}</td>
+                        <td>${row.cacheHit.toLocaleString()}</td>
+                        <td>${row.cacheMiss.toLocaleString()}</td>
+                        <td>${row.output.toLocaleString()}</td>
+                        <td class="cost-col">${formatMoney(row.cost)}</td>
+                        <td class="new-col">${formatMoney(c.actual)}</td>
+                        <td>${incHtml(incPct(c.actual, row.cost))}</td>
+                    `);
+                    tr.innerHTML = cells.join('');
+                    tbody.appendChild(tr);
+                });
+
+                const t = g.totals;
+                const tr = document.createElement('tr');
+                tr.className = 'date-total';
+                tr.innerHTML = `
+                    <td>当日合计</td>
+                    <td></td><td></td>
+                    <td>${t.requests.toLocaleString()}</td>
+                    <td>${t.hit.toLocaleString()}</td>
+                    <td>${t.miss.toLocaleString()}</td>
+                    <td>${t.out.toLocaleString()}</td>
+                    <td class="cost-col">${formatMoney(t.old)}</td>
+                    <td class="new-col">${formatMoney(t.actual)}</td>
+                    <td>${incHtml(incPct(t.actual, t.old))}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ============ 天级模式（多日导出，空闲/高峰上下界估算） ============
+
+        function renderSummaryCardsDaily(o, days, asc) {
+            const idlePct = incPct(o.idle, o.old);
+            const peakPct = incPct(o.peak, o.old);
+            const cards = [
+                { label: '统计天数', value: days + ' 天', cls: '' },
+                { label: '总请求次数', value: shortNum(o.requests), cls: 'card-green' },
+                { label: '缓存命中 Tokens', value: shortNum(o.hit), cls: 'card-green' },
+                { label: '缓存未命中 Tokens', value: shortNum(o.miss), cls: 'card-orange' },
+                { label: '输出 Tokens', value: shortNum(o.out), cls: 'card-orange' },
+                { label: '原总费用', value: formatMoney(o.old), cls: 'card-red' },
+                { label: '新总费用 · 全空闲', value: formatMoney(o.idle), extra: '涨幅 ' + incText(idlePct), cls: 'card-blue' },
+                { label: '新总费用 · 全高峰', value: formatMoney(o.peak), extra: '涨幅 ' + incText(peakPct), cls: 'card-purple' }
+            ];
+            document.getElementById('summary-cards').innerHTML = cards.map(c =>
+                `<div class="summary-card ${c.cls}"><div class="summary-label">${c.label}</div>` +
+                `<div class="summary-value">${c.value}</div>` +
+                (c.extra ? `<div class="summary-extra">${c.extra}</div>` : '') + `</div>`
+            ).join('');
+        }
+
+        function renderChartsDaily(asc, dMap, models) {
+            if (typeof echarts === 'undefined') {
+                document.querySelectorAll('.chart-box').forEach(el => {
+                    el.innerHTML = '<p style="color:#b91c1c;padding:1rem;">ECharts 加载失败（需要网络），无法显示图表。</p>';
+                });
+                return;
+            }
+            const dates = asc.map(d => d.date);
+            const moneyFmt = (v) => v == null ? '-' : '¥ ' + Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            document.getElementById('chart-cost-title').textContent = '📈 每日费用趋势（原价 vs 空闲/高峰价）';
+            const c1 = echarts.init(document.getElementById('chart-cost'));
+            c1.setOption({
+                tooltip: { trigger: 'axis', valueFormatter: moneyFmt },
+                legend: { data: ['原费用', '新费用·空闲', '新费用·高峰'], top: 0 },
+                grid: { left: 80, right: 20, top: 40, bottom: 30 },
+                xAxis: { type: 'category', data: dates, boundaryGap: false },
+                yAxis: { type: 'value', name: '费用 (¥)', axisLabel: { formatter: v => v.toLocaleString('zh-CN', { maximumFractionDigits: 0 }) } },
+                series: [
+                    { name: '原费用', type: 'line', smooth: true, symbolSize: 5, data: dates.map(d => dMap[d].old), itemStyle: { color: '#ef4444' } },
+                    { name: '新费用·空闲', type: 'line', smooth: true, symbolSize: 5, data: dates.map(d => +dMap[d].idle.toFixed(4)), itemStyle: { color: '#2563eb' } },
+                    { name: '新费用·高峰', type: 'line', smooth: true, symbolSize: 5, data: dates.map(d => +dMap[d].peak.toFixed(4)), itemStyle: { color: '#7c3aed' } }
+                ]
+            });
+            charts['chart-cost'] = c1;
+
+            const c2 = echarts.init(document.getElementById('chart-tokens'));
+            c2.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: params => {
+                        let html = `<strong>${params[0].axisValue}</strong><br/>`;
+                        params.forEach(p => html += `${p.marker}${p.seriesName}: <strong>${Number(p.value).toLocaleString()}</strong><br/>`);
+                        return html;
+                    }
+                },
+                legend: { data: ['缓存命中', '缓存未命中', '输出'], top: 0 },
+                grid: { left: 80, right: 20, top: 40, bottom: 30 },
+                xAxis: { type: 'category', data: dates },
+                yAxis: { type: 'value', name: 'Tokens', axisLabel: { formatter: shortNum } },
+                series: [
+                    { name: '缓存命中', type: 'bar', stack: 't', data: dates.map(d => dMap[d].hit), itemStyle: { color: '#10b981' } },
+                    { name: '缓存未命中', type: 'bar', stack: 't', data: dates.map(d => dMap[d].miss), itemStyle: { color: '#f59e0b' } },
+                    { name: '输出', type: 'bar', stack: 't', data: dates.map(d => dMap[d].out), itemStyle: { color: '#3b82f6' } }
+                ]
+            });
+            charts['chart-tokens'] = c2;
+
+            document.getElementById('chart-model-title').textContent = '🏷️ 各模型费用对比';
+            const c3 = echarts.init(document.getElementById('chart-model'));
+            c3.setOption({
+                tooltip: { trigger: 'axis', valueFormatter: moneyFmt },
+                legend: { data: ['原费用', '新费用·空闲', '新费用·高峰'], top: 0 },
+                grid: { left: 80, right: 20, top: 40, bottom: 30 },
+                xAxis: { type: 'category', data: models },
+                yAxis: { type: 'value', name: '费用 (¥)', axisLabel: { formatter: v => v.toLocaleString('zh-CN', { maximumFractionDigits: 0 }) } },
+                series: [
+                    { name: '原费用', type: 'bar', data: models.map(m => +mMap[m].old.toFixed(4)), itemStyle: { color: '#ef4444' }, barMaxWidth: 40 },
+                    { name: '新费用·空闲', type: 'bar', data: models.map(m => +mMap[m].idle.toFixed(4)), itemStyle: { color: '#2563eb' }, barMaxWidth: 40 },
+                    { name: '新费用·高峰', type: 'bar', data: models.map(m => +mMap[m].peak.toFixed(4)), itemStyle: { color: '#7c3aed' }, barMaxWidth: 40 }
+                ]
+            });
+            charts['chart-model'] = c3;
+
+            window.addEventListener('resize', () => Object.values(charts).forEach(c => c.resize()));
+        }
+
+        function renderModelTableDaily(mMap, models, overall) {
+            document.getElementById('model-table-head').innerHTML = `
+                <tr>
+                    <th>模型</th><th>请求次数</th><th>缓存命中 (Tokens)</th><th>缓存未命中 (Tokens)</th><th>输出 (Tokens)</th>
+                    <th>原费用</th><th>新费用·空闲</th><th>空闲涨幅</th><th>新费用·高峰</th><th>高峰涨幅</th>
+                </tr>`;
+            const tbody = document.querySelector('#model-table tbody');
+            tbody.innerHTML = '';
+            models.forEach(m => {
+                const v = mMap[m];
+                const badge = v.model.toLowerCase().includes('flash')
+                    ? `<span class="badge-flash">${v.model}</span>`
+                    : `<span class="badge-pro">${v.model}</span>`;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${badge}</td>
+                    <td>${v.requests.toLocaleString()}</td>
+                    <td>${v.hit.toLocaleString()}</td>
+                    <td>${v.miss.toLocaleString()}</td>
+                    <td>${v.out.toLocaleString()}</td>
+                    <td class="cost-col">${formatMoney(v.old)}</td>
+                    <td class="new-col">${formatMoney(v.idle)}</td>
+                    <td>${incHtml(incPct(v.idle, v.old))}</td>
+                    <td class="new-col">${formatMoney(v.peak)}</td>
+                    <td>${incHtml(incPct(v.peak, v.old))}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            const tr = document.createElement('tr');
+            tr.className = 'total-row';
+            tr.innerHTML = `
+                <td>总计</td>
+                <td>${overall.requests.toLocaleString()}</td>
+                <td>${overall.hit.toLocaleString()}</td>
+                <td>${overall.miss.toLocaleString()}</td>
+                <td>${overall.out.toLocaleString()}</td>
+                <td class="cost-col">${formatMoney(overall.old)}</td>
+                <td class="new-col">${formatMoney(overall.idle)}</td>
+                <td>${incHtml(incPct(overall.idle, overall.old))}</td>
+                <td class="new-col">${formatMoney(overall.peak)}</td>
+                <td>${incHtml(incPct(overall.peak, overall.old))}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function renderUsageTableDaily(statsData) {
+            document.getElementById('usage-table-head').innerHTML = `
+                <tr>
+                    <th>日期</th><th>模型</th><th>请求次数</th><th>缓存命中 (Tokens)</th><th>缓存未命中 (Tokens)</th>
+                    <th>输出 (Tokens)</th><th>原费用</th><th>新费用·空闲</th><th>空闲涨幅</th><th>新费用·高峰</th><th>高峰涨幅</th>
+                </tr>`;
+            const tbody = document.querySelector('#usage-table tbody');
+            tbody.innerHTML = '';
+
+            if (statsData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;">没有解析到数据</td></tr>';
+                return;
+            }
+
+            const groups = [];
+            let cur = null;
+            statsData.forEach(row => {
+                if (!cur || cur.date !== row.date) {
+                    cur = { date: row.date, rows: [], totals: { requests: 0, hit: 0, miss: 0, out: 0, old: 0, idle: 0, peak: 0 } };
+                    groups.push(cur);
+                }
+                const c = getRowCosts(row);
+                cur.rows.push({ row, c });
+                const t = cur.totals;
+                t.requests += row.requests; t.hit += row.cacheHit; t.miss += row.cacheMiss; t.out += row.output;
+                t.old += row.cost; t.idle += c.idle; t.peak += c.peak;
+            });
+
+            groups.forEach(g => {
+                const rowspan = g.rows.length + 1;
+                g.rows.forEach(({ row, c }, idx) => {
+                    const badge = row.model.toLowerCase().includes('flash')
+                        ? `<span class="badge-flash">${row.model}</span>`
+                        : `<span class="badge-pro">${row.model}</span>`;
+                    const tr = document.createElement('tr');
+                    const cells = [];
+                    if (idx === 0) {
+                        cells.push(`<td rowspan="${rowspan}" style="text-align:left;"><strong>${g.date}</strong></td>`);
+                    }
+                    cells.push(`
+                        <td>${badge}</td>
+                        <td>${row.requests.toLocaleString()}</td>
+                        <td>${row.cacheHit.toLocaleString()}</td>
+                        <td>${row.cacheMiss.toLocaleString()}</td>
+                        <td>${row.output.toLocaleString()}</td>
+                        <td class="cost-col">${formatMoney(row.cost)}</td>
+                        <td class="new-col">${formatMoney(c.idle)}</td>
+                        <td>${incHtml(incPct(c.idle, row.cost))}</td>
+                        <td class="new-col">${formatMoney(c.peak)}</td>
+                        <td>${incHtml(incPct(c.peak, row.cost))}</td>
+                    `);
+                    tr.innerHTML = cells.join('');
+                    tbody.appendChild(tr);
+                });
+
+                const t = g.totals;
+                const tr = document.createElement('tr');
+                tr.className = 'date-total';
+                tr.innerHTML = `
+                    <td>当日合计</td>
+                    <td></td>
+                    <td>${t.requests.toLocaleString()}</td>
+                    <td>${t.hit.toLocaleString()}</td>
+                    <td>${t.miss.toLocaleString()}</td>
+                    <td>${t.out.toLocaleString()}</td>
+                    <td class="cost-col">${formatMoney(t.old)}</td>
+                    <td class="new-col">${formatMoney(t.idle)}</td>
+                    <td>${incHtml(incPct(t.idle, t.old))}</td>
+                    <td class="new-col">${formatMoney(t.peak)}</td>
+                    <td>${incHtml(incPct(t.peak, t.old))}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
