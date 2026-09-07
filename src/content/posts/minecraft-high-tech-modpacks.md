@@ -4,6 +4,7 @@ published: 2026-09-07
 updated: 2026-09-07
 description: 模组分类、整合包档案与在成熟包上增删模组的完整记录
 tags: [Minecraft]
+ai: true
 category: 经验
 ---
 

@@ -11,6 +11,7 @@ interface Props {
 	updated?: Date;
 	tags: string[];
 	category: string | null;
+	ai?: boolean;
 	hideTagsForMobile?: boolean;
 	hideUpdateDate?: boolean;
 	slug?: string;
@@ -20,6 +21,7 @@ const {
 	updated,
 	tags,
 	category,
+	ai = false,
 	hideTagsForMobile = false,
 	hideUpdateDate = false,
 	slug,
@@ -66,6 +68,14 @@ const updatedValue = updated ? formatDateToYYYYMMDD(updated) : "";
             </a>
         </div>
     </div>
+
+    <!-- ai generated -->
+    {ai && (
+        <span class="inline-flex items-center gap-1 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] px-2.5 py-0.5 text-xs font-medium whitespace-nowrap select-none">
+            <Icon name="material-symbols:smart-toy-outline" class="text-sm"></Icon>
+            AI 生成
+        </span>
+    )}
 
     <!-- tags -->
     <div class:list={["items-center", {"flex": !hideTagsForMobile, "hidden md:flex": hideTagsForMobile}]}>
