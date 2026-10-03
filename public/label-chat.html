@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>Label Chat — AI 标签排版（纯前端版）</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root { --bg:#14161a; --panel:#1c1f26; --line:#2a2f3a; --fg:#e8eaf0; --dim:#8b93a5; --acc:#4f8cff; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--fg); font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif; height:100vh; display:flex; }
+  #chat { width:38%; min-width:340px; display:flex; flex-direction:column; border-right:1px solid var(--line); }
+  #chat header { padding:10px 14px; border-bottom:1px solid var(--line); color:var(--dim); display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  #msgs { flex:1; overflow-y:auto; padding:14px; }
+  .m { margin:10px 0; max-width:92%; }
+  .m.user { margin-left:auto; background:var(--acc); color:#fff; padding:8px 12px; border-radius:12px 12px 2px 12px; white-space:pre-wrap; }
+  .m.ai { background:var(--panel); padding:8px 12px; border-radius:12px 12px 12px 2px; white-space:pre-wrap; }
+  .m img.thumb { height:60px; margin-top:6px; border-radius:6px; display:block; }
+  .m small { color:var(--dim); display:block; margin-top:6px; }
+  #attach { display:flex; gap:6px; flex-wrap:wrap; padding:0 12px; }
+  #attach img { height:52px; border-radius:6px; border:1px solid var(--line); cursor:pointer; }
+  #inputbar { padding:12px; border-top:1px solid var(--line); display:flex; gap:8px; }
+  textarea#msg { flex:1; height:84px; resize:none; background:var(--panel); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:8px; }
+  button { background:var(--acc); color:#fff; border:0; border-radius:8px; padding:8px 14px; cursor:pointer; }
+  button:disabled { opacity:.5; }
+  .chip { color:var(--acc); cursor:pointer; font-size:12px; }
+  #preview { flex:1; display:flex; flex-direction:column; }
+  #preview header { padding:10px 14px; border-bottom:1px solid var(--line); color:var(--dim); display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  #preview header button { background:var(--panel); color:var(--fg); border:1px solid var(--line); padding:4px 10px; font-size:12px; }
+  #stage { flex:1; display:flex; align-items:center; justify-content:center; overflow:auto; padding:16px; }
+  canvas#png { max-width:100%; max-height:100%; background:#fff; box-shadow:0 4px 24px rgba(0,0,0,.4); }
+  #jsonwrap { height:30%; border-top:1px solid var(--line); display:flex; flex-direction:column; }
+  #jsonwrap header { padding:6px 12px; color:var(--dim); border-bottom:1px solid var(--line); font-size:12px; display:flex; justify-content:space-between; }
+  #spec { flex:1; background:var(--panel); color:#cdd6e4; border:0; padding:10px; font:12px/1.5 ui-monospace,Menlo,monospace; resize:none; outline:none; }
+  #settings { position:fixed; right:12px; top:12px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; width:280px; z-index:9; }
+  #settings h4 { font-size:12px; color:var(--dim); margin-bottom:6px; }
+  #settings input, #settings select { width:100%; background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:4px 8px; margin:3px 0; font-size:12px; }
+  label { font-size:11px; color:var(--dim); }
+  .warn { color:#ffb84f; font-size:11px; line-height:1.4; }
+</style>
+</head>
+<body>
+  <div id="settings">
+    <h4>⚙️ API 设置（只存在本机 localStorage）</h4>
+    <label>服务</label>
+    <select id="prov" onchange="saveCfg()">
+      <option value="ds">DeepSeek 官方（便宜，纯文本）</option>
+      <option value="or">OpenRouter（多模型，可看图）</option>
+    </select>
+    <label>文字模型</label>
+    <input id="mText" oninput="saveCfg()" placeholder="deepseek-chat">
+    <label>视觉模型（发图时用）</label>
+    <input id="mVis" oninput="saveCfg()" placeholder="qwen/qwen3-vl-…:free">
+    <label>API Key</label>
+    <input id="key" type="password" oninput="saveCfg()" placeholder="sk-…">
+    <div class="warn">⚠ Key 只存你浏览器 localStorage、不进代码库；但纯前端调用意味着请求从你浏览器带 Key 发出，请勿用多人电脑。</div>
+  </div>
+  <div id="chat">
+    <header>💬 排版助手
+      <span class="chip" onclick="loadDemo('sn1')">流水号示例</span>
+      <span class="chip" onclick="loadDemo('mk')">美客美家示例</span>
+      <span class="chip" style="color:#ffb84f" onclick="showBtw()">📦 btw 工具</span>
+    </header>
+    <div id="msgs"></div>
+    <div id="attach"></div>
+    <div id="inputbar">
+      <textarea id="msg" placeholder="描述需求 / 粘贴截图 / 拖入图片或 btw 文件"></textarea>
+      <button id="send" onclick="send()">发送<br><span style="font-size:10px">⌘⏎</span></button>
+    </div>
+  </div>
+  <div id="preview">
+    <header>🖨 预览（203dpi 实打印像素）
+      <button onclick="renderSpec()">用当前 JSON 渲染</button>
+      <button onclick="exportPng()">导出 PNG</button>
+      <button onclick="exportJson()">保存 JSON</button>
+      <span id="status" style="margin-left:auto"></span>
+    </header>
+    <div id="stage"><canvas id="png"></canvas></div>
+    <div id="jsonwrap">
+      <header><span>label.json（可直接改）</span><span id="size"></span></header>
+      <textarea id="spec" spellcheck="false"></textarea>
+    </div>
+  </div>
+
+<script>
+/* ============ 配置 ============ */
+const cfg = () => ({
+  prov: localStorage.lc_prov || 'ds',
+  mText: localStorage.lc_mText || 'deepseek-chat',
+  mVis: localStorage.lc_mVis || '',
+  key: localStorage.lc_key || '',
+});
+function saveCfg(){
+  localStorage.lc_prov = document.getElementById('prov').value;
+  localStorage.lc_mText = document.getElementById('mText').value;
+  localStorage.lc_mVis = document.getElementById('mVis').value;
+  localStorage.lc_key = document.getElementById('key').value;
+}
+function initCfg(){
+  const c = cfg();
+  document.getElementById('prov').value = c.prov;
+  document.getElementById('mText').value = c.mText; document.getElementById('mText').placeholder = 'deepseek-chat / or 模型名';
+  document.getElementById('mVis').value = c.mVis;
+  document.getElementById('key').value = c.key;
+}
+function endpoint(){
+  const c = cfg();
+  return c.prov === 'ds' ? 'https://api.deepseek.com/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
+}
+
+/* ============ 系统指令 ============ */
+const SPEC = `# Label Format v1 — AI 排版指令（instruction）
+坐标/尺寸一律毫秒mm，原点标签左上角，打印分辨率 203dpi（1mm≈8px），纯黑白。
+## Schema
+{ "version":1, "size":{"w":100.0,"h":60.0},
+  "objects": [...],
+  "variables": { "字段":"值", "sn":{"mode":"serial","start":1,"total":200} } }
+## objects
+- box: x,y,w,h 必填; radius(圆角mm默认0), line(线宽mm默认0.3)
+- text: x,y,text 必填; w(限宽mm,超出自动缩字号), font(hei黑/song宋,默认song), size(字高mm默认4), bold(默认true), align(left默认/center/right,center|right需给w)
+- barcode: x,y,data,h(条高mm) 必填; module(窄条mm默认0.4), showtext(默认true); Code39,A-Z 0-9 -.$/+% 空格
+- image: x,y,src,w|h (src 为文件名,占位渲染)
+变量: text/data 里 {name}; serial 自动产出 {sn} 与 {sn_total},{total}
+## 约束
+1. 字号≥2mm 2. 行距=size+2mm左右 3. 文本不越 margin.left(默认5mm) 4. 源边框用 box(radius 1~3mm, line 0.15~0.35)
+5. text 中用到 {x} 的每个 x 必须在 variables 中定义 (sn_total 除外,自动产出)
+## 工作流
+用户给文案/图片时: 逐行定y(首行 y≈margin+3, 之后按行距), 数字/日期抽成 variables, 批次/流水号→serial, 自检约束后只输出一个完整 JSON（\`\`\`json 代码块内, 块外最多一句话）。
+看图任务: 尺寸按图比例估算(默认100×60), 文字逐行抄录, 条码→barcode(data=条码下方文字), 图案→说明用户可后续补原图。`;
+
+/* ============ 渲染器 (canvas, 203dpi) ============ */
+const DPI = 203, PX = DPI / 25.4;
+const mm = v => v * PX;
+function fontStr(name, sizeMm, bold) {
+  const px = Math.max(6, Math.round(mm(sizeMm) * 1.05));
+  const fam = name === 'hei' ? '"SimHei","Heiti SC",sans-serif' : '"SimSun","Songti SC",serif';
+  return `${bold ? 'bold ' : ''}${px}px ${fam}, serif`;
+}
+const SUBST = (text, vals) => Object.entries(vals || {}).reduce((t, [k, v]) => t.replaceAll(`{${k}}`, v), text);
+function resolve(spec) {
+  const vals = {}, cli = window.__vars || {};
+  const specVars = spec.variables || {};
+  let firstTotal = null;
+  for (const [k, v] of Object.entries(specVars)) {
+    if (typeof v === 'object' && v.mode === 'serial') {
+      vals[k] = cli[k] ?? v.start ?? 1;
+      vals[k + '_total'] = v.total ?? 1;
+      firstTotal ??= vals[k + '_total'];
+    } else vals[k] = cli[k] ?? v;
+  }
+  Object.assign(vals, Object.fromEntries(Object.entries(cli).filter(([k]) => !(k in vals))));
+  if (firstTotal != null && !('total' in vals)) vals.total = firstTotal;
+  return vals;
+}
+function drawCode39(ctx, x, y, data, hMm, modMm = 0.4, showtext = true) {
+  const T = {"0":"nnnwwnwnn","1":"wnnwnnnnw","2":"nnwwnnnnw","3":"wnwwnnnnn","4":"nnnwwnnnw","5":"wnnwwnnnn","6":"nnwwwnnnn","7":"nnnwnnwnw","8":"wnnwnnwnn","9":"nnwwnnwnn","A":"wnnnnwnnw","B":"nnwnnwnnw","C":"wnwnnwnnn","D":"nnnnwwnnw","E":"wnnnwwnnn","F":"nnwnwwnnn","G":"nnnnnwwnw","H":"wnnnnwwnn","I":"nnwnnwwnn","J":"nnnnwwwnn","K":"wnnnnnnww","L":"nnwnnnnww","M":"wnwnnnnwn","N":"nnnnwnnww","O":"wnnnwnnwn","P":"nnwnwnnwn","Q":"nnnnnwwww","R":"wnnnnnwwn","S":"nnwnnnwwn","T":"nnnnwnwwn","U":"wwnnnnnnw","V":"nwwnnnnnw","W":"wwwnnnnnn","X":"nwnnwnnnw","Y":"wwnnwnnnn","Z":"nwwnwnnnn","-":"nwnnnnwnw",".":"wwnnnnwnn"," ":"nwwnnnwnn","$":"nwnwnwnnn","/":"nwnwnnnwn","+":"nwnnnwnwn","%":"nnnwnwnwn","*":"nwnnwnwnn"};
+  data = ('*' + data.toUpperCase() + '*');
+  if (![...data].every(c => T[c])) throw new Error('Code39 字符不合法: ' + data);
+  const u = mm(modMm);
+  let cx = x;
+  ctx.fillStyle = '#000';
+  for (const ch of data) {
+    const pat = T[ch];
+    for (let i = 0; i < 9; i++) {
+      const w = (pat[i] === 'w' ? 3 : 1) * u;
+      if (i % 2 === 0) ctx.fillRect(cx, y, w, mm(hMm)); // i%2==0 → bar
+      cx += w;
+    }
+    cx += u;
+  }
+  if (showtext) {
+    ctx.font = '13px Arial, sans-serif';
+    ctx.fillText(data, x, y + mm(hMm) + 14);
+  }
+}
+function renderSpecTo(spec) {
+  const w = Math.round(mm(spec.size.w)), h = Math.round(mm(spec.size.h));
+  const c = document.getElementById('png');
+  c.width = w; c.height = h;
+  c.style.aspectRatio = `${w}/${h}`;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+  const vals = resolve(spec);
+  for (const ob of spec.objects || []) {
+    const t = ob.type, x = mm(ob.x), y = mm(ob.y);
+    try {
+      if (t === 'box') {
+        ctx.beginPath();
+        ctx.lineWidth = Math.max(1, mm(ob.line ?? 0.3));
+        ctx.strokeStyle = '#000';
+        ctx.roundRect(x, y, mm(ob.w), mm(ob.h), mm(ob.radius ?? 0));
+        ctx.stroke();
+      } else if (t === 'text') {
+        const text = SUBST(ob.text || '', vals);
+        let size = ob.size ?? 4;
+        ctx.font = fontStr(ob.font ?? 'song', size, ob.bold ?? true);
+        if (ob.w) { // 限宽自动缩字号
+          while (ctx.measureText(text).width > mm(ob.w) && size > 1.5) {
+            size -= 0.2;
+            ctx.font = fontStr(ob.font ?? 'song', size, ob.bold ?? true);
+          }
+        }
+        let tx = x;
+        if ((ob.align === 'center' || ob.align === 'right') && ob.w) {
+          const tw = ctx.measureText(text).width;
+          tx += ob.align === 'center' ? (mm(ob.w) - tw) / 2 : mm(ob.w) - tw;
+        }
+        ctx.fillStyle = '#000';
+        ctx.textBaseline = 'top';
+        ctx.fillText(text, tx, y);
+      } else if (t === 'barcode') {
+        drawCode39(ctx, x, y, SUBST(ob.data, vals), ob.h, ob.module ?? 0.4, ob.showtext ?? true);
+      } else if (t === 'image') {
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, mm(ob.w ?? 25), mm(ob.h ?? 10));
+        ctx.font = '12px Arial'; ctx.fillText(`[图:${ob.src}]`, x + 4, y + 16);
+      }
+    } catch (e) { console.warn('对象跳过', ob.type, e); }
+  }
+  const spec0 = { size: spec.size };
+  document.getElementById('size').textContent = `${spec.size.w}×${spec.size.h}mm → ${w}×${h}px`;
+}
+function renderSpec(quiet) {
+  try {
+    const spec = JSON.parse(document.getElementById('spec').value);
+    renderSpecTo(spec);
+    if (!quiet) document.getElementById('status').textContent = '渲染 ✓ ' + new Date().toLocaleTimeString();
+  } catch (e) { document.getElementById('status').textContent = 'JSON/渲染错误: ' + e.message; }
+}
+function exportPng() {
+  const c = document.getElementById('png');
+  const a = document.createElement('a');
+  a.href = c.toDataURL('image/png');
+  a.download = 'label.png'; a.click();
+}
+function exportJson() {
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(document.getElementById('spec').value);
+  a.download = 'label.json'; a.click();
+}
+
+/* ============ btw 工具 (纯 JS 写回器) ============ */
+async function showBtw() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.btw';
+  inp.onchange = async () => inp.files[0] && btwFlow(inp.files[0]);
+  inp.click();
+}
+async function zlibDecompress(u8) {
+  const ds = new DecompressionStream('deflate');
+  const res = new Response(new Blob([u8]).stream().pipeThrough(ds));
+  return new Uint8Array(await res.arrayBuffer());
+}
+async function zlibCompress(u8) {
+  const cs = new CompressionStream('deflate');
+  const res = new Response(new Blob([u8]).stream().pipeThrough(cs));
+  return new Uint8Array(await res.arrayBuffer());
+}
+async function firstZlibStream(data) {
+  for (let i = 0; i < data.length - 2; i++) {
+    if (data[i] === 0x78 && (data[i+1] === 0x9c || data[i+1] === 0xda || data[i+1] === 0x01)) {
+      try { await zlibDecompress(data.subarray(i)); return i; } catch (e) {}
+    }
+  }
+  throw new Error('btw 里没找到 zlib 对象树');
+}
+function utf16Records(blob) {
+  const out = [];
+  let i = 0;
+  while (i < blob.length - 4) {
+    if (blob[i] === 0xFF && blob[i+1] === 0xFE && blob[i+2] === 0xFF) {
+      const L = blob[i+3], end = i + 4 + 2 * L;
+      if (end <= blob.length) {
+        const s = new TextDecoder('utf-16le').decode(blob.subarray(i + 4, end));
+        let ok = L === 0;
+        try { ok = ok || [...s].every(c => c.isPrintable ? true : (c.codePointAt(0) > 31 || c === '\n')); } catch (e) {}
+        ok = ok || [...s].every(c => { const p = c.codePointAt(0); return (p > 31 && p < 0xE000 && p !== 0x7F) || (p >= 0x3400 && p <= 0xFFFF); });
+        if (ok) { out.push({ off: i, len: end - i, text: s }); i = end; continue; }
+      }
+    }
+    i++;
+  }
+  return out;
+}
+const b16le = s => [...s].flatMap(c => { const h = c.charCodeAt(0).toString(16).padStart(4, '0'); return [h.slice(2), h.slice(0, 2)].map(x => parseInt(x, 16)); });
+async function btwFlow(file) {
+  const pairs = prompt('btw 内容替换（每行一条 旧=新）\n留空只解析:', '生产日期：2025.03.10=生产日期：2026.10.08');
+  if (pairs === null) return;
+  const edits = Object.fromEntries(pairs.split('\n').map(l => l.split('=', 2)).filter(a => a.length === 2 && a[0]));
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const zs = await firstZlibStream(buf);
+  const blob = await zlibDecompress(buf.subarray(zs));
+  const recs = utf16Records(blob);
+  const out = [], editsInfo = [];
+  let last = 0;
+  const done = new Set();
+  for (const r of recs) {
+    if (edits[r.text] !== undefined && !done.has(r.off)) {
+      done.add(r.off);
+      const nw = edits[r.text];
+      editsInfo.push(`${r.text} → ${nw}`);
+      out.push(blob.subarray(last, r.off));
+      const head = [0xFF, 0xFE, 0xFF, nw.length];
+      out.push(new Uint8Array([...head, ...b16le(nw)]));
+      last = r.off + r.len;
+    }
+  }
+  out.push(blob.subarray(last));
+  const miss = Object.keys(edits).filter(k => !editsInfo.some(s => s.startsWith(k)));
+  // 重组
+  const parts = [buf.subarray(0, zs)];
+  let total = 0;
+  const newBlobParts = out;
+  const newLen = newBlobParts.reduce((s, p) => s + p.length, 0);
+  const compressed = await zlibCompress(newBlobParts);
+  const dl = new Blob([...parts.filter(p => p.length), compressed], { type: 'application/octet-stream' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(dl);
+  a.download = file.name.replace(/\.btw$/i, '') + '_改.btw';
+  a.click();
+  alert(`处理完成:\n${editsInfo.join('\n') || '(无替换)'}\n${miss.length ? '未找到: ' + miss.join('、') : ''}\n旧对象树 ${blob.length}B → 新 ${newLen}B (压缩 ${compressed.length}B)\n请回到 Windows 端用 BarTender 验证打开.`);
+}
+
+/* ============ 聊天 ============ */
+let history = [], pending = [];
+const MSGS = document.getElementById('msgs');
+function addMsg(role, text, images) {
+  const d = document.createElement('div');
+  d.className = 'm ' + role;
+  if (text) d.textContent = text;
+  (images || []).forEach(u => { const im = new Image(); im.src = u; im.className = 'thumb'; d.appendChild(im); });
+  MSGS.appendChild(d); MSGS.scrollTop = MSGS.scrollHeight;
+  return d;
+}
+function busy(t) { document.getElementById('status').textContent = t; }
+function addAttach(dataUrl) {
+  pending.push(dataUrl);
+  const img = new Image(); img.src = dataUrl;
+  img.onclick = () => { pending = pending.filter(x => x !== dataUrl); img.remove(); };
+  document.getElementById('attach').appendChild(img);
+}
+function img2url(file, cb) {
+  const r = new FileReader();
+  r.onload = () => {
+    const im = new Image(); im.onload = () => {
+      const c = document.createElement('canvas');
+      const s = Math.min(1, 1200 / Math.max(im.width, im.height));
+      c.width = im.width * s; c.height = im.height * s;
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      cb(c.toDataURL('image/jpeg', 0.85));
+    }; im.src = r.result;
+  };
+  r.readAsDataURL(file);
+}
+document.addEventListener('paste', e => {
+  if (!e.clipboardData) return;
+  for (const it of e.clipboardData.items) if (it.type.startsWith('image/')) img2url(it.getAsFile(), addAttach);
+});
+document.body.addEventListener('dragover', e => e.preventDefault());
+document.body.addEventListener('drop', e => {
+  e.preventDefault();
+  for (const f of e.dataTransfer.files) {
+    if (f.type.startsWith('image/')) img2url(f, addAttach);
+    else if (f.name.toLowerCase().endsWith('.btw')) btwFlow(f);
+  }
+});
+document.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') send(); });
+
+async function send() {
+  const c = cfg();
+  if (!c.key) { busy('⚙️ 请先填 API Key（右上角设置）'); return; }
+  const box = document.getElementById('msg');
+  const text = box.value.trim();
+  const withImgs = pending.slice(); pending = [];
+  document.getElementById('attach').innerHTML = '';
+  if (!text && !withImgs.length) return;
+  box.value = '';
+  addMsg('user', text || '(发了图片)', withImgs);
+  const um = { role: 'user', content: text || '请按图排一版。' };
+  if (withImgs.length) {
+    if (c.prov === 'ds') {  // DeepSeek 官方暂无视觉模型 → 有图自动切 OpenRouter
+      um.images = withImgs;
+      addMsg('ai', 'ℹ️ 检测到图片，DeepSeek 官方模型不支持视觉。若「视觉模型」未填或仍选 DeepSeek，将按文字处理。');
+    }
+  }
+  history.push(um);
+  const wait = addMsg('ai', '⏳ 生成中…');
+  document.getElementById('send').disabled = true;
+  try {
+    const useVis = withImgs.length > 0;
+    const model = useVis && c.mVis ? c.mVis : c.mText;
+    const provUrl = useVis && c.mVis ? 'https://openrouter.ai/api/v1/chat/completions' : endpoint();
+    const headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + c.key };
+    if (provUrl.includes('openrouter')) { headers['HTTP-Referer'] = location.origin; headers['X-Title'] = 'Label Chat'; }
+    const msgs = [{ role: 'system', content: SPEC }, ...history.map(m => {
+      if (m.images) {
+        return { role: m.role, content: [{ type: 'text', text: m.content }, ...m.images.map(u => ({ type: 'image_url', image_url: { url: u } }))] };
+      }
+      return m;
+    })];
+    const resp = await fetch(provUrl, {
+      method: 'POST', headers,
+      body: JSON.stringify({ model, messages: msgs, stream: true, temperature: 0.3 })
+    });
+    if (!resp.ok) throw new Error(`API ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let acc = '', buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n'); buf = lines.pop();
+      for (const l of lines) {
+        if (!l.startsWith('data: ')) continue;
+        const d = l.slice(6).trim();
+        if (d === '[DONE]') continue;
+        try {
+          const j = JSON.parse(d);
+          const delta = j.choices?.[0]?.delta?.content || '';
+          if (delta) { acc += delta; wait.textContent = acc.replace(/```json|```/g, '').trim().slice(-400); MSGS.scrollTop = MSGS.scrollHeight; }
+        } catch (e) {}
+      }
+    }
+    history.push({ role: 'assistant', content: acc });
+    const mm2 = acc.match(/```json\s*([\s\S]*?)```/) || acc.match(/(\{[\s\S]*\})/);
+    let spec = mm2 && JSON.parse(mm2[1]);
+    if (spec && spec.objects) {
+      delete spec._preview;
+      document.getElementById('spec').value = JSON.stringify(spec, null, 2);
+      renderSpec(true);
+      wait.appendChild(Object.assign(document.createElement('small'), { textContent: '✓ 已生成并渲染（右侧）' }));
+      busy('就绪');
+    } else {
+      wait.appendChild(Object.assign(document.createElement('small'), { textContent: '⚠ 本轮没有可解析的 label.json' }));
+      busy('⚠ 无 JSON');
+    }
+  } catch (e) {
+    if (acc) history.pop();
+    wait.textContent += '\n❌ ' + e.message;
+    busy('出错');
+  }
+  document.getElementById('send').disabled = false;
+}
+
+/* ============ 示例 ============ */
+const DEMOS = {
+  sn1: {"version":1,"size":{"w":100.0,"h":60.0},"objects":[
+    {"type":"box","x":0.25,"y":0.25,"w":99.5,"h":59.5,"radius":1.2,"line":0.15},
+    {"type":"text","x":7,"y":6,"size":4.5,"font":"song","text":"件号流水标（演示）"},
+    {"type":"text","x":7,"y":16,"size":6,"font":"song","w":86,"align":"center","text":"第 {sn} / {sn_total} 张"},
+    {"type":"barcode","x":20,"y":28,"h":18,"module":0.33,"textsize":3,"data":"{sn}"},
+    {"type":"text","x":7,"y":52,"size":3,"font":"song","bold":false,"text":"上海谦林环保包装有限公司"}],
+   "variables":{"sn":{"mode":"serial","start":1,"total":200}}},
+  mk: {"version":1,"size":{"w":100.0,"h":60.0},"objects":[
+    {"type":"box","x":0.25,"y":0.25,"w":99.5,"h":59.5,"radius":1.2,"line":0.15},
+    {"type":"text","x":7.2,"y":5.0,"size":4,"font":"song","text":"产品名称：{product}"},
+    {"type":"text","x":7.2,"y":11.98,"size":4,"font":"song","text":"装箱数量：{qty}"},
+    {"type":"text","x":7.2,"y":18.98,"size":4,"font":"song","text":"生产日期：{date}"},
+    {"type":"text","x":7.2,"y":25.12,"size":4,"font":"song","text":"保质期：两年"},
+    {"type":"text","x":7.2,"y":31.0,"size":4,"font":"song","text":"储存条件：保持恒温干燥"},
+    {"type":"text","x":7.2,"y":37.88,"size":4,"font":"song","text":"监制商：上海谦林环保包装有限公司"},
+    {"type":"text","x":7.2,"y":44.0,"size":4,"font":"song","text":"监制商地址：上海市松江区东宝路19号"},
+    {"type":"text","x":7.2,"y":50.88,"size":4,"font":"song","text":"监制商电话：021-67660317"}],
+   "variables":{"product":"美客·美家西餐厅无纺布袋2023版","qty":"500只/袋","date":"2025.03.10"}},
+};
+function loadDemo(k) {
+  document.getElementById('spec').value = JSON.stringify(DEMOS[k], null, 2);
+  renderSpec(true);
+  busy('示例已载入 ✓');
+}
+initCfg();
+loadDemo('mk');
+addMsg('ai', '你好！我是标签排版 AI（纯前端版）。\n· 发图（粘贴/拖拽/发到聊天）看图反推排版\n· 描述需求生成模板（1/200 流水号、Code39 条码都行）\n· 📦 btw 工具：拖入 .btw 可以直接改字并下载改版\n先在右上角填 API Key（DeepSeek 官方或 OpenRouter）。');
+</script>
+</body>
+</html>
