@@ -31,7 +31,11 @@
   #jsonwrap { height:30%; border-top:1px solid var(--line); display:flex; flex-direction:column; }
   #jsonwrap header { padding:6px 12px; color:var(--dim); border-bottom:1px solid var(--line); font-size:12px; display:flex; justify-content:space-between; }
   #spec { flex:1; background:var(--panel); color:#cdd6e4; border:0; padding:10px; font:12px/1.5 ui-monospace,Menlo,monospace; resize:none; outline:none; }
-  #settings { position:fixed; right:12px; top:12px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; width:280px; z-index:9; }
+  #settings { position:fixed; right:12px; top:12px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; width:280px; z-index:9; transition:all .2s; }
+  #settings.collapsed { width:52px; padding:8px; overflow:hidden; }
+  #settings.collapsed :not(#gear):not(#gear *) { display:none; }
+  #settings.collapsed #gear { display:block !important; margin:0 auto; }
+  #gear { position:sticky; float:right; margin-left:6px; background:var(--panel); border:1px solid var(--line); color:var(--fg); border-radius:6px; width:26px; height:26px; line-height:24px; text-align:center; cursor:pointer; }
   #settings h4 { font-size:12px; color:var(--dim); margin-bottom:6px; }
   #settings input, #settings select { width:100%; background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:4px 8px; margin:3px 0; font-size:12px; }
   label { font-size:11px; color:var(--dim); }
@@ -40,7 +44,8 @@
 </head>
 <body>
   <div id="settings">
-    <h4>⚙️ API 设置（只存在本机 localStorage）</h4>
+    <span id="gear" onclick="toggleSettings()">⚙</span>
+    <h4>API 设置（只存在本机 localStorage）</h4>
     <label>服务</label>
     <select id="prov" onchange="saveCfg()">
       <option value="ds">DeepSeek 官方（便宜，纯文本）</option>
@@ -83,6 +88,9 @@
 
 <script>
 /* ============ 配置 ============ */
+function toggleSettings() {
+  document.getElementById('settings').classList.toggle('collapsed');
+}
 const cfg = () => ({
   prov: localStorage.lc_prov || 'ds',
   mText: localStorage.lc_mText || 'deepseek-chat',
